@@ -1,3 +1,11 @@
+1998-03-10  Federico Mena Quintero  <federico@nuclecu.unam.mx>
+
+	* gtk/gtkcontainer.c (gtk_container_class_init): Removed un-needed
+	parameter in gtk_signal_new ("need_resize", ...).
+
+	* gdk/gdkgc.c (gdk_gc_set_function): Replace GXor by GXxor.  Seems
+	to have been a typo.
+
 Tue Mar 10 14:24:09 1998  Owen Taylor  <owt1@cornell.edu>
 
 	* gtk/gtkselection.c (gtk_selection_clear): Make the return
