@@ -1,9 +1,0 @@
-*.lo
-Makefile
-Makefile.in
-.deps
-_libs
-.libs
-libgdk.la
-gdkcursors.h
-gdkkeysyms.h
