@@ -196,6 +196,7 @@ gtk_public_h_sources =          \
 	gtkcheckmenuitem.h	\
 	gtkclipboard.h		\
 	gtkcolorbutton.h	\
+	gtkcolorengine.h	\
 	gtkcolorprofile.h	\
 	gtkcolorsel.h		\
 	gtkcolorseldialog.h	\
@@ -382,6 +383,7 @@ gtk_private_h_sources =		\
 	gtkfilesystem.h		\
 	gtkfilesystemmodel.h	\
 	gtkiconcache.h		\
+	gtkcolorenginefallback.h \
 	gtkintl.h		\
 	gtkkeyhash.h		\
 	gtkmnemonichash.h	\
@@ -455,6 +457,8 @@ gtk_base_c_sources =            \
 	gtkcheckbutton.c	\
 	gtkcheckmenuitem.c	\
 	gtkcolorbutton.c	\
+	gtkcolorengine.c	\
+	gtkcolorenginefallback.c \
 	gtkcolorprofile.c	\
 	gtkcolorsel.c		\
 	gtkcolorseldialog.c	\
