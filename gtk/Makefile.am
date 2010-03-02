@@ -196,6 +196,7 @@ gtk_public_h_sources =          \
 	gtkcheckmenuitem.h	\
 	gtkclipboard.h		\
 	gtkcolorbutton.h	\
+	gtkcolorprofile.h	\
 	gtkcolorsel.h		\
 	gtkcolorseldialog.h	\
 	gtkcombobox.h		\
@@ -453,6 +454,7 @@ gtk_base_c_sources =            \
 	gtkcheckbutton.c	\
 	gtkcheckmenuitem.c	\
 	gtkcolorbutton.c	\
+	gtkcolorprofile.c	\
 	gtkcolorsel.c		\
 	gtkcolorseldialog.c	\
 	gtkcombobox.c		\
