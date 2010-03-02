@@ -27,6 +27,7 @@
 #include "config.h"
 
 #include <glib.h>
+#include <gio/gio.h>
 #include "gdkconfig.h"
 
 #include <locale.h>
@@ -50,6 +51,7 @@
 #include "gtkaccelmap.h"
 #include "gtkbox.h"
 #include "gtkclipboard.h"
+#include "gtkcolorengine.h"
 #include "gtkdnd.h"
 #include "gtkversion.h"
 #include "gtkmain.h"
@@ -820,6 +822,52 @@ gtk_get_option_group (gboolean open_default_display)
   g_option_group_set_translation_domain (group, GETTEXT_PACKAGE);
   
   return group;
+}
+
+static void
+_gtk_io_modules_ensure_extension_points_registered (void)
+{
+  static gboolean registered_extensions = FALSE;
+  GIOExtensionPoint *ep;
+
+  if (!registered_extensions)
+    {
+      registered_extensions = TRUE;
+      ep = g_io_extension_point_register (GTK_COLOR_ENGINE_EXTENSION_POINT_NAME);
+      g_io_extension_point_set_required_type (ep, GTK_TYPE_COLOR_ENGINE);
+    }
+}
+
+void
+_gtk_io_modules_ensure_loaded (void)
+{
+  static gboolean loaded_dirs = FALSE;
+  const gchar *module_path;
+  gchar *path;
+
+  _gtk_io_modules_ensure_extension_points_registered ();
+
+  if (!loaded_dirs)
+    {
+      loaded_dirs = TRUE;
+      path = g_build_filename (GTK_LIBDIR, "gtk-2.0", GTK_BINARY_VERSION, "giomodules", NULL);
+      g_io_modules_scan_all_in_directory (path);
+      g_free (path);
+
+      module_path = g_getenv ("GTK_EXTRA_GIOMODULES");
+      if (module_path)
+        {
+          gint i = 0;
+          gchar **paths;
+          paths = g_strsplit (module_path, ":", 0);
+          while (paths[i] != NULL)
+            {
+              g_io_modules_scan_all_in_directory (paths[i]);
+              i++;
+            }
+          g_strfreev (paths);
+        }
+    }
 }
 
 /**

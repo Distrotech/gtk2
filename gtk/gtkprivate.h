@@ -112,6 +112,8 @@ gboolean _gtk_fnmatch (const char *pattern,
 #define GTK_DEFAULT_ACCEL_MOD_MASK GDK_META_MASK
 #endif
 
+void _gtk_io_modules_ensure_loaded (void);
+
 G_END_DECLS
 
 #endif /* __GTK_PRIVATE_H__ */
