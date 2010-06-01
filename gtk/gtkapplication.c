@@ -33,6 +33,11 @@
 #include "gtkintl.h"
 #include "gtkprivate.h"
 
+#include <gdk/gdk.h>
+#ifdef GDK_WINDOWING_X11
+#include <gdk/x11/gdkx.h>
+#endif
+
 enum
 {
   PROP_0,
@@ -48,6 +53,16 @@ struct _GtkApplicationPrivate
 };
 
 G_DEFINE_TYPE (GtkApplication, gtk_application, G_TYPE_APPLICATION)
+
+static void gtk_application_format_activation_data (GVariantBuilder *builder);
+static void gtk_application_receive_activation_data (GVariant *data);
+
+
+static const GApplicationPlugin app_plugin = {
+  gtk_application_format_activation_data,
+  gtk_application_receive_activation_data,
+  0
+};
 
 static gboolean
 gtk_application_default_quit (GApplication *application, guint timestamp)
@@ -82,6 +97,43 @@ gtk_application_default_action (GApplication *application, const char *action, g
   g_list_free (actions);
 }
 
+static void
+gtk_application_format_activation_data (GVariantBuilder *builder)
+{
+  const char *startup_id = NULL;
+  GdkDisplay *display = gdk_display_get_default ();
+
+  /* try and get the startup notification id from GDK, the environment
+   * or, if everything else failed, fake one.
+   */
+#ifdef GDK_WINDOWING_X11
+  startup_id = gdk_x11_display_get_startup_notification_id (display);
+#endif /* GDK_WINDOWING_X11 */
+
+  if (startup_id)
+    g_variant_builder_add (builder, "{sv}", "startup-notification-id", 
+			   g_variant_new ("s", startup_id));
+}
+
+static void
+gtk_application_receive_activation_data (GVariant *data)
+{
+  GVariantIter iter;
+  gchar *key;
+  GVariant *value;
+
+  g_variant_iter_init (&iter, data);
+  while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+    {
+      if (!strcmp (key, "startup-notification-id") && !strcmp (g_variant_get_type_string (value), "s"))
+	{
+	  gdk_notify_startup_complete_with_id (g_variant_get_string (value, NULL));
+	}
+      g_free (key);
+      g_variant_unref (value);
+    }
+}
+
 /**
  * gtk_application_new:
  * @argc: (allow-none) (inout): System argument count
@@ -102,9 +154,21 @@ gtk_application_new (int                  *argc,
                      char               ***argv,
                      const char           *appid)
 {  
+  int argc_for_app;
+  char **argv_for_app;
+
   gtk_init (argc, argv);
 
-  return g_object_new (GTK_TYPE_APPLICATION, "appid", appid, NULL);
+  if (argc)
+    argc_for_app = *argc;
+  else
+    argc_for_app = 0;
+  if (argv)
+    argv_for_app = *argv;
+  else
+    argv_for_app = NULL;
+
+  return GTK_APPLICATION (g_application_new_subtype (argc_for_app, argv_for_app, appid, GTK_TYPE_APPLICATION, &app_plugin));
 }
 
 static void
