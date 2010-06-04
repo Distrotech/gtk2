@@ -40,6 +40,29 @@
 #include <gdk/x11/gdkx.h>
 #endif
 
+/**
+ * SECTION:gtkapplication
+ * @title: GtkApplication
+ * @short_description: Application class
+ *
+ * #GtkApplication is a class that handles many important aspects
+ * of a GTK+ application in a convenient fashion, without enforcing
+ * a one-size-fits-all application model.
+ *
+ * Currently, GtkApplication handles application uniqueness, provides
+ * some basic scriptability by exporting 'actions', implements some
+ * standard actions itself (such as 'Quit') and provides a main window
+ * whose life-cycle is automatically tied to the life-cycle of your
+ * application.
+ *
+ * <example id="gtkapplication"><title>A simple application</title>
+ * <programlisting>
+ * <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="text" href="../../../../gtk/tests/gtk-example-application.c">
+ *  <xi:fallback>FIXME: MISSING XINCLUDE CONTENT</xi:fallback>
+ * </xi:include>
+ * </programlisting>
+ * </example>
+ */
 enum
 {
   PROP_0,
@@ -162,6 +185,8 @@ gtk_application_receive_activation_data (GVariant *data)
  * see g_application_new().
  *
  * Returns: (transfer full): A newly-referenced #GtkApplication
+ *
+ * Since: 3.0
  */
 GtkApplication*
 gtk_application_new (gint          *argc,
@@ -217,6 +242,8 @@ on_action_sensitive (GtkAction      *action,
  * </itemizedlist>
  *
  * It is an error to call this function more than once.
+ *
+ * Since: 3.0
  */
 void
 gtk_application_set_action_group (GtkApplication *app,
@@ -266,6 +293,8 @@ gtk_application_on_window_destroy (GtkWidget *window,
  * any other windows, the default action will be to call gtk_application_quit().
  *
  * Returns: (transfer none): The default #GtkWindow for this application
+ *
+ * Since: 3.0
  */
 GtkWindow *
 gtk_application_get_window (GtkApplication *app)
@@ -288,6 +317,8 @@ gtk_application_get_window (GtkApplication *app)
  *
  * Runs the main loop; see g_application_run().
  * The default implementation for #GtkApplication uses gtk_main().
+ *
+ * Since: 3.0
  */
 void
 gtk_application_run (GtkApplication *app)
@@ -301,6 +332,8 @@ gtk_application_run (GtkApplication *app)
  *
  * Request the application exit.
  * By default, this method will exit the main loop; see gtk_main_quit().
+ *
+ * Since: 3.0
  */
 void
 gtk_application_quit (GtkApplication *app)
