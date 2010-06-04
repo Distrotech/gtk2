@@ -81,6 +81,16 @@ gtk_application_default_run (GApplication *application)
 }
 
 static void
+gtk_application_default_activated (GApplication *application,
+                                   GVariant     *arguments)
+{
+  GtkApplication *app = GTK_APPLICATION (application);
+
+  if (app->priv->default_window != NULL)
+    gtk_window_present (app->priv->default_window);
+}
+
+static void
 gtk_application_default_action (GApplication *application,
                                 const gchar  *action,
                                 guint         timestamp)
@@ -370,6 +380,7 @@ gtk_application_class_init (GtkApplicationClass *klass)
   application_class->run = gtk_application_default_run;
   application_class->quit = gtk_application_default_quit;
   application_class->action = gtk_application_default_action;
+  application_class->activated = gtk_application_default_activated;
 
   g_type_class_add_private (gobject_class, sizeof (GtkApplicationPrivate));
 }
