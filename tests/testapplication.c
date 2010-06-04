@@ -27,7 +27,7 @@ static const char *builder_data =
 "  <property name=\"program-name\">Test Application</property>"
 "  <property name=\"website\">http://gtk.org</property>"
 "</object>"
-"<object class=\"GtkActionGroup\" id=\"main_actions\">"
+"<object class=\"GtkActionGroup\" id=\"actions\">"
 "  <child>"
 "      <object class=\"GtkAction\" id=\"About\">"
 "          <property name=\"name\">About</property>"
@@ -60,8 +60,8 @@ main (int argc, char **argv)
   builder = gtk_builder_new ();
   if (!gtk_builder_add_from_string (builder, builder_data, -1, NULL))
     g_error ("failed to parse UI");
-  actions = GTK_ACTION_GROUP (gtk_builder_get_object (builder, "main_actions"));
-  gtk_application_set_main_action_group (app, actions);
+  actions = GTK_ACTION_GROUP (gtk_builder_get_object (builder, "actions"));
+  gtk_application_set_action_group (app, actions);
   
   action = gtk_action_group_get_action (actions, "About");
   g_signal_connect (action, "activate", G_CALLBACK (about_activate), app);

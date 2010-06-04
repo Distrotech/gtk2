@@ -74,19 +74,19 @@ struct _GtkApplicationClass
   void (*_gtk_reserved6) (void);
 };
 
-GType           gtk_application_get_type        (void) G_GNUC_CONST;
-GtkApplication* gtk_application_new             (int                 *argc,
-                                                 char              ***argv,
-                                                 const char          *appid);
+GType           gtk_application_get_type         (void) G_GNUC_CONST;
+GtkApplication* gtk_application_new              (gint             *argc,
+                                                  gchar          ***argv,
+                                                  const gchar      *appid);
 
-void            gtk_application_set_main_action_group (GtkApplication *app,
-                                                       GtkActionGroup *group);
+void            gtk_application_set_action_group (GtkApplication   *app,
+                                                  GtkActionGroup   *group);
 
-GtkWindow *     gtk_application_get_window (GtkApplication *app);
-   
-void            gtk_application_run (GtkApplication  *app);
+GtkWindow *     gtk_application_get_window       (GtkApplication   *app);
 
-void            gtk_application_quit (GtkApplication *app);
+void            gtk_application_run              (GtkApplication   *app);
+
+void            gtk_application_quit             (GtkApplication   *app);
 
 G_END_DECLS
 

@@ -183,7 +183,7 @@ on_action_sensitive (GtkAction      *action,
 }
 
 /**
- * gtk_application_set_main_action_group:
+ * gtk_application_set_action_group:
  * @app: A #GtkApplication
  * @group: A #GtkActionGroup
  *
@@ -201,8 +201,8 @@ on_action_sensitive (GtkAction      *action,
  * It is an error to call this function more than once.
  */
 void
-gtk_application_set_main_action_group (GtkApplication *app,
-                                       GtkActionGroup *group)
+gtk_application_set_action_group (GtkApplication *app,
+                                  GtkActionGroup *group)
 {
   GList *actions, *iter;
 
