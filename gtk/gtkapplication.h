@@ -65,6 +65,10 @@ struct _GtkApplicationClass
 {
   GApplicationClass parent_class;
 
+  /*< vfuncs >*/
+  void        (* activated)   (GApplication  *application,
+			       GVariant      *args);
+
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
@@ -72,6 +76,10 @@ struct _GtkApplicationClass
   void (*_gtk_reserved4) (void);
   void (*_gtk_reserved5) (void);
   void (*_gtk_reserved6) (void);
+  void (*_gtk_reserved7) (void);
+  void (*_gtk_reserved8) (void);
+  void (*_gtk_reserved9) (void);
+  void (*_gtk_reserved10) (void);
 };
 
 GType           gtk_application_get_type         (void) G_GNUC_CONST;

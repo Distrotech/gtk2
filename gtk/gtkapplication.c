@@ -69,6 +69,15 @@ enum
   PROP_WINDOW
 };
 
+enum
+{
+  ACTIVATED,
+
+  LAST_SIGNAL
+};
+
+static guint gtk_application_signals[LAST_SIGNAL] = { 0 };
+
 struct _GtkApplicationPrivate
 {
   char *appid;
@@ -78,16 +87,6 @@ struct _GtkApplicationPrivate
 };
 
 G_DEFINE_TYPE (GtkApplication, gtk_application, G_TYPE_APPLICATION)
-
-static void gtk_application_format_activation_data (GVariantBuilder *builder);
-static void gtk_application_receive_activation_data (GVariant *data);
-
-
-static const GApplicationPlugin app_plugin = {
-  gtk_application_format_activation_data,
-  gtk_application_receive_activation_data,
-  0
-};
 
 static gboolean
 gtk_application_default_quit (GApplication *application,
@@ -101,6 +100,28 @@ static void
 gtk_application_default_run (GApplication *application)
 {
   gtk_main ();
+}
+
+static void
+gtk_application_default_prepare_activation (GApplication *application,
+					    GVariant     *arguments,
+					    GVariant     *platform_data)
+{
+  GVariantIter iter;
+  gchar *key;
+  GVariant *value;
+
+  g_variant_iter_init (&iter, platform_data);
+  while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+    {
+      if (strcmp (key, "startup-notification-id") == 0 &&
+          strcmp (g_variant_get_type_string (value), "s") == 0)
+        gdk_notify_startup_complete_with_id (g_variant_get_string (value, NULL));
+      g_free (key);
+      g_variant_unref (value);
+    }
+  
+  g_signal_emit (G_OBJECT (application), gtk_application_signals[ACTIVATED], 0, arguments);
 }
 
 static void
@@ -135,11 +156,14 @@ gtk_application_default_action (GApplication *application,
   g_list_free (actions);
 }
 
-static void
-gtk_application_format_activation_data (GVariantBuilder *builder)
+static GVariant *
+gtk_application_format_activation_data (void)
 {
   const gchar *startup_id = NULL;
   GdkDisplay *display = gdk_display_get_default ();
+  GVariantBuilder builder;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{sv}"));
 
   /* try and get the startup notification id from GDK, the environment
    * or, if everything else failed, fake one.
@@ -149,26 +173,9 @@ gtk_application_format_activation_data (GVariantBuilder *builder)
 #endif /* GDK_WINDOWING_X11 */
 
   if (startup_id)
-    g_variant_builder_add (builder, "{sv}", "startup-notification-id",
+    g_variant_builder_add (&builder, "{sv}", "startup-notification-id",
                            g_variant_new ("s", startup_id));
-}
-
-static void
-gtk_application_receive_activation_data (GVariant *data)
-{
-  GVariantIter iter;
-  gchar *key;
-  GVariant *value;
-
-  g_variant_iter_init (&iter, data);
-  while (g_variant_iter_next (&iter, "{sv}", &key, &value))
-    {
-      if (strcmp (key, "startup-notification-id") == 0 &&
-          strcmp (g_variant_get_type_string (value), "s") == 0)
-        gdk_notify_startup_complete_with_id (g_variant_get_string (value, NULL));
-      g_free (key);
-      g_variant_unref (value);
-    }
+  return g_variant_builder_end (&builder);
 }
 
 /**
@@ -193,8 +200,10 @@ gtk_application_new (gint          *argc,
                      gchar       ***argv,
                      const gchar   *appid)
 {
+  GtkApplication *app;
   gint argc_for_app;
   gchar **argv_for_app;
+  GVariant *platform_data;
 
   gtk_init (argc, argv);
 
@@ -207,11 +216,14 @@ gtk_application_new (gint          *argc,
   else
     argv_for_app = NULL;
 
-  return GTK_APPLICATION (g_application_new_subtype (argc_for_app,
-                                                     argv_for_app,
-                                                     appid,
-                                                     GTK_TYPE_APPLICATION,
-                                                     &app_plugin));
+  app = g_object_new (GTK_TYPE_APPLICATION, "appid", appid, NULL);
+
+  platform_data = gtk_application_format_activation_data (); 
+  g_application_register_with_data (G_APPLICATION (app), argc_for_app, argv_for_app,
+				    platform_data);
+  g_variant_unref (platform_data);
+  
+  return app;
 }
 
 static void
@@ -390,6 +402,9 @@ gtk_application_constructor (GType                  type,
 {
   GObject *object;
 
+  /* Last ditch effort here */
+  gtk_init (0, NULL);
+
   object = (* G_OBJECT_CLASS (gtk_application_parent_class)->constructor) (type,
                                                                            n_construct_properties,
                                                                            construct_params);
@@ -413,7 +428,30 @@ gtk_application_class_init (GtkApplicationClass *klass)
   application_class->run = gtk_application_default_run;
   application_class->quit = gtk_application_default_quit;
   application_class->action = gtk_application_default_action;
-  application_class->activated = gtk_application_default_activated;
+  application_class->prepare_activation = gtk_application_default_prepare_activation;
+
+  klass->activated = gtk_application_default_activated;
+
+  /**
+   * GtkApplication::activated:
+   * @arguments: A #GVariant with the signature "aay"
+   *
+   * This signal is emitted when a non-primary process for a given
+   * application is invoked while your application is running; for
+   * example, when a file browser launches your program to open a
+   * file.  The raw operating system arguments are passed in the
+   * variant @arguments.
+   */
+
+  gtk_application_signals[ACTIVATED] =
+    g_signal_new (g_intern_static_string ("activated"),
+                  G_OBJECT_CLASS_TYPE (klass),
+                  G_SIGNAL_RUN_LAST,
+                  G_STRUCT_OFFSET (GtkApplicationClass, activated),
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__BOXED,
+                  G_TYPE_NONE, 1,
+                  G_TYPE_VARIANT);
 
   g_type_class_add_private (gobject_class, sizeof (GtkApplicationPrivate));
 }
