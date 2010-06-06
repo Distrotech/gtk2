@@ -28,6 +28,10 @@
  */
 
 #include "config.h"
+
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "gtkapplication.h"
 #include "gtkmain.h"
 #include "gtkintl.h"
@@ -311,12 +315,38 @@ gtk_application_on_window_destroy (GtkWidget *window,
 GtkWindow *
 gtk_application_get_window (GtkApplication *app)
 {
+  const gchar *pid;
+  const gchar *filename;
+  GKeyFile *keyfile;
+  gchar *name;
+  gchar *icon;
+
   if (app->priv->default_window != NULL)
     return app->priv->default_window;
 
   app->priv->default_window = GTK_WINDOW (gtk_window_new (GTK_WINDOW_TOPLEVEL));
   g_object_ref_sink (app->priv->default_window);
-  /* TODO look up .desktop file on freedesktop platform, initialize title etc. */
+
+  pid = g_getenv ("GIO_LAUNCHED_DESKTOP_FILE_PID");
+  filename = g_getenv ("GIO_LAUNCHED_DESKTOP_FILE");
+
+  keyfile = g_key_file_new ();
+
+  if (pid != NULL && filename != NULL && atoi (pid) == getpid () &&
+      g_key_file_load_from_file (keyfile, filename, 0, NULL))
+    {
+      name = g_key_file_get_locale_string (keyfile, G_KEY_FILE_DESKTOP_GROUP, G_KEY_FILE_DESKTOP_KEY_NAME, NULL, NULL);
+      icon = g_key_file_get_string (keyfile, G_KEY_FILE_DESKTOP_GROUP, G_KEY_FILE_DESKTOP_KEY_ICON, NULL);
+
+      gtk_window_set_title (app->priv->default_window, name);
+      gtk_window_set_icon_name (app->priv->default_window, icon);
+
+      g_free (name);
+      g_free (icon);
+    }
+
+  g_key_file_free (keyfile);
+
   g_signal_connect (app->priv->default_window, "destroy",
                     G_CALLBACK (gtk_application_on_window_destroy), app);
 
