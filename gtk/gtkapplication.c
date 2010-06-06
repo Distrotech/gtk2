@@ -88,6 +88,7 @@ struct _GtkApplicationPrivate
   GtkActionGroup *main_actions;
 
   GtkWindow *default_window;
+  GSList *windows;
 };
 
 G_DEFINE_TYPE (GtkApplication, gtk_application, G_TYPE_APPLICATION)
@@ -134,6 +135,7 @@ gtk_application_default_activated (GApplication *application,
 {
   GtkApplication *app = GTK_APPLICATION (application);
 
+  /* TODO: should we raise the last focused window instead ? */
   if (app->priv->default_window != NULL)
     gtk_window_present (app->priv->default_window);
 }
@@ -222,11 +224,11 @@ gtk_application_new (gint          *argc,
 
   app = g_object_new (GTK_TYPE_APPLICATION, "appid", appid, NULL);
 
-  platform_data = gtk_application_format_activation_data (); 
+  platform_data = gtk_application_format_activation_data ();
   g_application_register_with_data (G_APPLICATION (app), argc_for_app, argv_for_app,
 				    platform_data);
   g_variant_unref (platform_data);
-  
+
   return app;
 }
 
@@ -290,23 +292,60 @@ gtk_application_on_window_destroy (GtkWidget *window,
 {
   GtkApplication *app = GTK_APPLICATION (user_data);
 
-  gtk_application_quit (app);
+  app->priv->windows = g_slist_remove (app->priv->windows, window);
+
+  if (app->priv->windows == NULL)
+    gtk_application_quit (app);
 
   return FALSE;
+}
+
+/**
+ * gtk_application_add_window:
+ * @app: a #GtkApplication
+ * @window: a toplevel window to add to @app
+ *
+ * Adds a window to the #GtkApplication.
+ *
+ * If the user closes all of the windows added to @app, the default
+ * behaviour is to call gtk_application_quit().
+ *
+ * If your application uses only a single toplevel window, you can
+ * use gtk_application_get_window().
+ *
+ * Since: 3.0
+ */
+void
+gtk_application_add_window (GtkApplication *app,
+                            GtkWindow      *window)
+{
+  app->priv->windows = g_slist_prepend (app->priv->windows, window);
+
+  /* TODO: maybe set title and icon here too, but only if the window
+   * doesn't have them set yet.
+   */
+
+  g_signal_connect (window, "destroy",
+                    G_CALLBACK (gtk_application_on_window_destroy), app);
 }
 
 /**
  * gtk_application_get_window:
  * @app: a #GtkApplication
  *
- * A #GtkApplication has a "default window".  This window should act as
- * the primary user interaction point with your application.  This
- * window is of type #GTK_WINDOW_TYPE_TOPLEVEL and its properties such
- * as "title" and "icon-name" will be initialized as appropriate for the
- * platform.
+ * A simple #GtkApplication has a "default window". This window should
+ * act as the primary user interaction point with your application.
+ * The window returned by this function is of type #GTK_WINDOW_TYPE_TOPLEVEL
+ * and its properties such as "title" and "icon-name" will be initialized
+ * as appropriate for the platform.
  *
  * If the user closes this window, and your application hasn't created
  * any other windows, the default action will be to call gtk_application_quit().
+ *
+ * If your application has more than one toplevel window (e.g. an
+ * single-document-interface application with multiple open documents),
+ * or if you are constructing your toplevel windows yourself (e.g. using
+ * #GtkBuilder), use gtk_application_add_window() instead.
  *
  * Returns: (transfer none): The default #GtkWindow for this application
  *
@@ -347,8 +386,7 @@ gtk_application_get_window (GtkApplication *app)
 
   g_key_file_free (keyfile);
 
-  g_signal_connect (app->priv->default_window, "destroy",
-                    G_CALLBACK (gtk_application_on_window_destroy), app);
+  gtk_application_add_window (app, app->priv->default_window);
 
   return app->priv->default_window;
 }
