@@ -8,7 +8,8 @@ INCLUDES =				\
 	-DGDK_DISABLE_DEPRECATED	\
 	-DGTK_DISABLE_DEPRECATED	\
 	$(GTK_DEBUG_FLAGS)		\
-	$(GTK_DEP_CFLAGS)
+	$(GTK_DEP_CFLAGS)		\
+	$(GDK_DEP_CFLAGS)
 
 DEPS =									\
 	$(top_builddir)/gdk-pixbuf/libgdk_pixbuf-$(GTK_API_VERSION).la	\
