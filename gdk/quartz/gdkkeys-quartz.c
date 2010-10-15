@@ -663,14 +663,22 @@ void
 gdk_keymap_add_virtual_modifiers (GdkKeymap       *keymap,
                                   GdkModifierType *state)
 {
-  /* FIXME: For now, we've mimiced the Windows backend. */
+  if (*state & GDK_MOD1_MASK)
+    *state |= GDK_META_MASK;
+  if (*state & GDK_MOD5_MASK)
+    *state |= GDK_SUPER_MASK;
+
 }
 
 gboolean
 gdk_keymap_map_virtual_modifiers (GdkKeymap       *keymap,
                                   GdkModifierType *state)
 {
-  /* FIXME: For now, we've mimiced the Windows backend. */
+  if (*state & GDK_META_MASK)
+    *state |= GDK_MOD1_MASK;
+  if (*state & GDK_SUPER_MASK)
+    *state |= GDK_MOD5_MASK;
+
   return TRUE;
 }
 
