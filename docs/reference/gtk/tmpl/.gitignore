@@ -9,6 +9,7 @@ gtkcalendar.sgml
 gtkcelleditable.sgml
 gtkcombobox.sgml
 gtkcomboboxentry.sgml
+gtkcontainer.sgml
 gtkeditable.sgml
 gtkentrybuffer.sgml
 gtkhbox.sgml
@@ -34,6 +35,7 @@ gtkrecentchooserwidget.sgml
 gtkrecentmanager.sgml
 gtkscale.sgml
 gtkscalebutton.sgml
+gtkscrolledwindow.sgml
 gtkseparator.sgml
 gtkseparatormenuitem.sgml
 gtkseparatortoolitem.sgml

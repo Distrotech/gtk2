@@ -188,6 +188,16 @@ void	     gtk_container_child_get_property		(GtkContainer	   *container,
 							 const gchar	   *property_name,
 							 GValue		   *value);
 
+/**
+ * GTK_CONTAINER_WARN_INVALID_CHILD_PROPERTY_ID:
+ * @object: the #GObject on which set_child_property() or get_child_property()
+ *  was called
+ * @property_id: the numeric id of the property
+ * @pspec: the #GParamSpec of the property
+ *
+ * This macro should be used to emit a standard warning about unexpected
+ * properties in set_child_property() and get_child_property() implementations.
+ */
 #define GTK_CONTAINER_WARN_INVALID_CHILD_PROPERTY_ID(object, property_id, pspec) \
     G_OBJECT_WARN_INVALID_PSPEC ((object), "child property id", (property_id), (pspec))
 
@@ -200,6 +210,7 @@ void    gtk_container_class_handle_border_width (GtkContainerClass *klass);
 
 /* Non-public methods */
 void	_gtk_container_queue_resize	     (GtkContainer *container);
+void	_gtk_container_resize_invalidate     (GtkContainer *container);
 void    _gtk_container_clear_resize_widgets   (GtkContainer *container);
 gchar*	_gtk_container_child_composite_name   (GtkContainer *container,
 					      GtkWidget	   *child);

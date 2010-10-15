@@ -1225,9 +1225,9 @@ LDFLAGS="$saved_ldflags"
 
 # Pull in gio-unix for GDesktopAppInfo usage, see at least gdkapplaunchcontext-x11.c
 if test "x$gdktarget" = "xx11"; then
-  GDK_PACKAGES="$PANGO_PACKAGES gio-unix-2.0 $X_PACKAGES gdk-pixbuf-2.0 cairo-$cairo_backend"
+  GDK_PACKAGES="$PANGO_PACKAGES gio-unix-2.0 $X_PACKAGES gdk-pixbuf-2.0 cairo-$cairo_backend cairo-gobject"
 else
-  GDK_PACKAGES="$PANGO_PACKAGES gio-2.0 gdk-pixbuf-2.0 cairo-$cairo_backend"
+  GDK_PACKAGES="$PANGO_PACKAGES gio-2.0 gdk-pixbuf-2.0 cairo-$cairo_backend cairo-gobject"
 fi
 
 GDK_DEP_LIBS="$GDK_EXTRA_LIBS `$PKG_CONFIG --libs $GDK_PACKAGES`"
@@ -1477,6 +1477,12 @@ if test -n "$export_dynamic"; then
   GTK_DEP_LIBS=`echo $GTK_DEP_LIBS | sed -e "s/$export_dynamic//"`
 fi
 
+#############
+# GSettings #
+#############
+
+GLIB_GSETTINGS
+
 ##################################################
 # GObject introspection
 ##################################################
@@ -1634,6 +1640,7 @@ po-properties/Makefile.in
 demos/Makefile
 demos/gtk-demo/Makefile
 demos/gtk-demo/geninclude.pl
+examples/Makefile
 tests/Makefile
 docs/Makefile
 docs/reference/Makefile

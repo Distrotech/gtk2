@@ -26,7 +26,14 @@
 
 #include "config.h"
 
+#include "gdkcursor.h"
+
+#include "gdkprivate-x11.h"
+#include "gdkdisplay-x11.h"
+#include "gdkx.h"
+
 #define GDK_PIXBUF_ENABLE_BACKEND
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
@@ -37,12 +44,8 @@
 #include <X11/extensions/Xfixes.h>
 #endif
 #include <string.h>
+#include <errno.h>
 
-#include "gdkprivate-x11.h"
-#include "gdkcursor.h"
-#include "gdkdisplay-x11.h"
-#include "gdkx.h"
-#include <gdk-pixbuf/gdk-pixbuf.h>
 
 static guint theme_serial = 0;
 
@@ -639,6 +642,11 @@ create_cursor_image (GdkPixbuf *pixbuf,
  * gdk_display_get_maximal_cursor_size() give information about 
  * cursor sizes.
  *
+ * If @x or @y are <literal>-1</literal>, the pixbuf must have
+ * options named "x_hot" and "y_hot", resp., containing
+ * integer values between %0 and the width resp. height of
+ * the pixbuf. (Since: 3.0)
+ *
  * On the X backend, support for RGBA cursors requires a
  * sufficently new version of the X Render extension. 
  *
@@ -656,9 +664,34 @@ gdk_cursor_new_from_pixbuf (GdkDisplay *display,
   Cursor xcursor;
   GdkCursorPrivate *private;
   GdkCursor *cursor;
+  const char *option;
+  char *end;
+  gint64 value;
 
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
   g_return_val_if_fail (GDK_IS_PIXBUF (pixbuf), NULL);
+
+  if (x == -1 && (option = gdk_pixbuf_get_option (pixbuf, "x_hot")))
+    {
+      errno = 0;
+      end = NULL;
+      value = g_ascii_strtoll (option, &end, 10);
+      if (errno == 0 &&
+          end != option &&
+          value >= 0 && value < G_MAXINT)
+        x = (gint) value;
+    }
+  if (y == -1 && (option = gdk_pixbuf_get_option (pixbuf, "y_hot")))
+    {
+      errno = 0;
+      end = NULL;
+      value = g_ascii_strtoll (option, &end, 10);
+      if (errno == 0 &&
+          end != option &&
+          value >= 0 && value < G_MAXINT)
+        y = (gint) value;
+    }
+
   g_return_val_if_fail (0 <= x && x < gdk_pixbuf_get_width (pixbuf), NULL);
   g_return_val_if_fail (0 <= y && y < gdk_pixbuf_get_height (pixbuf), NULL);
 

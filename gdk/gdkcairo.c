@@ -17,13 +17,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "gdkcairo.h"
+#include "config.h"
 
-#include <math.h>
+#include "gdkcairo.h"
 
 #include "gdkdrawable.h"
 #include "gdkinternals.h"
 
+#include <math.h>
 
 /**
  * SECTION:cairo_interaction
@@ -32,13 +33,12 @@
  *
  * <link href="http://cairographics.org">Cairo</link> is a graphics
  * library that supports vector graphics and image compositing that
- * can be used with GDK. Since 2.8, GTK+ does most of its drawing
- * using Cairo.
+ * can be used with GDK. GTK+ does all of its drawing using Cairo.
  *
  * GDK does not wrap the Cairo API, instead it allows to create Cairo
- * contexts which can be used to draw on #GdkDrawables. Additional
- * functions allow to convert GDK's rectangles and regions into
- * Cairo paths and to use pixbufs as sources for drawing operations.
+ * contexts which can be used to draw on #GdkWindows. Additional
+ * functions allow use #GdkRectangles with cairo and to use #GdkColors,
+ * #GdkPixbufs and #GdkWindows as sources for drawing operations.
  */
 
 
@@ -380,6 +380,7 @@ _gdk_cairo_surface_extents (cairo_surface_t *surface,
 
   cr = cairo_create (surface);
   cairo_clip_extents (cr, &x1, &y1, &x2, &y2);
+  cairo_destroy (cr);
 
   x1 = floor (x1);
   y1 = floor (y1);
@@ -418,8 +419,9 @@ _gdk_cairo_surface_extents (cairo_surface_t *surface,
  * is more than 50% opaque. This function takes into account device
  * offsets that might be set with cairo_surface_set_device_offset().
  *
- * Returns: A new region
- **/
+ * Returns: A #cairo_region_t. This must be freed with cairo_region_destroy()
+ *   when you are done.
+ */
 cairo_region_t *
 gdk_cairo_region_create_from_surface (cairo_surface_t *surface)
 {

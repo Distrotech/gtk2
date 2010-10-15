@@ -47,6 +47,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testfilechooser			\
 	testfilechooserbutton		\
 	testframe			\
+	testgeometry			\
 	testgtk				\
 	testheightforwidth		\
 	testiconview			\
@@ -89,9 +90,9 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testactions			\
 	testgrouping			\
 	testtooltips			\
+	testexpand			\
 	testexpander			\
-	testvolumebutton		\
-	testwrapbox
+	testvolumebutton
 
 if USE_X11
 noinst_PROGRAMS += testapplication testerrors
@@ -136,6 +137,7 @@ testerrors_DEPENDENCIES = $(TEST_DEPS)
 testfilechooser_DEPENDENCIES = $(TEST_DEPS)
 testfilechooserbutton_DEPENDENCIES = $(TEST_DEPS)
 testframe_DEPENDENCIES = $(TEST_DEPS)
+testgeometry_DEPENDENCIES = $(TEST_DEPS)
 testgtk_DEPENDENCIES = $(TEST_DEPS)
 testinput_DEPENDENCIES = $(TEST_DEPS)
 testimage_DEPENDENCIES = $(TEST_DEPS)
@@ -174,8 +176,8 @@ testactions_DEPENDENCIES = $(TEST_DEPS)
 testgrouping_DEPENDENCIES = $(TEST_DEPS)
 testtooltips_DEPENDENCIES = $(TEST_DEPS)
 testvolumebutton_DEPENDENCIES = $(TEST_DEPS)
-testwrapbox_DEPENDENCIES = $(TEST_DEPS)
 testwindows_DEPENDENCIES = $(TEST_DEPS)
+testexpand_DEPENDENCIES = $(TEST_DEPS)
 testexpander_DEPENDENCIES = $(TEST_DEPS)
 
 flicker_LDADD = $(LDADDS)
@@ -201,6 +203,7 @@ testerrors_LDADD = $(LDADDS)
 testfilechooser_LDADD = $(LDADDS)
 testfilechooserbutton_LDADD = $(LDADDS)
 testframe_LDADD = $(LDADDS)
+testgeometry_LDADD = $(LDADDS)
 testgtk_LDADD = $(LDADDS)
 testheightforwidth_LDADD = $(LDADDS)
 testicontheme_LDADD = $(LDADDS)
@@ -245,8 +248,8 @@ testactions_LDADD = $(LDADDS)
 testgrouping_LDADD = $(LDADDS)
 testtooltips_LDADD = $(LDADDS)
 testvolumebutton_LDADD = $(LDADDS)
-testwrapbox_LDADD = $(LDADDS)
 testwindows_LDADD = $(LDADDS)
+testexpand_LDADD = $(LDADDS)
 testexpander_LDADD = $(LDADDS)
 
 testentrycompletion_SOURCES = 	\
@@ -322,6 +325,9 @@ testbuttons_SOURCES = 		\
 testframe_SOURCES = 		\
 	testframe.c
 
+testgeometry_SOURCES = 		\
+	testgeometry.c
+
 testiconview_SOURCES = 		\
 	testiconview.c		\
 	prop-editor.c
@@ -345,9 +351,6 @@ testrecentchoosermenu_SOURCES =	\
 testvolumebutton_SOURCES =	\
 	testvolumebutton.c
 
-testwrapbox_SOURCES =	\
-	testwrapbox.c
-
 testoffscreen_SOURCES = 	\
 	gtkoffscreenbox.c	\
 	gtkoffscreenbox.h	\
@@ -358,6 +361,8 @@ testoffscreenwindow_SOURCES =	\
 
 testwindows_SOURCES = 	\
 	testwindows.c
+
+testexpand_SOURCES = testexpand.c
 
 testexpander_SOURCES = testexpander.c
 

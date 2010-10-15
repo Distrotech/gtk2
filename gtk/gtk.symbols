@@ -804,7 +804,9 @@ gtk_combo_box_get_active_iter
 gtk_combo_box_get_active_text
 gtk_combo_box_get_add_tearoffs
 gtk_combo_box_get_column_span_column
+gtk_combo_box_get_entry_text_column
 gtk_combo_box_get_focus_on_click
+gtk_combo_box_get_has_entry
 gtk_combo_box_get_model
 gtk_combo_box_get_popup_accessible
 gtk_combo_box_get_row_separator_func
@@ -816,6 +818,7 @@ gtk_combo_box_get_wrap_width
 gtk_combo_box_insert_text
 gtk_combo_box_new
 gtk_combo_box_new_text
+gtk_combo_box_new_with_entry
 gtk_combo_box_new_with_model
 gtk_combo_box_popdown
 gtk_combo_box_popup
@@ -826,6 +829,7 @@ gtk_combo_box_set_active
 gtk_combo_box_set_active_iter
 gtk_combo_box_set_add_tearoffs
 gtk_combo_box_set_column_span_column
+gtk_combo_box_set_entry_text_column
 gtk_combo_box_set_focus_on_click
 gtk_combo_box_set_model
 gtk_combo_box_set_row_separator_func
@@ -838,12 +842,14 @@ gtk_combo_box_set_wrap_width
 
 #if IN_HEADER(__GTK_COMBO_BOX_ENTRY_H__)
 #if IN_FILE(__GTK_COMBO_BOX_ENTRY_C__)
+#ifndef GTK_DISABLE_DEPRECATED
 gtk_combo_box_entry_get_text_column
 gtk_combo_box_entry_get_type G_GNUC_CONST
 gtk_combo_box_entry_new
 gtk_combo_box_entry_new_text
 gtk_combo_box_entry_new_with_model
 gtk_combo_box_entry_set_text_column
+#endif
 #endif
 #endif
 
@@ -2966,7 +2972,10 @@ gtk_target_list_ref
 gtk_target_list_remove
 gtk_target_list_unref
 gtk_target_table_new_from_list
+gtk_target_entry_get_type G_GNUC_CONST
 gtk_target_table_free
+gtk_target_entry_new
+gtk_target_entry_copy
 #endif
 #endif
 
@@ -4348,6 +4357,16 @@ gtk_widget_get_preferred_height_for_width
 gtk_widget_get_preferred_size
 gtk_widget_get_preferred_width
 gtk_widget_get_preferred_width_for_height
+gtk_widget_get_hexpand
+gtk_widget_set_hexpand
+gtk_widget_get_hexpand_set
+gtk_widget_set_hexpand_set
+gtk_widget_get_vexpand
+gtk_widget_set_vexpand
+gtk_widget_get_vexpand_set
+gtk_widget_set_vexpand_set
+gtk_widget_queue_compute_expand
+gtk_widget_compute_expand
 #endif
 #endif
 
@@ -4424,11 +4443,13 @@ gtk_window_remove_mnemonic
 gtk_window_reshow_with_initial_size
 gtk_window_resize
 gtk_window_resize_grip_is_visible
+gtk_window_resize_to_geometry
 gtk_window_set_accept_focus
 gtk_window_set_auto_startup_notification
 gtk_window_set_decorated
 gtk_window_set_deletable
 gtk_window_set_default
+gtk_window_set_default_geometry
 gtk_window_set_default_icon
 gtk_window_set_default_icon_from_file
 gtk_window_set_default_icon_list
@@ -4469,33 +4490,6 @@ gtk_window_stick
 gtk_window_unfullscreen
 gtk_window_unmaximize
 gtk_window_unstick
-#endif
-#endif
-
-
-#if IN_HEADER(__GTK_WRAP_BOX_H__)
-#if IN_FILE(__GTK_WRAP_BOX_C__)
-gtk_wrap_allocation_mode_get_type
-gtk_wrap_box_get_allocation_mode
-gtk_wrap_box_get_horizontal_spacing
-gtk_wrap_box_get_minimum_line_children
-gtk_wrap_box_get_natural_line_children
-gtk_wrap_box_get_horizontal_spreading
-gtk_wrap_box_get_vertical_spreading
-gtk_wrap_box_get_type G_GNUC_CONST
-gtk_wrap_box_get_vertical_spacing
-gtk_wrap_box_insert_child
-gtk_wrap_box_new
-gtk_wrap_box_packing_get_type
-gtk_wrap_box_reorder_child
-gtk_wrap_box_set_allocation_mode
-gtk_wrap_box_set_horizontal_spacing
-gtk_wrap_box_set_minimum_line_children
-gtk_wrap_box_set_natural_line_children
-gtk_wrap_box_set_horizontal_spreading
-gtk_wrap_box_set_vertical_spreading
-gtk_wrap_box_set_vertical_spacing
-gtk_wrap_box_spreading_get_type
 #endif
 #endif
 

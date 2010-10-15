@@ -27,14 +27,15 @@
 
 #include "config.h"
 
+#include <cairo-gobject.h>
+
 #include "gdkwindow.h"
 
 #ifdef GDK_WINDOWING_X11
 #include "x11/gdkx.h"           /* For workaround */
 #endif
-#include "math.h"
 
-#include "gdk.h"                /* For gdk_rectangle_union() */
+#include "gdkrectangle.h"
 #include "gdkinternals.h"
 #include "gdkintl.h"
 #include "gdkscreen.h"
@@ -43,6 +44,8 @@
 #include "gdkmarshalers.h"
 #include "gdkscreen.h"
 #include "gdkwindowimpl.h"
+
+#include <math.h>
 
 #undef DEBUG_WINDOW_PRINTING
 
@@ -185,6 +188,7 @@ enum {
   PICK_EMBEDDED_CHILD, /* only called if children are embedded */
   TO_EMBEDDER,
   FROM_EMBEDDER,
+  CREATE_SURFACE,
   LAST_SIGNAL
 };
 
@@ -353,6 +357,18 @@ accumulate_get_window (GSignalInvocationHint *ihint,
   return g_value_get_object (handler_return) == NULL;
 }
 
+static gboolean
+create_surface_accumulator (GSignalInvocationHint *ihint,
+                            GValue                *return_accu,
+                            const GValue          *handler_return,
+                            gpointer               data)
+{
+  g_value_copy (handler_return, return_accu);
+
+  /* Stop on the first non-NULL return value */
+  return g_value_get_boxed (handler_return) == NULL;
+}
+
 static GQuark quark_pointer_window = 0;
 
 static void
@@ -372,6 +388,8 @@ gdk_window_class_init (GdkWindowObjectClass *klass)
   drawable_class->set_cairo_clip = gdk_window_set_cairo_clip;
   drawable_class->get_clip_region = gdk_window_get_clip_region;
   drawable_class->get_visible_region = gdk_window_get_visible_region;
+
+  klass->create_surface = _gdk_offscreen_window_create_surface;
 
   quark_pointer_window = g_quark_from_static_string ("gtk-pointer-window");
 
@@ -411,7 +429,7 @@ gdk_window_class_init (GdkWindowObjectClass *klass)
     g_signal_new (g_intern_static_string ("pick-embedded-child"),
 		  G_OBJECT_CLASS_TYPE (object_class),
 		  G_SIGNAL_RUN_LAST,
-		  0,
+                  G_STRUCT_OFFSET (GdkWindowObjectClass, pick_embedded_child),
 		  accumulate_get_window, NULL,
 		  _gdk_marshal_OBJECT__DOUBLE_DOUBLE,
 		  GDK_TYPE_WINDOW,
@@ -438,7 +456,7 @@ gdk_window_class_init (GdkWindowObjectClass *klass)
     g_signal_new (g_intern_static_string ("to-embedder"),
 		  G_OBJECT_CLASS_TYPE (object_class),
 		  G_SIGNAL_RUN_LAST,
-		  0,
+                  G_STRUCT_OFFSET (GdkWindowObjectClass, to_embedder),
 		  NULL, NULL,
 		  _gdk_marshal_VOID__DOUBLE_DOUBLE_POINTER_POINTER,
 		  G_TYPE_NONE,
@@ -467,7 +485,7 @@ gdk_window_class_init (GdkWindowObjectClass *klass)
     g_signal_new (g_intern_static_string ("from-embedder"),
 		  G_OBJECT_CLASS_TYPE (object_class),
 		  G_SIGNAL_RUN_LAST,
-		  0,
+                  G_STRUCT_OFFSET (GdkWindowObjectClass, from_embedder),
 		  NULL, NULL,
 		  _gdk_marshal_VOID__DOUBLE_DOUBLE_POINTER_POINTER,
 		  G_TYPE_NONE,
@@ -476,6 +494,39 @@ gdk_window_class_init (GdkWindowObjectClass *klass)
 		  G_TYPE_DOUBLE,
 		  G_TYPE_POINTER,
 		  G_TYPE_POINTER);
+
+  /**
+   * GdkWindow::create-surface:
+   * @window: the offscreen window on which the signal is emitted
+   * @width: the width of the offscreen surface to create
+   * @height: the height of the offscreen surface to create
+   *
+   * The ::create-surface signal is emitted when an offscreen window
+   * needs its surface (re)created, which happens either when the the
+   * window is first drawn to, or when the window is being
+   * resized. The first signal handler that returns a non-%NULL
+   * surface will stop any further signal emission, and its surface
+   * will be used.
+   *
+   * Note that it is not possible to access the window's previous
+   * surface from within any callback of this signal. Calling
+   * gdk_offscreen_window_get_surface() will lead to a crash.
+   *
+   * Returns: the newly created #cairo_surface_t for the offscreen window
+   *
+   * Since: 3.0
+   */
+  signals[CREATE_SURFACE] =
+    g_signal_new (g_intern_static_string ("create-surface"),
+                  G_OBJECT_CLASS_TYPE (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  G_STRUCT_OFFSET (GdkWindowObjectClass, create_surface),
+                  create_surface_accumulator, NULL,
+                  _gdk_marshal_BOXED__INT_INT,
+                  CAIRO_GOBJECT_TYPE_SURFACE,
+                  2,
+                  G_TYPE_INT,
+                  G_TYPE_INT);
 }
 
 static void
@@ -1379,6 +1430,9 @@ gdk_window_new (GdkWindow     *parent,
   if (private->parent)
     private->parent->children = g_list_prepend (private->parent->children, window);
 
+  private->device_cursor = g_hash_table_new_full (NULL, NULL, NULL,
+                                                  (GDestroyNotify) gdk_cursor_unref);
+
   native = _gdk_native_windows; /* Default */
   if (private->parent->window_type == GDK_WINDOW_ROOT)
     native = TRUE; /* Always use native windows for toplevels */
@@ -1416,9 +1470,6 @@ gdk_window_new (GdkWindow     *parent,
   gdk_window_set_cursor (window, ((attributes_mask & GDK_WA_CURSOR) ?
 				  (attributes->cursor) :
 				  NULL));
-
-  private->device_cursor = g_hash_table_new_full (NULL, NULL, NULL,
-                                                  (GDestroyNotify) gdk_cursor_unref);
 
   device_manager = gdk_display_get_device_manager (gdk_window_get_display (parent));
   g_signal_connect (device_manager, "device-removed",
@@ -5018,6 +5069,9 @@ gdk_window_get_device_position (GdkWindow       *window,
 
   g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
   g_return_val_if_fail (GDK_IS_DEVICE (device), NULL);
+
+  tmp_x = 0;
+  tmp_y = 0;
 
   display = gdk_window_get_display (window);
   child = display->device_hooks->window_get_device_position (display, device, window,

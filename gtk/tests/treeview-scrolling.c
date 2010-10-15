@@ -26,6 +26,7 @@
 
 #include <gtk/gtk.h>
 #include <unistd.h>
+#include <math.h>
 
 #define VIEW_WIDTH 320
 #define VIEW_HEIGHT 240
@@ -40,6 +41,14 @@
  *     chosen paths).
  *   - Convert to proper GTK+ coding style.
  *   - Briefly test scrolling in tree stores as well.
+ *
+ * Important:
+ *   - For tests with "mixed height" models, you must ensure that
+ *     there are only two heights used in total and that the rows with
+ *     height A and B are strictly alternating.  The model creation
+ *     functions already do this for you, but take this into account
+ *     when you write a unit test that adds rows to such a created
+ *     model, you must follow this rule otherwise things will break.
  */
 
 
@@ -109,6 +118,9 @@ scroll_fixture_setup (ScrollFixture *fixture,
 	fixture->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
 	sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sw),
+					GTK_POLICY_NEVER,
+					GTK_POLICY_ALWAYS);
 	gtk_container_add (GTK_CONTAINER (fixture->window), sw);
 
 	fixture->tree_view = gtk_tree_view_new_with_model (model);
@@ -207,6 +219,40 @@ scroll_fixture_tree_setup (ScrollFixture *fixture,
 }
 
 static void
+scroll_fixture_mixed_tree_setup (ScrollFixture *fixture,
+			         gconstpointer   test_data)
+{
+	GtkTreeStore *store;
+	GtkTreeIter iter, child;
+	int i;
+
+	store = gtk_tree_store_new (1, G_TYPE_STRING);
+
+	gtk_tree_store_append (store, &iter, NULL);
+	gtk_tree_store_set (store, &iter, 0, "Root\nnode", -1);
+
+	for (i = 0; i < 5; i++) {
+		gtk_tree_store_append (store, &child, &iter);
+		if (i % 2 != 0)
+			gtk_tree_store_set (store, &child, 0, "Child node", -1);
+		else
+			gtk_tree_store_set (store, &child,
+					    0, "Child\nnode", -1);
+	}
+
+	for (i = 0; i < 5; i++) {
+		gtk_tree_store_append (store, &iter, NULL);
+		if (i % 2 == 0)
+			gtk_tree_store_set (store, &iter, 0, "Other node", -1);
+		else
+			gtk_tree_store_set (store, &iter, 0, "Other\nnode", -1);
+	}
+
+	/* The teardown will also destroy the model */
+	scroll_fixture_setup (fixture, GTK_TREE_MODEL (store), test_data);
+}
+
+static void
 scroll_fixture_teardown (ScrollFixture *fixture,
 			 gconstpointer  test_data)
 {
@@ -250,7 +296,7 @@ get_row_start_for_index (GtkTreeView *tree_view, int index)
 static enum Pos
 get_pos_from_path (GtkTreeView   *tree_view,
 		   GtkTreePath   *path,
-		   gint           row_height,
+		   gdouble        row_height,
 		   GtkAdjustment *vadj)
 {
 	int row_start;
@@ -272,8 +318,8 @@ test_position_with_align (GtkTreeView  *tree_view,
 			  enum Pos      pos,
 			  gint          row_y,
 			  gint          row_start,
-			  gint          row_height,
-			  gfloat        row_align)
+			  gdouble       row_height,
+			  gdouble       row_align)
 {
 	gboolean passed = TRUE;
 	GtkAdjustment *vadj = gtk_tree_view_get_vadjustment (tree_view);
@@ -333,7 +379,8 @@ test_position_with_align (GtkTreeView  *tree_view,
 			 *      (ie. the row's center is at the
 			 *       center of the view).
 			 */
-			if (row_y != (int)(vadj->page_size / 2 - row_height / 2))
+			gdouble middle = vadj->page_size / 2 - row_height / 2;
+			if (row_y != ceil (middle) && row_y != floor (middle))
 				passed = FALSE;
 		}
 		break;
@@ -372,8 +419,8 @@ test_position_with_align (GtkTreeView  *tree_view,
 
 static gboolean
 test_position_without_align (GtkTreeView *tree_view,
-			     gint         row_start,
-			     gint         row_height)
+			     gdouble      row_start,
+			     gdouble      row_height)
 {
 	GtkAdjustment *vadj = gtk_tree_view_get_vadjustment (tree_view);
 
@@ -392,8 +439,8 @@ static void
 test_position (GtkTreeView *tree_view,
 	       GtkTreePath *path,
 	       gboolean     use_align,
-	       gfloat       row_align,
-	       gfloat       col_align)
+	       gdouble      row_align,
+	       gdouble      col_align)
 {
 	gint pos;
 	gchar *path_str;
@@ -453,7 +500,7 @@ static void
 scroll (ScrollFixture *fixture,
 	GtkTreePath   *path,
 	gboolean       use_align,
-	gfloat         row_align)
+	gdouble        row_align)
 {
 	gtk_tree_view_set_cursor (GTK_TREE_VIEW (fixture->tree_view), path,
 				  NULL, FALSE);
@@ -519,7 +566,7 @@ static void
 scroll_after_realize (ScrollFixture *fixture,
 		      GtkTreePath   *path,
 		      gboolean       use_align,
-		      gfloat         row_align)
+		      gdouble        row_align)
 {
 	gtk_widget_show_all (fixture->window);
 
@@ -588,7 +635,7 @@ static void
 scroll_both_realize (ScrollFixture *fixture,
 		     GtkTreePath   *path,
 		     gboolean       use_align,
-		     gfloat         row_align)
+		     gdouble        row_align)
 {
 	GtkTreePath *end;
 
@@ -677,9 +724,19 @@ create_new_row (GtkListStore *store,
 			gtk_list_store_prepend (store, iter);
 			break;
 
+                case 3:
+			/* Add a row in the middle of the visible area */
+			gtk_list_store_insert (store, iter, 3);
+			break;
+
 		case 4:
 			/* Add a row in the middle of the visible area */
 			gtk_list_store_insert (store, iter, 4);
+			break;
+
+                case 5:
+			/* Add a row which is not completely visible */
+			gtk_list_store_insert (store, iter, 5);
 			break;
 
 		case 8:
@@ -946,6 +1003,212 @@ test_bug359231 (void)
 	scroll_fixture_teardown (fixture, NULL);
 }
 
+/* Test for GNOME bugzilla bug 93584.  We add 150 rows to an existing
+ * small model, and scroll to one of these with alignment.
+ */
+static void
+test_bug93584 (ScrollFixture *fixture,
+	       gconstpointer  test_data)
+{
+	int row, i;
+	GtkTreeStore *store;
+	GtkTreePath *path;
+
+	g_test_bug ("93584");
+
+	/* Mimic state as in original test case */
+	g_signal_connect (G_OBJECT (fixture->tree_view), "realize",
+			  G_CALLBACK (gtk_tree_view_expand_all), NULL);
+	gtk_widget_show_all (fixture->window);
+
+	store = GTK_TREE_STORE (gtk_tree_view_get_model (GTK_TREE_VIEW (fixture->tree_view)));
+
+	/* Add 150 rows */
+	for (i = 0; i < 150; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_store_append (store, &iter, NULL);
+		gtk_tree_store_set (store, &iter, 0, "Row", -1);
+	}
+
+	row = gtk_tree_model_iter_n_children (GTK_TREE_MODEL (store), NULL);
+	row -= 20;
+
+	path = gtk_tree_path_new_from_indices (row, -1);
+	scroll (fixture, path, TRUE, 0.5);
+	gtk_tree_path_free (path);
+}
+
+/* GNOME bugzilla bug 111500.  Expand a row and immediately scroll
+ * to its first child.  Make sure that expansion happens in currently
+ * invisible area.
+ */
+static void
+test_bug111500 (ScrollFixture *fixture,
+		gconstpointer  test_data)
+{
+	int i, len;
+	GtkTreeStore *store;
+	GtkTreeIter parent;
+	GtkTreePath *path;
+
+	g_test_bug ("111500");
+
+	gtk_widget_show_all (fixture->window);
+
+	/* Make sure all events have been processed and the window
+	 * is visible.
+	 */
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+
+	/* Further prepare model */
+	store = GTK_TREE_STORE (gtk_tree_view_get_model (GTK_TREE_VIEW (fixture->tree_view)));
+
+	for (i = 0; i < 15; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_store_append (store, &iter, NULL);
+		gtk_tree_store_set (store, &iter, 0, "Other node", -1);
+	}
+
+	len = gtk_tree_model_iter_n_children (GTK_TREE_MODEL (store), NULL);
+	gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (store), &parent,
+				       NULL, len - 1);
+
+	for (i = 0; i < 5; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_store_append (store, &iter, &parent);
+		gtk_tree_store_set (store, &iter, 0, "Row", -1);
+	}
+
+	path = gtk_tree_path_new_from_indices (len - 1, -1);
+	gtk_tree_view_expand_row (GTK_TREE_VIEW (fixture->tree_view),
+				  path, FALSE);
+
+	gtk_tree_path_down (path);
+
+	scroll (fixture, path, TRUE, 0.5);
+	gtk_tree_path_free (path);
+}
+
+static void
+test_bug111500_mixed (ScrollFixture *fixture,
+		      gconstpointer  test_data)
+{
+	int i, len;
+	GtkTreeStore *store;
+	GtkTreeIter parent;
+	GtkTreePath *path;
+
+	g_test_bug ("111500");
+
+	gtk_widget_show_all (fixture->window);
+
+	/* Make sure all events have been processed and the window
+	 * is visible.
+	 */
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+
+	/* Further prepare model */
+	store = GTK_TREE_STORE (gtk_tree_view_get_model (GTK_TREE_VIEW (fixture->tree_view)));
+
+	for (i = 0; i < 15; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_store_append (store, &iter, NULL);
+		if (i % 2 == 0)
+			gtk_tree_store_set (store, &iter, 0, "Other node", -1);
+		else
+			gtk_tree_store_set (store, &iter, 0, "Other\nnode", -1);
+	}
+
+	len = gtk_tree_model_iter_n_children (GTK_TREE_MODEL (store), NULL);
+	gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (store), &parent,
+				       NULL, len - 1);
+
+	for (i = 0; i < 5; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_store_append (store, &iter, &parent);
+		if (i % 2 != 0)
+			gtk_tree_store_set (store, &iter, 0, "Row", -1);
+		else
+			gtk_tree_store_set (store, &iter, 0, "Row\nRow", -1);
+	}
+
+	path = gtk_tree_path_new_from_indices (len - 1, -1);
+	gtk_tree_view_expand_row (GTK_TREE_VIEW (fixture->tree_view),
+				  path, FALSE);
+
+	gtk_tree_path_down (path);
+
+	scroll (fixture, path, TRUE, 0.5);
+	gtk_tree_path_free (path);
+}
+
+/* Test for GNOME bugzilla bug 163214.  Invalidate a couple of rows,
+ * then scroll to one of these.
+ */
+static void
+test_bug163214 (ScrollFixture *fixture,
+		gconstpointer  test_data)
+{
+	int i;
+	GtkListStore *store;
+	GtkTreePath *path;
+
+	g_test_bug ("163214");
+
+	gtk_widget_show_all (fixture->window);
+
+	/* Make sure all events have been processed and the window
+	 * is visible.
+	 */
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+
+	store = GTK_LIST_STORE (gtk_tree_view_get_model (GTK_TREE_VIEW (fixture->tree_view)));
+
+	/* Invalidate a page of rows */
+	for (i = 100; i < 110; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (store), &iter,
+					       NULL, i);
+		gtk_list_store_set (store, &iter, 0, "Row", -1);
+	}
+
+	/* Then scroll to that page. */
+	path = gtk_tree_path_new_from_indices (105, -1);
+	scroll (fixture, path, TRUE, 0.5);
+	gtk_tree_path_free (path);
+
+	/* Make sure all events have been processed and the window
+	 * is visible.
+	 */
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+
+	store = GTK_LIST_STORE (gtk_tree_view_get_model (GTK_TREE_VIEW (fixture->tree_view)));
+
+	/* Invalidate a page of rows */
+	for (i = 300; i < 310; i++) {
+		GtkTreeIter iter;
+
+		gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (store), &iter,
+					       NULL, i);
+		gtk_list_store_set (store, &iter, 0, "Row", -1);
+	}
+
+	/* Then scroll to the first row */
+	path = gtk_tree_path_new_from_indices (0, -1);
+	scroll (fixture, path, TRUE, 0.5);
+	gtk_tree_path_free (path);
+}
+
 /* Infrastructure for automatically adding tests */
 enum
 {
@@ -973,7 +1236,7 @@ test_type_string (int test_type)
 
 static char *
 align_string (gboolean use_align,
-	      gfloat   row_align)
+	      gdouble  row_align)
 {
 	char *ret;
 
@@ -989,7 +1252,7 @@ add_test (const char *path,
 	  gboolean    mixed,
 	  int         test_type,
 	  gboolean    use_align,
-	  gfloat      row_align,
+	  gdouble     row_align,
 	  void (* setup) (ScrollFixture *, gconstpointer),
 	  void (* scroll_func) (ScrollFixture *, gconstpointer))
 {
@@ -1014,7 +1277,7 @@ static void
 add_tests (gboolean mixed,
 	   int test_type,
 	   gboolean use_align,
-	   gfloat row_align,
+	   gdouble  row_align,
 	   void (*scroll_func) (ScrollFixture *, gconstpointer))
 {
 	void (* setup) (ScrollFixture *, gconstpointer);
@@ -1181,6 +1444,43 @@ main (int argc, char **argv)
 		    scroll_new_row_tree,
 		    scroll_fixture_teardown);
 
+	/* Test scrolling to a newly created row, in a mixed height model */
+	g_test_add ("/TreeView/scrolling/new-row-mixed/path-0", ScrollFixture,
+		    GINT_TO_POINTER (0),
+		    scroll_fixture_mixed_setup,
+		    scroll_new_row,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/new-row-mixed/path-3", ScrollFixture,
+		    GINT_TO_POINTER (3),
+		    scroll_fixture_mixed_setup,
+		    scroll_new_row,
+		    scroll_fixture_teardown);
+	/* We scroll to 8 to test a partial visible row.  The 8 is
+	 * based on my font setting of "Vera Sans 11" and
+	 * the separators set to 0.  (This should be made dynamic; FIXME).
+	 */
+	g_test_add ("/TreeView/scrolling/new-row-mixed/path-5", ScrollFixture,
+		    GINT_TO_POINTER (5),
+		    scroll_fixture_mixed_setup,
+		    scroll_new_row,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/new-row-mixed/path-500", ScrollFixture,
+		    GINT_TO_POINTER (500),
+		    scroll_fixture_mixed_setup,
+		    scroll_new_row,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/new-row-mixed/path-999", ScrollFixture,
+		    GINT_TO_POINTER (999),
+		    scroll_fixture_mixed_setup,
+		    scroll_new_row,
+		    scroll_fixture_teardown);
+
+	g_test_add ("/TreeView/scrolling/new-row-mixed/tree", ScrollFixture,
+		    NULL,
+		    scroll_fixture_mixed_tree_setup,
+		    scroll_new_row_tree,
+		    scroll_fixture_teardown);
+
 	/* Misc. tests */
 	g_test_add ("/TreeView/scrolling/specific/bug-316689",
 			ScrollFixture, NULL,
@@ -1188,6 +1488,22 @@ main (int argc, char **argv)
 		    scroll_fixture_teardown);
 	g_test_add_func ("/TreeView/scrolling/specific/bug-359231",
 			test_bug359231);
+	g_test_add ("/TreeView/scrolling/specific/bug-93584",
+		    ScrollFixture, NULL,
+		    scroll_fixture_tree_setup, test_bug93584,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/specific/bug-111500",
+		    ScrollFixture, NULL,
+		    scroll_fixture_tree_setup, test_bug111500,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/specific/bug-111500-mixed",
+		    ScrollFixture, NULL,
+		    scroll_fixture_mixed_tree_setup, test_bug111500_mixed,
+		    scroll_fixture_teardown);
+	g_test_add ("/TreeView/scrolling/specific/bug-163214",
+		    ScrollFixture, NULL,
+		    scroll_fixture_constant_setup, test_bug163214,
+		    scroll_fixture_teardown);
 
 	return g_test_run ();
 }
