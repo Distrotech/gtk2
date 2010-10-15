@@ -249,6 +249,8 @@ get_keyboard_modifiers_from_ns_event (NSEvent *nsevent)
     modifiers |= GDK_CONTROL_MASK;
   if (nsflags & NSCommandKeyMask)
     modifiers |= GDK_MOD1_MASK;
+  if (nsflags & NSAlternateKeyMask)
+      modifiers |= GDK_MOD5_MASK;
 
   return modifiers;
 }
