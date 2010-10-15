@@ -54,7 +54,7 @@ INCLUDES =						\
 	-DGTK_PRINT_BACKEND_ENABLE_UNSUPPORTED		\
 	$(GTK_DEBUG_FLAGS)				\
 	$(GTK_DEP_CFLAGS)				\
-	$(gtk_clipboard_dnd_c_sources_CFLAGS)		\
+	$(libgtk_quartz_2_0_la_CFLAGS)			\
 	$(INCLUDED_IMMODULE_DEFINE)
 
 gtarget=$(gdktarget)
@@ -672,6 +672,7 @@ gtk_use_win32_c_sources = \
 	gtkmountoperation-stub.c
 gtk_use_quartz_c_sources =	\
 	gtksearchenginequartz.c	\
+	gtkquartz.c		\
 	gtkplug-stub.c		\
 	gtksocket-stub.c	\
 	gtkmountoperation-stub.c
@@ -679,7 +680,7 @@ gtk_use_stub_c_sources = \
 	gtkplug-stub.c   \
 	gtksocket-stub.c \
 	gtkmountoperation-stub.c
-gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_quartz_c_sources) $(gtk_use_stub_c_sources)
+gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_source) $(gtk_use_stub_c_sources)
 if USE_X11
 gtk_private_h_sources += gtkxembed.h gtktrayicon.h xembed.h
 gtk_c_sources += $(gtk_use_x11_c_sources)
@@ -689,9 +690,9 @@ gtk_private_h_sources += gtkwin32embed.h gtkwin32embedwidget.h
 gtk_c_sources += $(gtk_use_win32_c_sources)
 else
 if USE_QUARTZ
+libgtk_quartz_2_0_la_CFLAGS = "-xobjective-c"
 gtk_private_h_sources += gtksearchenginequartz.h
 gtk_c_sources += $(gtk_use_quartz_c_sources)
-gtk_use_quartz_c_sources_CFLAGS = "-xobjective-c"
 else
 gtk_c_sources += $(gtk_use_stub_c_sources)
 endif
@@ -699,9 +700,8 @@ endif
 endif
 
 if USE_QUARTZ
-gtk_clipboard_dnd_c_sources = gtkclipboard-quartz.c gtkdnd-quartz.c gtkquartz.c
+gtk_clipboard_dnd_c_sources = gtkclipboard-quartz.c gtkdnd-quartz.c
 gtk_clipboard_dnd_h_sources = gtkquartz.h
-gtk_clipboard_dnd_c_sources_CFLAGS = "-xobjective-c"
 else
 gtk_clipboard_dnd_c_sources = gtkclipboard.c gtkdnd.c
 gtk_clipboard_dnd_c_sources_CFLAGS =
