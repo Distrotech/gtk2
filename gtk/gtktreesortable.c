@@ -24,6 +24,18 @@
 #include "gtkintl.h"
 
 
+/**
+ * SECTION:gtktreesortable
+ * @Short_description: The interface for sortable models used by GtkTreeView
+ * @Title: GtkTreeSortable
+ * @See_also:#GtkTreeModel, #GtkTreeView
+ *
+ * #GtkTreeSortable is an interface to be implemented by tree models which
+ * support sorting. The #GtkTreeView uses the methods provided by this interface
+ * to sort the model.
+ */
+
+
 static void gtk_tree_sortable_base_init (gpointer g_class);
 
 GType
@@ -99,8 +111,8 @@ gtk_tree_sortable_sort_column_changed (GtkTreeSortable *sortable)
 /**
  * gtk_tree_sortable_get_sort_column_id:
  * @sortable: A #GtkTreeSortable
- * @sort_column_id: The sort column id to be filled in
- * @order: The #GtkSortType to be filled in
+ * @sort_column_id: (out): The sort column id to be filled in
+ * @order: (out): The #GtkSortType to be filled in
  * 
  * Fills in @sort_column_id and @order with the current sort column and the
  * order. It returns %TRUE unless the @sort_column_id is 

@@ -28,6 +28,7 @@
 
 #include "gtkcheckbutton.h"
 
+#include "gtkbuttonprivate.h"
 #include "gtklabel.h"
 
 #include "gtkprivate.h"
@@ -38,8 +39,12 @@
 #define INDICATOR_SPACING  2
 
 
-static void gtk_check_button_size_request        (GtkWidget           *widget,
-						  GtkRequisition      *requisition);
+static void gtk_check_button_get_preferred_width  (GtkWidget          *widget,
+                                                   gint               *minimum,
+                                                   gint               *natural);
+static void gtk_check_button_get_preferred_height (GtkWidget          *widget,
+                                                   gint               *minimum,
+                                                   gint               *natural);
 static void gtk_check_button_size_allocate       (GtkWidget           *widget,
 						  GtkAllocation       *allocation);
 static gboolean gtk_check_button_draw            (GtkWidget           *widget,
@@ -57,10 +62,11 @@ static void
 gtk_check_button_class_init (GtkCheckButtonClass *class)
 {
   GtkWidgetClass *widget_class;
-  
+
   widget_class = (GtkWidgetClass*) class;
-  
-  widget_class->size_request = gtk_check_button_size_request;
+
+  widget_class->get_preferred_width = gtk_check_button_get_preferred_width;
+  widget_class->get_preferred_height = gtk_check_button_get_preferred_height;
   widget_class->size_allocate = gtk_check_button_size_allocate;
   widget_class->draw = gtk_check_button_draw;
 
@@ -89,8 +95,7 @@ gtk_check_button_init (GtkCheckButton *check_button)
 {
   gtk_widget_set_has_window (GTK_WIDGET (check_button), FALSE);
   gtk_widget_set_receives_default (GTK_WIDGET (check_button), FALSE);
-  GTK_TOGGLE_BUTTON (check_button)->draw_indicator = TRUE;
-  GTK_BUTTON (check_button)->depress_on_activate = FALSE;
+  gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON (check_button), TRUE);
 }
 
 GtkWidget*
@@ -196,12 +201,59 @@ _gtk_check_button_get_props (GtkCheckButton *check_button,
 }
 
 static void
-gtk_check_button_size_request (GtkWidget      *widget,
-			       GtkRequisition *requisition)
+gtk_check_button_get_preferred_width (GtkWidget *widget,
+                                      gint      *minimum,
+                                      gint      *natural)
 {
   GtkToggleButton *toggle_button = GTK_TOGGLE_BUTTON (widget);
   
-  if (toggle_button->draw_indicator)
+  if (gtk_toggle_button_get_mode (toggle_button))
+    {
+      GtkWidget *child;
+      gint indicator_size;
+      gint indicator_spacing;
+      gint focus_width;
+      gint focus_pad;
+      guint border_width;
+
+      border_width = gtk_container_get_border_width (GTK_CONTAINER (widget));
+
+      gtk_widget_style_get (GTK_WIDGET (widget),
+                            "focus-line-width", &focus_width,
+                            "focus-padding", &focus_pad,
+                            NULL);
+      *minimum = 2 * border_width;
+      *natural = 2 * border_width;
+
+      _gtk_check_button_get_props (GTK_CHECK_BUTTON (widget),
+                                   &indicator_size, &indicator_spacing);
+
+      child = gtk_bin_get_child (GTK_BIN (widget));
+      if (child && gtk_widget_get_visible (child))
+        {
+          gint child_min, child_nat;
+
+          gtk_widget_get_preferred_width (child, &child_min, &child_nat);
+
+          *minimum += child_min + indicator_spacing;
+          *natural += child_nat + indicator_spacing;
+        }
+
+      *minimum += (indicator_size + indicator_spacing * 2 + 2 * (focus_width + focus_pad));
+      *natural += (indicator_size + indicator_spacing * 2 + 2 * (focus_width + focus_pad));
+    }
+  else
+    GTK_WIDGET_CLASS (gtk_check_button_parent_class)->get_preferred_width (widget, minimum, natural);
+}
+
+static void
+gtk_check_button_get_preferred_height (GtkWidget *widget,
+                                       gint      *minimum,
+                                       gint      *natural)
+{
+  GtkToggleButton *toggle_button = GTK_TOGGLE_BUTTON (widget);
+
+  if (gtk_toggle_button_get_mode (toggle_button))
     {
       GtkWidget *child;
       gint temp;
@@ -214,34 +266,33 @@ gtk_check_button_size_request (GtkWidget      *widget,
       border_width = gtk_container_get_border_width (GTK_CONTAINER (widget));
 
       gtk_widget_style_get (GTK_WIDGET (widget),
-			    "focus-line-width", &focus_width,
-			    "focus-padding", &focus_pad,
-			    NULL);
- 
-      requisition->width = border_width * 2;
-      requisition->height = border_width * 2;
+                            "focus-line-width", &focus_width,
+                            "focus-padding", &focus_pad,
+                            NULL);
+
+      *minimum = border_width * 2;
+      *natural = border_width * 2;
 
       _gtk_check_button_get_props (GTK_CHECK_BUTTON (widget),
- 				   &indicator_size, &indicator_spacing);
-      
+                                   &indicator_size, &indicator_spacing);
+
       child = gtk_bin_get_child (GTK_BIN (widget));
       if (child && gtk_widget_get_visible (child))
-	{
-	  GtkRequisition child_requisition;
+        {
+          gint child_min, child_nat;
 
-          gtk_widget_get_preferred_size (child, &child_requisition, NULL);
+          gtk_widget_get_preferred_height (child, &child_min, &child_nat);
 
-	  requisition->width += child_requisition.width + indicator_spacing;
-	  requisition->height += child_requisition.height;
-	}
-      
-      requisition->width += (indicator_size + indicator_spacing * 2 + 2 * (focus_width + focus_pad));
-      
+          *minimum += child_min;
+          *natural += child_nat;
+        }
+
       temp = indicator_size + indicator_spacing * 2;
-      requisition->height = MAX (requisition->height, temp) + 2 * (focus_width + focus_pad);
+      *minimum = MAX (*minimum, temp) + 2 * (focus_width + focus_pad);
+      *natural = MAX (*natural, temp) + 2 * (focus_width + focus_pad);
     }
   else
-    GTK_WIDGET_CLASS (gtk_check_button_parent_class)->size_request (widget, requisition);
+    GTK_WIDGET_CLASS (gtk_check_button_parent_class)->get_preferred_height (widget, minimum, natural);
 }
 
 static void
@@ -257,7 +308,7 @@ gtk_check_button_size_allocate (GtkWidget     *widget,
   check_button = GTK_CHECK_BUTTON (widget);
   toggle_button = GTK_TOGGLE_BUTTON (widget);
 
-  if (toggle_button->draw_indicator)
+  if (gtk_toggle_button_get_mode (toggle_button))
     {
       GtkWidget *child;
       gint indicator_size;
@@ -274,7 +325,7 @@ gtk_check_button_size_allocate (GtkWidget     *widget,
       gtk_widget_set_allocation (widget, allocation);
 
       if (gtk_widget_get_realized (widget))
-	gdk_window_move_resize (button->event_window,
+	gdk_window_move_resize (gtk_button_get_event_window (button),
 				allocation->x, allocation->y,
 				allocation->width, allocation->height);
 
@@ -321,8 +372,8 @@ gtk_check_button_draw (GtkWidget *widget,
   
   toggle_button = GTK_TOGGLE_BUTTON (widget);
   bin = GTK_BIN (widget);
-  
-  if (toggle_button->draw_indicator)
+
+  if (gtk_toggle_button_get_mode (toggle_button))
     {
       gtk_check_button_paint (widget, cr);
 
@@ -395,16 +446,16 @@ gtk_real_check_button_draw_indicator (GtkCheckButton *check_button,
   if (!interior_focus || !(child && gtk_widget_get_visible (child)))
     x += focus_width + focus_pad;      
 
-  if (toggle_button->inconsistent)
+  if (gtk_toggle_button_get_inconsistent (toggle_button))
     shadow_type = GTK_SHADOW_ETCHED_IN;
-  else if (toggle_button->active)
+  else if (gtk_toggle_button_get_active (toggle_button))
     shadow_type = GTK_SHADOW_IN;
   else
     shadow_type = GTK_SHADOW_OUT;
 
-  if (button->activate_timeout || (button->button_down && button->in_button))
+  if (button->priv->activate_timeout || (button->priv->button_down && button->priv->in_button))
     state_type = GTK_STATE_ACTIVE;
-  else if (button->in_button)
+  else if (button->priv->in_button)
     state_type = GTK_STATE_PRELIGHT;
   else if (!gtk_widget_is_sensitive (widget))
     state_type = GTK_STATE_INSENSITIVE;

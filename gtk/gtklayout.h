@@ -58,17 +58,13 @@ struct _GtkLayout
 {
   GtkContainer container;
 
-  /* <private> */
+  /*< private >*/
   GtkLayoutPrivate *priv;
 };
 
 struct _GtkLayoutClass
 {
   GtkContainerClass parent_class;
-
-  void  (*set_scroll_adjustments)   (GtkLayout	    *layout,
-				     GtkAdjustment  *hadjustment,
-				     GtkAdjustment  *vadjustment);
 
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
@@ -98,12 +94,16 @@ void           gtk_layout_get_size        (GtkLayout     *layout,
 					   guint         *width,
 					   guint         *height);
 
+#if !defined (GTK_DISABLE_DEPRECATED) || defined (GTK_COMPILATION)
+
 GtkAdjustment* gtk_layout_get_hadjustment (GtkLayout     *layout);
 GtkAdjustment* gtk_layout_get_vadjustment (GtkLayout     *layout);
 void           gtk_layout_set_hadjustment (GtkLayout     *layout,
 					   GtkAdjustment *adjustment);
 void           gtk_layout_set_vadjustment (GtkLayout     *layout,
 					   GtkAdjustment *adjustment);
+
+#endif
 
 G_END_DECLS
 

@@ -372,18 +372,11 @@ combo_box_get (GtkWidget *combo)
   gchar *value;
   GtkTreeIter iter;
 
-  if (gtk_combo_box_get_has_entry (GTK_COMBO_BOX (combo)))
-    {
-      value = gtk_combo_box_get_active_text(GTK_COMBO_BOX (combo));
-    }
-  else
-    {
-      model = gtk_combo_box_get_model (GTK_COMBO_BOX (combo));
+  model = gtk_combo_box_get_model (GTK_COMBO_BOX (combo));
 
-      value = NULL;
-      if (gtk_combo_box_get_active_iter (GTK_COMBO_BOX (combo), &iter))
-         gtk_tree_model_get (model, &iter, VALUE_COLUMN, &value, -1);
-     }
+  value = NULL;
+  if (gtk_combo_box_get_active_iter (GTK_COMBO_BOX (combo), &iter))
+     gtk_tree_model_get (model, &iter, VALUE_COLUMN, &value, -1);
 
   return value;
 }
@@ -746,7 +739,7 @@ construct_widgets (GtkPrinterOptionWidget *widget)
 
     case GTK_PRINTER_OPTION_TYPE_ALTERNATIVE:
       group = NULL;
-      priv->box = gtk_hbox_new (FALSE, 12);
+      priv->box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
       gtk_widget_show (priv->box);
       gtk_box_pack_start (GTK_BOX (widget), priv->box, TRUE, TRUE, 0);
       for (i = 0; i < source->num_choices; i++)

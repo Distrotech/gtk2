@@ -61,12 +61,17 @@ struct _GtkBox
 struct _GtkBoxClass
 {
   GtkContainerClass parent_class;
+
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 
 GType       gtk_box_get_type            (void) G_GNUC_CONST;
 GtkWidget*  gtk_box_new                 (GtkOrientation  orientation,
-                                         gboolean        homogeneous,
                                          gint            spacing);
 
 void        gtk_box_pack_start          (GtkBox         *box,

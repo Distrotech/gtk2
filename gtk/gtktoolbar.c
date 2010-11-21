@@ -186,8 +186,13 @@ static gint       gtk_toolbar_draw                 (GtkWidget           *widget,
                                                     cairo_t             *cr);
 static void       gtk_toolbar_realize              (GtkWidget           *widget);
 static void       gtk_toolbar_unrealize            (GtkWidget           *widget);
-static void       gtk_toolbar_size_request         (GtkWidget           *widget,
-						    GtkRequisition      *requisition);
+static void       gtk_toolbar_get_preferred_width  (GtkWidget           *widget,
+                                                    gint                *minimum,
+                                                    gint                *natural);
+static void       gtk_toolbar_get_preferred_height (GtkWidget           *widget,
+                                                    gint                *minimum,
+                                                    gint                *natural);
+
 static void       gtk_toolbar_size_allocate        (GtkWidget           *widget,
 						    GtkAllocation       *allocation);
 static void       gtk_toolbar_style_set            (GtkWidget           *widget,
@@ -212,7 +217,6 @@ static void       gtk_toolbar_get_child_property   (GtkContainer        *contain
 						    GParamSpec          *pspec);
 static void       gtk_toolbar_finalize             (GObject             *object);
 static void       gtk_toolbar_show_all             (GtkWidget           *widget);
-static void       gtk_toolbar_hide_all             (GtkWidget           *widget);
 static void       gtk_toolbar_add                  (GtkContainer        *container,
 						    GtkWidget           *widget);
 static void       gtk_toolbar_remove               (GtkContainer        *container,
@@ -296,7 +300,6 @@ static GtkWidget *     toolbar_content_retrieve_menu_item   (ToolbarContent     
 static gboolean        toolbar_content_has_proxy_menu_item  (ToolbarContent	 *content);
 static gboolean        toolbar_content_is_separator         (ToolbarContent      *content);
 static void            toolbar_content_show_all             (ToolbarContent      *content);
-static void            toolbar_content_hide_all             (ToolbarContent      *content);
 static void	       toolbar_content_set_expand	    (ToolbarContent      *content,
 							     gboolean		  expand);
 
@@ -365,7 +368,8 @@ gtk_toolbar_class_init (GtkToolbarClass *klass)
   
   widget_class->button_press_event = gtk_toolbar_button_press;
   widget_class->draw = gtk_toolbar_draw;
-  widget_class->size_request = gtk_toolbar_size_request;
+  widget_class->get_preferred_width = gtk_toolbar_get_preferred_width;
+  widget_class->get_preferred_height = gtk_toolbar_get_preferred_height;
   widget_class->size_allocate = gtk_toolbar_size_allocate;
   widget_class->style_set = gtk_toolbar_style_set;
   widget_class->focus = gtk_toolbar_focus;
@@ -384,7 +388,6 @@ gtk_toolbar_class_init (GtkToolbarClass *klass)
   widget_class->unmap = gtk_toolbar_unmap;
   widget_class->popup_menu = gtk_toolbar_popup_menu;
   widget_class->show_all = gtk_toolbar_show_all;
-  widget_class->hide_all = gtk_toolbar_hide_all;
   
   container_class->add    = gtk_toolbar_add;
   container_class->remove = gtk_toolbar_remove;
@@ -995,6 +998,30 @@ gtk_toolbar_size_request (GtkWidget      *widget,
   
   priv->button_maxw = max_homogeneous_child_width;
   priv->button_maxh = max_homogeneous_child_height;
+}
+
+static void
+gtk_toolbar_get_preferred_width (GtkWidget *widget,
+                                 gint      *minimum,
+                                 gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_toolbar_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_toolbar_get_preferred_height (GtkWidget *widget,
+                                  gint      *minimum,
+                                  gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_toolbar_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.height;
 }
 
 static gint
@@ -2443,23 +2470,6 @@ gtk_toolbar_show_all (GtkWidget *widget)
 }
 
 static void
-gtk_toolbar_hide_all (GtkWidget *widget)
-{
-  GtkToolbar *toolbar = GTK_TOOLBAR (widget);
-  GtkToolbarPrivate *priv = toolbar->priv;
-  GList *list;
-
-  for (list = priv->content; list != NULL; list = list->next)
-    {
-      ToolbarContent *content = list->data;
-      
-      toolbar_content_hide_all (content);
-    }
-
-  gtk_widget_hide (widget);
-}
-
-static void
 gtk_toolbar_add (GtkContainer *container,
 		 GtkWidget    *widget)
 {
@@ -2623,7 +2633,7 @@ menu_position_func (GtkMenu  *menu,
 
   gtk_widget_get_allocation (priv->arrow_button, &allocation);
 
-  gdk_window_get_origin (GTK_BUTTON (priv->arrow_button)->event_window, x, y);
+  gdk_window_get_origin (gtk_button_get_event_window (GTK_BUTTON (priv->arrow_button)), x, y);
   if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
     {
       if (gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_LTR) 
@@ -3565,16 +3575,6 @@ toolbar_content_show_all (ToolbarContent  *content)
   widget = toolbar_content_get_widget (content);
   if (widget)
     gtk_widget_show_all (widget);
-}
-
-static void
-toolbar_content_hide_all (ToolbarContent  *content)
-{
-  GtkWidget *widget;
-  
-  widget = toolbar_content_get_widget (content);
-  if (widget)
-    gtk_widget_hide_all (widget);
 }
 
 /*

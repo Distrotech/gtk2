@@ -36,6 +36,24 @@
 #include "gtkintl.h"
 
 
+/**
+ * SECTION:gtktreeviewcolumn
+ * @Short_description: A visible column in a GtkTreeView widget
+ * @Title: GtkTreeViewColumn
+ * @See_also: #GtkTreeView, #GtkTreeSelection, #GtkTreeDnd, #GtkTreeMode, #GtkTreeSortable,
+ *   #GtkTreeModelSort, #GtkListStore, #GtkTreeStore, #GtkCellRenderer, #GtkCellEditable,
+ *   #GtkCellRendererPixbuf, #GtkCellRendererText, #GtkCellRendererToggle
+ *
+ * The GtkTreeViewColumn object represents a visible column in a #GtkTreeView widget.
+ * It allows to set properties of the column header, and functions as a holding pen for
+ * the cell renderers which determine how the data in the column is displayed.
+ *
+ * Please refer to the <link linkend="TreeWidget">tree widget conceptual overview</link>
+ * for an overview of all the objects and data types related to the tree widget and how
+ * they work together.
+ */
+
+
 enum
 {
   PROP_0,
@@ -856,7 +874,7 @@ gtk_tree_view_column_create_button (GtkTreeViewColumn *tree_column)
 
   tree_column->alignment = gtk_alignment_new (tree_column->xalign, 0.5, 0.0, 0.0);
 
-  hbox = gtk_hbox_new (FALSE, 2);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
   tree_column->arrow = gtk_arrow_new (GTK_ARROW_DOWN, GTK_SHADOW_IN);
 
   if (tree_column->child)
@@ -1080,7 +1098,7 @@ gtk_tree_view_column_button_event (GtkWidget *widget,
       ((GdkEventButton *)event)->button == 1)
     {
       column->maybe_reordered = TRUE;
-      gdk_window_get_pointer (GTK_BUTTON (widget)->event_window,
+      gdk_window_get_pointer (gtk_button_get_event_window (GTK_BUTTON (widget)),
 			      &column->drag_x,
 			      &column->drag_y,
 			      NULL);

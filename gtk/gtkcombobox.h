@@ -56,21 +56,20 @@ struct _GtkComboBoxClass
   /* signals */
   void     (* changed)          (GtkComboBox *combo_box);
 
-  /* vfuncs */
-  gchar *  (* get_active_text)  (GtkComboBox *combo_box);
-
   /* Padding for future expansion */
-  void (*_gtk_reserved0) (void);
   void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 
 /* construction */
-GType         gtk_combo_box_get_type         (void) G_GNUC_CONST;
-GtkWidget    *gtk_combo_box_new              (void);
-GtkWidget    *gtk_combo_box_new_with_entry   (void);
-GtkWidget    *gtk_combo_box_new_with_model   (GtkTreeModel    *model);
+GType         gtk_combo_box_get_type                 (void) G_GNUC_CONST;
+GtkWidget    *gtk_combo_box_new                      (void);
+GtkWidget    *gtk_combo_box_new_with_entry           (void);
+GtkWidget    *gtk_combo_box_new_with_model           (GtkTreeModel *model);
+GtkWidget    *gtk_combo_box_new_with_model_and_entry (GtkTreeModel *model);
 
 /* grids */
 gint          gtk_combo_box_get_wrap_width         (GtkComboBox *combo_box);
@@ -124,18 +123,9 @@ void               gtk_combo_box_set_entry_text_column  (GtkComboBox        *com
 							 gint                text_column);
 gint               gtk_combo_box_get_entry_text_column  (GtkComboBox        *combo_box);
 
-/* convenience -- text */
-GtkWidget    *gtk_combo_box_new_text         (void);
-void          gtk_combo_box_append_text      (GtkComboBox     *combo_box,
-                                              const gchar     *text);
-void          gtk_combo_box_insert_text      (GtkComboBox     *combo_box,
-                                              gint             position,
-                                              const gchar     *text);
-void          gtk_combo_box_prepend_text     (GtkComboBox     *combo_box,
-                                              const gchar     *text);
-void          gtk_combo_box_remove_text      (GtkComboBox     *combo_box,
-                                              gint             position);
-gchar        *gtk_combo_box_get_active_text  (GtkComboBox     *combo_box);
+void               gtk_combo_box_set_popup_fixed_width  (GtkComboBox      *combo_box,
+							 gboolean          fixed);
+gboolean           gtk_combo_box_get_popup_fixed_width  (GtkComboBox      *combo_box);
 
 /* programmatic control */
 void          gtk_combo_box_popup            (GtkComboBox     *combo_box);

@@ -51,6 +51,24 @@
 #include "gtktooltip.h"
 #include "gtkprivate.h"
 
+/*rint() is only available in GCC and/or C99*/
+#if (__STDC_VERSION__ < 199901L && !defined __GNUC__)
+double rint(double x)
+{
+	if (ceil(x+0.5) == floor(x+0.5))
+	{
+		int a = (int)ceil(x);
+		if (a%2 == 0)
+			return ceil(x);
+		else
+			return floor(x);
+	}
+	else
+		return floor(x+0.5);
+}
+#endif
+
+
 
 struct _GtkLabelPrivate
 {
@@ -898,12 +916,6 @@ gtk_label_class_init (GtkLabelClass *class)
 				"activate-current-link", 0);
   gtk_binding_entry_add_signal (binding_set, GDK_KEY_KP_Enter, 0,
 				"activate-current-link", 0);
-
-  gtk_settings_install_property (g_param_spec_boolean ("gtk-label-select-on-focus",
-						       P_("Select on focus"),
-						       P_("Whether to select the contents of a selectable label when it is focused"),
-						       TRUE,
-						       GTK_PARAM_READWRITE));
 
   g_type_class_add_private (class, sizeof (GtkLabelPrivate));
 }

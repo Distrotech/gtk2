@@ -98,15 +98,15 @@ main(int argc, char **argv)
 	g_signal_connect (window, "destroy",
 			  G_CALLBACK (gtk_main_quit), NULL);
 	
-	vbox = gtk_vbox_new (FALSE, 0);
+	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 
-        combo_box = gtk_combo_box_new_text ();
+        combo_box = gtk_combo_box_text_new ();
 
-        gtk_combo_box_append_text (GTK_COMBO_BOX (combo_box), "NEAREST");
-        gtk_combo_box_append_text (GTK_COMBO_BOX (combo_box), "BILINEAR");
-        gtk_combo_box_append_text (GTK_COMBO_BOX (combo_box), "TILES");
-        gtk_combo_box_append_text (GTK_COMBO_BOX (combo_box), "HYPER");
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_box), "NEAREST");
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_box), "BILINEAR");
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_box), "TILES");
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_box), "HYPER");
 
         gtk_combo_box_set_active (GTK_COMBO_BOX (combo_box), 1);
 
@@ -117,7 +117,7 @@ main(int argc, char **argv)
 	alignment = gtk_alignment_new (0.0, 0.0, 0.0, 0.5);
 	gtk_box_pack_start (GTK_BOX (vbox), alignment, FALSE, FALSE, 0);
 
-	hbox = gtk_hbox_new (FALSE, 4);
+	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
 	gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
 
 	label = gtk_label_new ("Overall Alpha:");
@@ -127,7 +127,7 @@ main(int argc, char **argv)
 	g_signal_connect (adjustment, "value_changed",
 			  G_CALLBACK (overall_changed_cb), NULL);
 	
-	hscale = gtk_hscale_new (adjustment);
+	hscale = gtk_scale_new (GTK_ORIENTATION_HORIZONTAL, adjustment);
 	gtk_scale_set_digits (GTK_SCALE (hscale), 0);
 	gtk_box_pack_start (GTK_BOX (hbox), hscale, TRUE, TRUE, 0);
 

@@ -1242,7 +1242,7 @@ gtk_selection_data_get_display (GtkSelectionData *selection_data)
  * @selection_data: a pointer to a #GtkSelectionData structure.
  * @type: the type of selection data
  * @format: format (number of bits in a unit)
- * @data: pointer to the data (will be copied)
+ * @data: (array) (element-type guchar): pointer to the data (will be copied)
  * @length: length of the data
  * 
  * Stores new data into a #GtkSelectionData object. Should
@@ -3132,7 +3132,7 @@ gtk_target_entry_new (const char *target,
 		      guint       flags,
 		      guint       info)
 {
-  GtkTargetEntry entry = { target, flags, info };
+  GtkTargetEntry entry = { (char *) target, flags, info };
   return gtk_target_entry_copy (&entry);
 }
 

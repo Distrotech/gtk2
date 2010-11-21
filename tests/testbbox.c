@@ -38,25 +38,25 @@ static const char* types[] = { "GtkHButtonBox",
 			       NULL};
 
 static void
-populate_combo_with (GtkComboBox *combo, const char** elements)
+populate_combo_with (GtkComboBoxText *combo, const char** elements)
 {
   int i;
   
   for (i = 0; elements[i] != NULL; i++) {
-    gtk_combo_box_append_text (combo, elements[i]);
+    gtk_combo_box_text_append_text (combo, elements[i]);
   }
   
-  gtk_combo_box_set_active (combo, 0);
+  gtk_combo_box_set_active (GTK_COMBO_BOX (combo), 0);
 }
 
 static void
-combo_changed_cb (GtkComboBox *combo,
+combo_changed_cb (GtkComboBoxText *combo,
 		  gpointer user_data)
 {
   char *text;
   int i;
   
-  text = gtk_combo_box_get_active_text (combo);
+  text = gtk_combo_box_text_get_active_text (combo);
   
   for (i = 0; styles[i]; i++) {
     if (g_str_equal (text, styles[i])) {
@@ -77,7 +77,7 @@ reparent_widget (GtkWidget *widget,
 }
 
 static void
-combo_types_changed_cb (GtkComboBox *combo,
+combo_types_changed_cb (GtkComboBoxText *combo,
 			GtkWidget **buttons)
 {
   int i;
@@ -85,7 +85,7 @@ combo_types_changed_cb (GtkComboBox *combo,
   GtkWidget *old_parent, *new_parent;
   GtkButtonBoxStyle style;
   
-  text = gtk_combo_box_get_active_text (combo);
+  text = gtk_combo_box_text_get_active_text (combo);
   
   if (g_str_equal (text, "GtkHButtonBox")) {
     old_parent = vbbox;
@@ -132,12 +132,12 @@ main (int    argc,
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   g_signal_connect (G_OBJECT (window), "delete-event", G_CALLBACK (gtk_main_quit), NULL);
   
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add (GTK_CONTAINER (window), vbox);
   
   /* GtkHButtonBox */
   
-  hbbox = gtk_hbutton_box_new ();
+  hbbox = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_box_pack_start (GTK_BOX (vbox), hbbox, TRUE, TRUE, 5);
   
   for (i = 0; i < N_BUTTONS; i++) {
@@ -148,21 +148,21 @@ main (int    argc,
   bbox = hbbox;
   
   /* GtkVButtonBox */
-  vbbox = gtk_vbutton_box_new ();
+  vbbox = gtk_button_box_new (GTK_ORIENTATION_VERTICAL);
   gtk_box_pack_start (GTK_BOX (vbox), vbbox, TRUE, TRUE, 5);
   
   /* Options */
   
-  hbox = gtk_hbox_new (FALSE, 0);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
   
-  combo_types = gtk_combo_box_new_text ();
-  populate_combo_with (GTK_COMBO_BOX (combo_types), types);
+  combo_types = gtk_combo_box_text_new ();
+  populate_combo_with (GTK_COMBO_BOX_TEXT (combo_types), types);
   g_signal_connect (G_OBJECT (combo_types), "changed", G_CALLBACK (combo_types_changed_cb), buttons);
   gtk_box_pack_start (GTK_BOX (hbox), combo_types, TRUE, TRUE, 0);
   
-  combo_styles = gtk_combo_box_new_text ();
-  populate_combo_with (GTK_COMBO_BOX (combo_styles), styles);
+  combo_styles = gtk_combo_box_text_new ();
+  populate_combo_with (GTK_COMBO_BOX_TEXT (combo_styles), styles);
   g_signal_connect (G_OBJECT (combo_styles), "changed", G_CALLBACK (combo_changed_cb), NULL);
   gtk_box_pack_start (GTK_BOX (hbox), combo_styles, TRUE, TRUE, 0);
   

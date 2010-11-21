@@ -31,7 +31,7 @@
 #include "gtkcellrenderertext.h"
 #include "gtkcheckmenuitem.h"
 #include "gtkclipboard.h"
-#include "gtkcombobox.h"
+#include "gtkcomboboxtext.h"
 #include "gtkentry.h"
 #include "gtkexpander.h"
 #include "gtkfilechooserprivate.h"
@@ -2306,6 +2306,19 @@ new_folder_button_clicked (GtkButton             *button,
   gtk_tree_path_free (path);
 }
 
+static GSource *
+add_idle_while_impl_is_alive (GtkFileChooserDefault *impl, GCallback callback)
+{
+  GSource *source;
+
+  source = g_idle_source_new ();
+  g_source_set_closure (source,
+			g_cclosure_new_object (callback, G_OBJECT (impl)));
+  g_source_attach (source, NULL);
+
+  return source;
+}
+
 /* Idle handler for creating a new folder after editing its name cell, or for
  * canceling the editing.
  */
@@ -2364,13 +2377,7 @@ queue_edited_idle (GtkFileChooserDefault *impl,
    */
 
   if (!impl->edited_idle)
-    {
-      impl->edited_idle = g_idle_source_new ();
-      g_source_set_closure (impl->edited_idle,
-			    g_cclosure_new_object (G_CALLBACK (edited_idle_cb),
-						   G_OBJECT (impl)));
-      g_source_attach (impl->edited_idle, NULL);
-    }
+    impl->edited_idle = add_idle_while_impl_is_alive (impl, G_CALLBACK (edited_idle_cb));
 
   g_free (impl->edited_new_text);
   impl->edited_new_text = g_strdup (new_text);
@@ -2409,7 +2416,7 @@ filter_create (GtkFileChooserDefault *impl)
   GtkCellRenderer *cell;
   GList           *cells;
 
-  impl->filter_combo = gtk_combo_box_new_text ();
+  impl->filter_combo = gtk_combo_box_text_new ();
   gtk_combo_box_set_focus_on_click (GTK_COMBO_BOX (impl->filter_combo), FALSE);
 
   /* Get the combo's text renderer and set ellipsize parameters */
@@ -2966,11 +2973,7 @@ shortcuts_drag_leave_cb (GtkWidget             *widget,
 #if 0
   if (gtk_drag_get_source_widget (context) == widget && !impl->shortcuts_drag_outside_idle)
     {
-      impl->shortcuts_drag_outside_idle = g_idle_source_new ();
-      g_source_set_closure (impl->shortcuts_drag_outside_idle,
-			    g_cclosure_new_object (G_CALLBACK (shortcuts_drag_outside_idle_cb),
-						   G_OBJECT (impl)));
-      g_source_attach (impl->shortcuts_drag_outside_idle, NULL);
+      impl->shortcuts_drag_outside_idle = add_idle_while_impl_is_alive (impl, G_CALLBACK (shortcuts_drag_outside_idle_cb));
     }
 #endif
 
@@ -3706,7 +3709,7 @@ shortcuts_pane_create (GtkFileChooserDefault *impl,
   GtkWidget *hbox;
   GtkWidget *widget;
 
-  vbox = gtk_vbox_new (FALSE, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_widget_show (vbox);
 
   /* Shortcuts tree */
@@ -3716,7 +3719,8 @@ shortcuts_pane_create (GtkFileChooserDefault *impl,
 
   /* Box for buttons */
 
-  hbox = gtk_hbox_new (TRUE, 6);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+  gtk_box_set_homogeneous (GTK_BOX (hbox), TRUE);
   gtk_size_group_add_widget (size_group, hbox);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
@@ -4422,12 +4426,12 @@ file_pane_create (GtkFileChooserDefault *impl,
   GtkWidget *hbox;
   GtkWidget *widget;
 
-  vbox = gtk_vbox_new (FALSE, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_widget_show (vbox);
 
   /* Box for lists and preview */
 
-  hbox = gtk_hbox_new (FALSE, PREVIEW_HBOX_SPACING);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, PREVIEW_HBOX_SPACING);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, TRUE, TRUE, 0);
   gtk_widget_show (hbox);
 
@@ -4438,13 +4442,13 @@ file_pane_create (GtkFileChooserDefault *impl,
 
   /* Preview */
 
-  impl->preview_box = gtk_vbox_new (FALSE, 12);
+  impl->preview_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
   gtk_box_pack_start (GTK_BOX (hbox), impl->preview_box, FALSE, FALSE, 0);
   /* Don't show preview box initially */
 
   /* Filter combo */
 
-  impl->filter_combo_hbox = gtk_hbox_new (FALSE, 12);
+  impl->filter_combo_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
 
   widget = filter_create (impl);
 
@@ -4632,7 +4636,7 @@ save_widgets_create (GtkFileChooserDefault *impl)
 
   location_switch_to_path_bar (impl);
 
-  vbox = gtk_vbox_new (FALSE, 12);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 
   table = gtk_table_new (2, 2, FALSE);
   gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
@@ -4972,10 +4976,10 @@ browse_widgets_create (GtkFileChooserDefault *impl)
 
   /* size group is used by the [+][-] buttons and the filter combo */
   size_group = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
-  vbox = gtk_vbox_new (FALSE, 12);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 
   /* Location widgets */
-  impl->browse_path_bar_hbox = gtk_hbox_new (FALSE, 12);
+  impl->browse_path_bar_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   gtk_box_pack_start (GTK_BOX (vbox), impl->browse_path_bar_hbox, FALSE, FALSE, 0);
   gtk_widget_show (impl->browse_path_bar_hbox);
 
@@ -5005,7 +5009,7 @@ browse_widgets_create (GtkFileChooserDefault *impl)
 
   /* Box for the location label and entry */
 
-  impl->location_entry_box = gtk_hbox_new (FALSE, 12);
+  impl->location_entry_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   gtk_box_pack_start (GTK_BOX (vbox), impl->location_entry_box, FALSE, FALSE, 0);
 
   impl->location_label = gtk_label_new_with_mnemonic (_("_Location:"));
@@ -5013,7 +5017,7 @@ browse_widgets_create (GtkFileChooserDefault *impl)
   gtk_box_pack_start (GTK_BOX (impl->location_entry_box), impl->location_label, FALSE, FALSE, 0);
 
   /* Paned widget */
-  hpaned = gtk_hpaned_new ();
+  hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_widget_show (hpaned);
   gtk_box_pack_start (GTK_BOX (vbox), hpaned, TRUE, TRUE, 0);
 
@@ -7538,7 +7542,7 @@ gtk_file_chooser_default_add_filter (GtkFileChooser *chooser,
   if (!name)
     name = "Untitled filter";	/* Place-holder, doesn't need to be marked for translation */
 
-  gtk_combo_box_append_text (GTK_COMBO_BOX (impl->filter_combo), name);
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (impl->filter_combo), name);
 
   if (!g_slist_find (impl->filters, impl->current_filter))
     set_current_filter (impl, filter);
@@ -8933,6 +8937,37 @@ search_entry_activate_cb (GtkEntry *entry,
   search_start_query (impl, text);
 }
 
+static gboolean
+focus_entry_idle_cb (GtkFileChooserDefault *impl)
+{
+  GDK_THREADS_ENTER ();
+  
+  g_source_destroy (impl->focus_entry_idle);
+  impl->focus_entry_idle = NULL;
+
+  if (impl->search_entry)
+    gtk_widget_grab_focus (impl->search_entry);
+
+  GDK_THREADS_LEAVE ();
+
+  return FALSE;
+}
+
+static void
+focus_search_entry_in_idle (GtkFileChooserDefault *impl)
+{
+  /* bgo#634558 - When the user clicks on the Search entry in the shortcuts
+   * pane, we get a selection-changed signal and we set up the search widgets.
+   * However, gtk_tree_view_button_press() focuses the treeview *after* making
+   * the change to the selection.  So, we need to re-focus the search entry
+   * after the treeview has finished doing its work; we'll do that in an idle
+   * handler.
+   */
+
+  if (!impl->focus_entry_idle)
+    impl->focus_entry_idle = add_idle_while_impl_is_alive (impl, G_CALLBACK (focus_entry_idle_cb));
+}
+
 /* Hides the path bar and creates the search entry */
 static void
 search_setup_widgets (GtkFileChooserDefault *impl)
@@ -8941,8 +8976,8 @@ search_setup_widgets (GtkFileChooserDefault *impl)
   GtkWidget *image;
   gchar *tmp;
 
-  impl->search_hbox = gtk_hbox_new (FALSE, 12);
-  
+  impl->search_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+
   /* Image */
 
   image = gtk_image_new_from_stock (GTK_STOCK_FIND, GTK_ICON_SIZE_BUTTON);
@@ -9001,7 +9036,7 @@ search_setup_widgets (GtkFileChooserDefault *impl)
       gtk_widget_hide (impl->location_entry_box);
     }
 
-  gtk_widget_grab_focus (impl->search_entry);
+  focus_search_entry_in_idle (impl);
 
   /* FMQ: hide the filter combo? */
 }
@@ -9045,7 +9080,7 @@ search_activate (GtkFileChooserDefault *impl)
   
   if (impl->operation_mode == OPERATION_MODE_SEARCH)
     {
-      gtk_widget_grab_focus (impl->search_entry);
+      focus_search_entry_in_idle (impl);
       return;
     }
 
@@ -9371,7 +9406,7 @@ recent_hide_entry (GtkFileChooserDefault *impl)
   GtkWidget *image;
   gchar *tmp;
 
-  impl->recent_hbox = gtk_hbox_new (FALSE, 12);
+  impl->recent_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
 
   /* Image */
   image = gtk_image_new_from_icon_name ("document-open-recent", GTK_ICON_SIZE_BUTTON);

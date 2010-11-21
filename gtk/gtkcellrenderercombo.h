@@ -44,13 +44,19 @@ struct _GtkCellRendererCombo
 {
   GtkCellRendererText parent;
 
-  /* <private> */
+  /*< private >*/
   GtkCellRendererComboPrivate *priv;
 };
 
 struct _GtkCellRendererComboClass
 {
   GtkCellRendererTextClass parent;
+
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 GType            gtk_cell_renderer_combo_get_type (void) G_GNUC_CONST;

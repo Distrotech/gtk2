@@ -600,7 +600,7 @@ main (int argc, char **argv)
   /* Preview widget */
   /* THIS IS A TERRIBLE PREVIEW WIDGET, AND SHOULD NOT BE COPIED AT ALL.
    */
-  preview_vbox = gtk_vbox_new (0, FALSE);
+  preview_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   /*gtk_file_chooser_set_preview_widget (GTK_FILE_CHOOSER (dialog), preview_vbox);*/
 
   preview_label = gtk_label_new (NULL);
@@ -644,7 +644,7 @@ main (int argc, char **argv)
 
   control_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
-  vbbox = gtk_vbutton_box_new ();
+  vbbox = gtk_button_box_new (GTK_ORIENTATION_VERTICAL);
   gtk_container_add (GTK_CONTAINER (control_window), vbbox);
 
   button = gtk_button_new_with_mnemonic ("_Select all");

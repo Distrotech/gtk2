@@ -52,6 +52,12 @@ struct _GtkCellView
 struct _GtkCellViewClass
 {
   GtkWidgetClass parent_class;
+
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 GType             gtk_cell_view_get_type               (void) G_GNUC_CONST;
@@ -83,6 +89,8 @@ void              gtk_cell_view_get_desired_height_for_width_of_row(GtkCellView 
 
 void              gtk_cell_view_set_background_color    (GtkCellView     *cell_view,
                                                          const GdkColor  *color);
+void              gtk_cell_view_set_background_rgba     (GtkCellView     *cell_view,
+                                                         const GdkRGBA   *rgba);
 
 G_END_DECLS
 

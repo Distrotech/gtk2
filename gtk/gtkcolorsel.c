@@ -63,6 +63,23 @@
 #include "gtkprivate.h"
 #include "gtkintl.h"
 
+
+/**
+ * SECTION:gtkcolorsel
+ * @Short_description: A widget used to select a color
+ * @Title: GtkColorSelection
+ *
+ * The #GtkColorSelection is a widget that is used to select
+ * a color.  It consists of a color wheel and number of sliders
+ * and entry boxes for color parameters such as hue, saturation,
+ * value, red, green, blue, and opacity.  It is found on the standard
+ * color selection dialog box #GtkColorSelectionDialog.
+ */
+
+
+/* Keep it in sync with gtksettings.c:default_color_palette */
+#define DEFAULT_COLOR_PALETTE   "black:white:gray50:red:purple:blue:light blue:green:yellow:orange:lavender:brown:goldenrod4:dodger blue:pink:light green:gray10:gray30:gray75:gray90"
+
 /* Number of elements in the custom palatte */
 #define GTK_CUSTOM_PALETTE_WIDTH 10
 #define GTK_CUSTOM_PALETTE_HEIGHT 2
@@ -99,7 +116,8 @@ enum {
   PROP_HAS_PALETTE,
   PROP_HAS_OPACITY_CONTROL,
   PROP_CURRENT_COLOR,
-  PROP_CURRENT_ALPHA
+  PROP_CURRENT_ALPHA,
+  PROP_CURRENT_RGBA
 };
 
 enum {
@@ -235,8 +253,6 @@ static void shutdown_eyedropper (GtkWidget *widget);
 
 static guint color_selection_signals[LAST_SIGNAL] = { 0 };
 
-static const gchar default_colors[] = "black:white:gray50:red:purple:blue:light blue:green:yellow:orange:lavender:brown:goldenrod4:dodger blue:pink:light green:gray10:gray30:gray75:gray90";
-
 static GtkColorSelectionChangePaletteFunc noscreen_change_palette_hook = default_noscreen_change_palette_func;
 static GtkColorSelectionChangePaletteWithScreenFunc change_palette_hook = default_change_palette_func;
 
@@ -331,7 +347,29 @@ gtk_color_selection_class_init (GtkColorSelectionClass *klass)
 						      P_("The current opacity value (0 fully transparent, 65535 fully opaque)"),
 						      0, 65535, 65535,
 						      GTK_PARAM_READWRITE));
-  
+
+  /**
+   * GtkColorSelection:current-rgba
+   *
+   * The current RGBA color.
+   *
+   * Since: 3.0
+   */
+  g_object_class_install_property (gobject_class,
+                                   PROP_CURRENT_RGBA,
+                                   g_param_spec_boxed ("current-rgba",
+                                                       P_("Current RGBA"),
+                                                       P_("The current RGBA color"),
+                                                       GDK_TYPE_RGBA,
+                                                       GTK_PARAM_READWRITE));
+
+  /**
+   * GtkColorSelection::color-changed:
+   * @colorselection: the object which received the signal.
+   *
+   * This signal is emitted when the color changes in the #GtkColorSelection
+   * according to its update policy.
+   */
   color_selection_signals[COLOR_CHANGED] =
     g_signal_new (I_("color-changed"),
 		  G_OBJECT_CLASS_TYPE (gobject_class),
@@ -341,13 +379,7 @@ gtk_color_selection_class_init (GtkColorSelectionClass *klass)
 		  _gtk_marshal_VOID__VOID,
 		  G_TYPE_NONE, 0);
 
-  gtk_settings_install_property (g_param_spec_string ("gtk-color-palette",
-                                                      P_("Custom palette"),
-                                                      P_("Palette to use in the color selector"),
-                                                      default_colors,
-                                                      GTK_PARAM_READWRITE));
-
-   g_type_class_add_private (gobject_class, sizeof (GtkColorSelectionPrivate));
+  g_type_class_add_private (gobject_class, sizeof (GtkColorSelectionPrivate));
 }
 
 static void
@@ -370,10 +402,10 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
   priv->default_set = FALSE;
   priv->default_alpha_set = FALSE;
   
-  top_hbox = gtk_hbox_new (FALSE, 12);
+  top_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   gtk_box_pack_start (GTK_BOX (colorsel), top_hbox, FALSE, FALSE, 0);
   
-  vbox = gtk_vbox_new (FALSE, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   priv->triangle_colorsel = gtk_hsv_new ();
   g_signal_connect (priv->triangle_colorsel, "changed",
                     G_CALLBACK (hsv_changed), colorsel);
@@ -383,7 +415,7 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
   gtk_widget_set_tooltip_text (priv->triangle_colorsel,
                         _("Select the color you want from the outer ring. Select the darkness or lightness of that color using the inner triangle."));
   
-  hbox = gtk_hbox_new (FALSE, 6);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_box_pack_end (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
   
   frame = gtk_frame_new (NULL);
@@ -407,7 +439,7 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
   gtk_widget_set_tooltip_text (button,
                         _("Click the eyedropper, then click a color anywhere on your screen to select that color."));
   
-  top_right_vbox = gtk_vbox_new (FALSE, 6);
+  top_right_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_box_pack_start (GTK_BOX (top_hbox), top_right_vbox, FALSE, FALSE, 0);
   table = gtk_table_new (8, 6, FALSE);
   gtk_box_pack_start (GTK_BOX (top_right_vbox), table, FALSE, FALSE, 0);
@@ -427,14 +459,14 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
                          _("Amount of green light in the color."));
   make_label_spinbutton (colorsel, &priv->blue_spinbutton, _("_Blue:"), table, 6, 2, COLORSEL_BLUE,
                          _("Amount of blue light in the color."));
-  gtk_table_attach_defaults (GTK_TABLE (table), gtk_hseparator_new (), 0, 8, 3, 4); 
+  gtk_table_attach_defaults (GTK_TABLE (table), gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), 0, 8, 3, 4); 
 
   priv->opacity_label = gtk_label_new_with_mnemonic (_("Op_acity:")); 
   gtk_misc_set_alignment (GTK_MISC (priv->opacity_label), 0.0, 0.5); 
   gtk_table_attach_defaults (GTK_TABLE (table), priv->opacity_label, 0, 1, 4, 5); 
   adjust = gtk_adjustment_new (0.0, 0.0, 255.0, 1.0, 1.0, 0.0);
   g_object_set_data (G_OBJECT (adjust), I_("COLORSEL"), colorsel); 
-  priv->opacity_slider = gtk_hscale_new (adjust);
+  priv->opacity_slider = gtk_scale_new (GTK_ORIENTATION_HORIZONTAL, adjust);
   gtk_widget_set_tooltip_text (priv->opacity_slider,
                         _("Transparency of the color."));
   gtk_label_set_mnemonic_widget (GTK_LABEL (priv->opacity_label),
@@ -496,7 +528,7 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
 	}
     }
   set_selected_palette (colorsel, 0, 0);
-  priv->palette_frame = gtk_vbox_new (FALSE, 6);
+  priv->palette_frame = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   label = gtk_label_new_with_mnemonic (_("_Palette:"));
   gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_start (GTK_BOX (priv->palette_frame), label, FALSE, FALSE, 0);
@@ -565,6 +597,9 @@ gtk_color_selection_set_property (GObject         *object,
     case PROP_CURRENT_ALPHA:
       gtk_color_selection_set_current_alpha (colorsel, g_value_get_uint (value));
       break;
+    case PROP_CURRENT_RGBA:
+      gtk_color_selection_set_current_rgba (colorsel, g_value_get_boxed (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -595,6 +630,14 @@ gtk_color_selection_get_property (GObject     *object,
       break;
     case PROP_CURRENT_ALPHA:
       g_value_set_uint (value, gtk_color_selection_get_current_alpha (colorsel));
+      break;
+    case PROP_CURRENT_RGBA:
+      {
+        GdkRGBA rgba;
+
+        gtk_color_selection_get_current_rgba (colorsel, &rgba);
+        g_value_set_boxed (value, &rgba);
+      }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1007,7 +1050,7 @@ color_sample_new (GtkColorSelection *colorsel)
   
   priv = colorsel->private_data;
   
-  priv->sample_area = gtk_hbox_new (FALSE, 0);
+  priv->sample_area = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   priv->old_sample = gtk_drawing_area_new ();
   priv->cur_sample = gtk_drawing_area_new ();
 
@@ -1189,13 +1232,13 @@ get_current_colors (GtkColorSelection *colorsel)
   gchar *palette;
 
   settings = gtk_widget_get_settings (GTK_WIDGET (colorsel));
-  g_object_get (settings,
-		"gtk-color-palette", &palette,
-		NULL);
+  g_object_get (settings, "gtk-color-palette", &palette, NULL);
   
   if (!gtk_color_selection_palette_from_string (palette, &colors, &n_colors))
     {
-      gtk_color_selection_palette_from_string (default_colors, &colors, &n_colors);
+      gtk_color_selection_palette_from_string (DEFAULT_COLOR_PALETTE,
+                                               &colors,
+                                               &n_colors);
     }
   else
     {
@@ -1207,14 +1250,17 @@ get_current_colors (GtkColorSelection *colorsel)
 	  GdkColor *tmp_colors = colors;
 	  gint tmp_n_colors = n_colors;
 	  
-	  gtk_color_selection_palette_from_string (default_colors, &colors, &n_colors);
+	  gtk_color_selection_palette_from_string (DEFAULT_COLOR_PALETTE,
+                                                   &colors,
+                                                   &n_colors);
 	  memcpy (colors, tmp_colors, sizeof (GdkColor) * tmp_n_colors);
 
 	  g_free (tmp_colors);
 	}
     }
 
-  g_assert (n_colors >= GTK_CUSTOM_PALETTE_WIDTH * GTK_CUSTOM_PALETTE_HEIGHT);
+  /* make sure that we fill every slot */
+  g_assert (n_colors == GTK_CUSTOM_PALETTE_WIDTH * GTK_CUSTOM_PALETTE_HEIGHT);
   g_free (palette);
   
   return colors;
@@ -2633,6 +2679,142 @@ gtk_color_selection_get_previous_alpha (GtkColorSelection *colorsel)
   
   priv = colorsel->private_data;
   return priv->has_opacity ? UNSCALE (priv->old_color[COLORSEL_OPACITY]) : 65535;
+}
+
+/**
+ * gtk_color_selection_set_current_rgba:
+ * @colorsel: a #GtkColorSelection.
+ * @rgba: A #GdkRGBA to set the current color with
+ *
+ * Sets the current color to be @rgba.  The first time this is called, it will
+ * also set the original color to be @rgba too.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_color_selection_set_current_rgba (GtkColorSelection *colorsel,
+                                      const GdkRGBA     *rgba)
+{
+  GtkColorSelectionPrivate *priv;
+  gint i;
+
+  g_return_if_fail (GTK_IS_COLOR_SELECTION (colorsel));
+  g_return_if_fail (rgba != NULL);
+
+  priv = colorsel->private_data;
+  priv->changing = TRUE;
+
+  priv->color[COLORSEL_RED] = CLAMP (rgba->red, 0, 1);
+  priv->color[COLORSEL_GREEN] = CLAMP (rgba->green, 0, 1);
+  priv->color[COLORSEL_BLUE] = CLAMP (rgba->blue, 0, 1);
+  priv->color[COLORSEL_OPACITY] = CLAMP (rgba->alpha, 0, 1);
+
+  gtk_rgb_to_hsv (priv->color[COLORSEL_RED],
+		  priv->color[COLORSEL_GREEN],
+		  priv->color[COLORSEL_BLUE],
+		  &priv->color[COLORSEL_HUE],
+		  &priv->color[COLORSEL_SATURATION],
+		  &priv->color[COLORSEL_VALUE]);
+
+  if (priv->default_set == FALSE)
+    {
+      for (i = 0; i < COLORSEL_NUM_CHANNELS; i++)
+	priv->old_color[i] = priv->color[i];
+    }
+
+  priv->default_set = TRUE;
+  update_color (colorsel);
+}
+
+/**
+ * gtk_color_selection_get_current_rgba:
+ * @colorsel: a #GtkColorSelection.
+ * @rgba: (out): a #GdkRGBA to fill in with the current color.
+ *
+ * Sets @rgba to be the current color in the GtkColorSelection widget.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_color_selection_get_current_rgba (GtkColorSelection *colorsel,
+                                      GdkRGBA           *rgba)
+{
+  GtkColorSelectionPrivate *priv;
+
+  g_return_if_fail (GTK_IS_COLOR_SELECTION (colorsel));
+  g_return_if_fail (rgba != NULL);
+
+  priv = colorsel->private_data;
+  rgba->red = priv->color[COLORSEL_RED];
+  rgba->green = priv->color[COLORSEL_GREEN];
+  rgba->blue = priv->color[COLORSEL_BLUE];
+  rgba->alpha = (priv->has_opacity) ? priv->color[COLORSEL_OPACITY] : 1;
+}
+
+/**
+ * gtk_color_selection_set_previous_rgba:
+ * @colorsel: a #GtkColorSelection.
+ * @rgba: a #GdkRGBA to set the previous color with
+ *
+ * Sets the 'previous' color to be @rgba.  This function should be called with
+ * some hesitations, as it might seem confusing to have that color change.
+ * Calling gtk_color_selection_set_current_rgba() will also set this color the first
+ * time it is called.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_color_selection_set_previous_rgba (GtkColorSelection *colorsel,
+                                       const GdkRGBA     *rgba)
+{
+  GtkColorSelectionPrivate *priv;
+
+  g_return_if_fail (GTK_IS_COLOR_SELECTION (colorsel));
+  g_return_if_fail (rgba != NULL);
+
+  priv = colorsel->private_data;
+  priv->changing = TRUE;
+
+  priv->old_color[COLORSEL_RED] = CLAMP (rgba->red, 0, 1);
+  priv->old_color[COLORSEL_GREEN] = CLAMP (rgba->green, 0, 1);
+  priv->old_color[COLORSEL_BLUE] = CLAMP (rgba->blue, 0, 1);
+  priv->old_color[COLORSEL_OPACITY] = CLAMP (rgba->alpha, 0, 1);
+
+  gtk_rgb_to_hsv (priv->old_color[COLORSEL_RED],
+		  priv->old_color[COLORSEL_GREEN],
+		  priv->old_color[COLORSEL_BLUE],
+		  &priv->old_color[COLORSEL_HUE],
+		  &priv->old_color[COLORSEL_SATURATION],
+		  &priv->old_color[COLORSEL_VALUE]);
+
+  color_sample_update_samples (colorsel);
+  priv->default_set = TRUE;
+  priv->changing = FALSE;
+}
+
+/**
+ * gtk_color_selection_get_previous_rgba:
+ * @colorsel: a #GtkColorSelection.
+ * @rgba: a #GdkRGBA to fill in with the original color value.
+ *
+ * Fills @rgba in with the original color value.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_color_selection_get_previous_rgba (GtkColorSelection *colorsel,
+                                       GdkRGBA           *rgba)
+{
+  GtkColorSelectionPrivate *priv;
+
+  g_return_if_fail (GTK_IS_COLOR_SELECTION (colorsel));
+  g_return_if_fail (rgba != NULL);
+
+  priv = colorsel->private_data;
+  rgba->red = priv->old_color[COLORSEL_RED];
+  rgba->green = priv->old_color[COLORSEL_GREEN];
+  rgba->blue = priv->old_color[COLORSEL_BLUE];
+  rgba->alpha = (priv->has_opacity) ? priv->old_color[COLORSEL_OPACITY] : 1;
 }
 
 /**

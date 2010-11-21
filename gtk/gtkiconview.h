@@ -81,7 +81,7 @@ struct _GtkIconView
 {
   GtkContainer parent;
 
-  /* <private> */
+  /*< private >*/
   GtkIconViewPrivate *priv;
 };
 
@@ -89,10 +89,6 @@ struct _GtkIconViewClass
 {
   GtkContainerClass parent_class;
 
-  void    (* set_scroll_adjustments) (GtkIconView      *icon_view,
-				      GtkAdjustment    *hadjustment,
-				      GtkAdjustment    *vadjustment);
-  
   void    (* item_activated)         (GtkIconView      *icon_view,
 				      GtkTreePath      *path);
   void    (* selection_changed)      (GtkIconView      *icon_view);
@@ -106,6 +102,12 @@ struct _GtkIconViewClass
 				      GtkMovementStep   step,
 				      gint              count);
   gboolean (* activate_cursor_item)  (GtkIconView      *icon_view);
+
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 GType          gtk_icon_view_get_type          (void) G_GNUC_CONST;
@@ -149,7 +151,6 @@ gint           gtk_icon_view_get_margin        (GtkIconView    *icon_view);
 void           gtk_icon_view_set_item_padding  (GtkIconView    *icon_view, 
 					        gint            item_padding);
 gint           gtk_icon_view_get_item_padding  (GtkIconView    *icon_view);
-
 
 GtkTreePath *  gtk_icon_view_get_path_at_pos   (GtkIconView     *icon_view,
 						gint             x,

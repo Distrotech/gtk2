@@ -39,8 +39,12 @@ void       gtk_rotated_bin_set_angle (GtkRotatedBin *bin,
 
 static void     gtk_rotated_bin_realize       (GtkWidget       *widget);
 static void     gtk_rotated_bin_unrealize     (GtkWidget       *widget);
-static void     gtk_rotated_bin_size_request  (GtkWidget       *widget,
-                                               GtkRequisition  *requisition);
+static void     gtk_rotated_bin_get_preferred_width  (GtkWidget *widget,
+                                                      gint      *minimum,
+                                                      gint      *natural);
+static void     gtk_rotated_bin_get_preferred_height (GtkWidget *widget,
+                                                      gint      *minimum,
+                                                      gint      *natural);
 static void     gtk_rotated_bin_size_allocate (GtkWidget       *widget,
                                                GtkAllocation   *allocation);
 static gboolean gtk_rotated_bin_damage        (GtkWidget       *widget,
@@ -148,7 +152,8 @@ gtk_rotated_bin_class_init (GtkRotatedBinClass *klass)
 
   widget_class->realize = gtk_rotated_bin_realize;
   widget_class->unrealize = gtk_rotated_bin_unrealize;
-  widget_class->size_request = gtk_rotated_bin_size_request;
+  widget_class->get_preferred_width = gtk_rotated_bin_get_preferred_width;
+  widget_class->get_preferred_height = gtk_rotated_bin_get_preferred_height;
   widget_class->size_allocate = gtk_rotated_bin_size_allocate;
   widget_class->draw = gtk_rotated_bin_draw;
 
@@ -405,6 +410,30 @@ gtk_rotated_bin_size_request (GtkWidget      *widget,
 }
 
 static void
+gtk_rotated_bin_get_preferred_width (GtkWidget *widget,
+                                     gint      *minimum,
+                                     gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_rotated_bin_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_rotated_bin_get_preferred_height (GtkWidget *widget,
+                                      gint      *minimum,
+                                      gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_rotated_bin_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.height;
+}
+
+static void
 gtk_rotated_bin_size_allocate (GtkWidget     *widget,
                                GtkAllocation *allocation)
 {
@@ -560,8 +589,9 @@ do_offscreen_window (GtkWidget *do_widget)
       gtk_widget_modify_bg (window, GTK_STATE_NORMAL, &black);
       gtk_container_set_border_width (GTK_CONTAINER (window), 10);
 
-      vbox = gtk_vbox_new (0, FALSE);
-      scale = gtk_hscale_new_with_range (0, G_PI/2, 0.01);
+      vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+      scale = gtk_scale_new_with_range (GTK_ORIENTATION_HORIZONTAL,
+                                        0, G_PI/2, 0.01);
       gtk_scale_set_draw_value (GTK_SCALE (scale), FALSE);
 
       button = gtk_button_new_with_label ("A Button");

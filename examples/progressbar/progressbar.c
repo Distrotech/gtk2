@@ -116,7 +116,7 @@ int main( int   argc,
     gtk_window_set_title (GTK_WINDOW (pdata->window), "GtkProgressBar");
     gtk_container_set_border_width (GTK_CONTAINER (pdata->window), 0);
 
-    vbox = gtk_vbox_new (FALSE, 5);
+    vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, FALSE, 5);
     gtk_container_set_border_width (GTK_CONTAINER (vbox), 10);
     gtk_container_add (GTK_CONTAINER (pdata->window), vbox);
     gtk_widget_show (vbox);
@@ -136,7 +136,7 @@ int main( int   argc,
     /* Add a timer callback to update the value of the progress bar */
     pdata->timer = gdk_threads_add_timeout (100, progress_timeout, pdata);
 
-    separator = gtk_hseparator_new ();
+    separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
     gtk_box_pack_start (GTK_BOX (vbox), separator, FALSE, FALSE, 0);
     gtk_widget_show (separator);
 

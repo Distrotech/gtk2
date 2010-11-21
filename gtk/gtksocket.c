@@ -42,6 +42,7 @@
 #include "gtkdnd.h"
 #include "gtkdebug.h"
 #include "gtkintl.h"
+#include "gtkwidgetprivate.h"
 
 
 /**
@@ -117,8 +118,12 @@ static void     gtk_socket_notify               (GObject          *object,
 						 GParamSpec       *pspec);
 static void     gtk_socket_realize              (GtkWidget        *widget);
 static void     gtk_socket_unrealize            (GtkWidget        *widget);
-static void     gtk_socket_size_request         (GtkWidget        *widget,
-						 GtkRequisition   *requisition);
+static void     gtk_socket_get_preferred_width  (GtkWidget        *widget,
+                                                 gint             *minimum,
+                                                 gint             *natural);
+static void     gtk_socket_get_preferred_height (GtkWidget        *widget,
+                                                 gint             *minimum,
+                                                 gint             *natural);
 static void     gtk_socket_size_allocate        (GtkWidget        *widget,
 						 GtkAllocation    *allocation);
 static void     gtk_socket_hierarchy_changed    (GtkWidget        *widget,
@@ -196,7 +201,8 @@ gtk_socket_class_init (GtkSocketClass *class)
 
   widget_class->realize = gtk_socket_realize;
   widget_class->unrealize = gtk_socket_unrealize;
-  widget_class->size_request = gtk_socket_size_request;
+  widget_class->get_preferred_width = gtk_socket_get_preferred_width;
+  widget_class->get_preferred_height = gtk_socket_get_preferred_height;
   widget_class->size_allocate = gtk_socket_size_allocate;
   widget_class->hierarchy_changed = gtk_socket_hierarchy_changed;
   widget_class->grab_notify = gtk_socket_grab_notify;
@@ -204,11 +210,9 @@ gtk_socket_class_init (GtkSocketClass *class)
   widget_class->key_release_event = gtk_socket_key_event;
   widget_class->focus = gtk_socket_focus;
 
-  /* We don't want to show_all/hide_all the in-process
-   * plug, if any.
+  /* We don't want to show_all the in-process plug, if any.
    */
   widget_class->show_all = gtk_widget_show;
-  widget_class->hide_all = gtk_widget_hide;
   
   container_class->remove = gtk_socket_remove;
   container_class->forall = gtk_socket_forall;
@@ -453,30 +457,48 @@ gtk_socket_unrealize (GtkWidget *widget)
 }
 
 static void
-gtk_socket_size_request (GtkWidget      *widget,
-			 GtkRequisition *requisition)
+gtk_socket_get_preferred_width (GtkWidget *widget,
+                                gint      *minimum,
+                                gint      *natural)
 {
   GtkSocket *socket = GTK_SOCKET (widget);
 
   if (socket->plug_widget)
     {
-      gtk_widget_get_preferred_size (socket->plug_widget, requisition, NULL);
+      gtk_widget_get_preferred_width (socket->plug_widget, minimum, natural);
     }
   else
     {
       if (socket->is_mapped && !socket->have_size && socket->plug_window)
-	_gtk_socket_windowing_size_request (socket);
+        _gtk_socket_windowing_size_request (socket);
 
       if (socket->is_mapped && socket->have_size)
-	{
-	  requisition->width = MAX (socket->request_width, 1);
-	  requisition->height = MAX (socket->request_height, 1);
-	}
+        *minimum = *natural = MAX (socket->request_width, 1);
       else
-	{
-	  requisition->width = 1;
-	  requisition->height = 1;
-	}
+        *minimum = *natural = 1;
+    }
+}
+
+static void
+gtk_socket_get_preferred_height (GtkWidget *widget,
+                                 gint      *minimum,
+                                 gint      *natural)
+{
+  GtkSocket *socket = GTK_SOCKET (widget);
+
+  if (socket->plug_widget)
+    {
+      gtk_widget_get_preferred_height (socket->plug_widget, minimum, natural);
+    }
+  else
+    {
+      if (socket->is_mapped && !socket->have_size && socket->plug_window)
+        _gtk_socket_windowing_size_request (socket);
+
+      if (socket->is_mapped && socket->have_size)
+        *minimum = *natural = MAX (socket->request_height, 1);
+      else
+        *minimum = *natural = 1;
     }
 }
 

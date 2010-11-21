@@ -32,6 +32,17 @@
  * operation splitted in several steps, guiding the user through its pages
  * and controlling the page flow to collect the necessary data.
  *
+ * The design of GtkAssistant is that it controls what buttons to show and
+ * to make sensitive, based on what it knows about the page sequence and
+ * the <link linkend="GtkAssistantPageType">type</link> of each page, in
+ * addition to state information like the page
+ * <link linkend="gtk-assistant-set-page-complete">completion</link> and
+ * <link linkend="gtk-assistant-commit">committed</link> status.
+ *
+ * If you have a case that doesn't quite fit in #GtkAssistants way of
+ * handling buttons, you can use the #GTK_ASSISTANT_PAGE_CUSTOM page type
+ * and handle buttons yourself.
+ *
  * <refsect2 id="GtkAssistant-BUILDER-UI">
  * <title>GtkAssistant as GtkBuildable</title>
  * <para>
@@ -117,8 +128,12 @@ static void     gtk_assistant_init               (GtkAssistant      *assistant);
 static void     gtk_assistant_destroy            (GtkWidget         *widget);
 static void     gtk_assistant_style_set          (GtkWidget         *widget,
 						  GtkStyle          *old_style);
-static void     gtk_assistant_size_request       (GtkWidget         *widget,
-						  GtkRequisition    *requisition);
+static void     gtk_assistant_get_preferred_width  (GtkWidget        *widget,
+                                                    gint             *minimum,
+                                                    gint             *natural);
+static void     gtk_assistant_get_preferred_height (GtkWidget        *widget,
+                                                    gint             *minimum,
+                                                    gint             *natural);
 static void     gtk_assistant_size_allocate      (GtkWidget         *widget,
 						  GtkAllocation     *allocation);
 static void     gtk_assistant_map                (GtkWidget         *widget);
@@ -209,7 +224,8 @@ gtk_assistant_class_init (GtkAssistantClass *class)
 
   widget_class->destroy = gtk_assistant_destroy;
   widget_class->style_set = gtk_assistant_style_set;
-  widget_class->size_request = gtk_assistant_size_request;
+  widget_class->get_preferred_width = gtk_assistant_get_preferred_width;
+  widget_class->get_preferred_height = gtk_assistant_get_preferred_height;
   widget_class->size_allocate = gtk_assistant_size_allocate;
   widget_class->map = gtk_assistant_map;
   widget_class->unmap = gtk_assistant_unmap;
@@ -578,13 +594,22 @@ set_assistant_buttons_state (GtkAssistant *assistant)
       gtk_widget_hide (priv->last);
       compute_progress_state (assistant);
       break;
+    case GTK_ASSISTANT_PAGE_CUSTOM:
+      gtk_widget_hide (priv->cancel);
+      gtk_widget_hide (priv->back);
+      gtk_widget_hide (priv->forward);
+      gtk_widget_hide (priv->apply);
+      gtk_widget_hide (priv->last);
+      gtk_widget_hide (priv->close);
+      break;
     default:
       g_assert_not_reached ();
     }
 
   if (priv->committed)
     gtk_widget_hide (priv->cancel);
-  else if (priv->current_page->type == GTK_ASSISTANT_PAGE_SUMMARY)
+  else if (priv->current_page->type == GTK_ASSISTANT_PAGE_SUMMARY ||
+           priv->current_page->type == GTK_ASSISTANT_PAGE_CUSTOM)
     gtk_widget_hide (priv->cancel);
   else
     gtk_widget_show (priv->cancel);
@@ -708,34 +733,14 @@ static void
 on_assistant_forward (GtkWidget    *widget,
                       GtkAssistant *assistant)
 {
-  if (!compute_next_step (assistant))
-    g_critical ("Page flow is broken, you may want to end it with a page of "
-		"type GTK_ASSISTANT_PAGE_CONFIRM or GTK_ASSISTANT_PAGE_SUMMARY");
+  gtk_assistant_next_page (assistant);
 }
 
 static void
 on_assistant_back (GtkWidget    *widget,
                    GtkAssistant *assistant)
 {
-  GtkAssistantPrivate *priv = assistant->priv;
-  GtkAssistantPage *page_info;
-  GSList *page_node;
-
-  /* skip the progress pages when going back */
-  do
-    {
-      page_node = priv->visited_pages;
-
-      g_return_if_fail (page_node != NULL);
-
-      priv->visited_pages = priv->visited_pages->next;
-      page_info = (GtkAssistantPage *) page_node->data;
-      g_slist_free_1 (page_node);
-    }
-  while (page_info->type == GTK_ASSISTANT_PAGE_PROGRESS ||
-	 !gtk_widget_get_visible (page_info->page));
-
-  set_current_page (assistant, page_info);
+  gtk_assistant_previous_page (assistant);
 }
 
 static void
@@ -800,8 +805,8 @@ gtk_assistant_init (GtkAssistant *assistant)
   gtk_widget_show (priv->sidebar_image);
 
   /* Action area  */
-  priv->action_area  = gtk_hbox_new (FALSE, 6);
-  
+  priv->action_area  = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+
   priv->close   = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
   priv->apply   = gtk_button_new_from_stock (GTK_STOCK_APPLY);
   priv->forward = gtk_button_new_from_stock (GTK_STOCK_GO_FORWARD);
@@ -1200,6 +1205,29 @@ gtk_assistant_size_request (GtkWidget      *widget,
   requisition->height = height;
 }
 
+static void
+gtk_assistant_get_preferred_width (GtkWidget *widget,
+                                   gint      *minimum,
+                                   gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_assistant_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_assistant_get_preferred_height (GtkWidget *widget,
+                                    gint      *minimum,
+                                    gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_assistant_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.height;
+}
 
 static void
 gtk_assistant_size_allocate (GtkWidget      *widget,
@@ -1647,6 +1675,73 @@ gtk_assistant_set_current_page (GtkAssistant *assistant,
 					   priv->current_page);
 
   set_current_page (assistant, page);
+}
+
+/**
+ * gtk_assistant_next_page:
+ * @assistant: a #GtkAssistant
+ *
+ * Navigate to the next page. It is a programming
+ *  error to call this function if there is no next page.
+ *
+ * This function is for use when creating pages of the
+ *  #GTK_ASSISTANT_PAGE_CUSTOM type.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_assistant_next_page (GtkAssistant *assistant)
+{
+  GtkAssistantPrivate *priv;
+
+  g_return_if_fail (GTK_IS_ASSISTANT (assistant));
+
+  priv = assistant->priv;
+
+  if (!compute_next_step (assistant))
+    g_critical ("Page flow is broken, you may want to end it with a page of "
+		"type GTK_ASSISTANT_PAGE_CONFIRM or GTK_ASSISTANT_PAGE_SUMMARY");
+}
+
+/**
+ * gtk_assistant_previous_page:
+ * @assistant: a #GtkAssistant
+ *
+ * Navigate to the previous visited page. It is a programming
+ *  error to call this function if no previous page is
+ *  available.
+ *
+ * This function is for use when creating pages of the
+ *  #GTK_ASSISTANT_PAGE_CUSTOM type.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_assistant_previous_page (GtkAssistant *assistant)
+{
+  GtkAssistantPrivate *priv;
+  GtkAssistantPage *page_info;
+  GSList *page_node;
+
+  g_return_if_fail (GTK_IS_ASSISTANT (assistant));
+
+  priv = assistant->priv;
+
+  /* skip the progress pages when going back */
+  do
+    {
+      page_node = priv->visited_pages;
+
+      g_return_if_fail (page_node != NULL);
+
+      priv->visited_pages = priv->visited_pages->next;
+      page_info = (GtkAssistantPage *) page_node->data;
+      g_slist_free_1 (page_node);
+    }
+  while (page_info->type == GTK_ASSISTANT_PAGE_PROGRESS ||
+	 !gtk_widget_get_visible (page_info->page));
+
+  set_current_page (assistant, page_info);
 }
 
 /**

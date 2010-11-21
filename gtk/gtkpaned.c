@@ -39,6 +39,56 @@
 #include "gtkintl.h"
 
 
+/**
+ * SECTION:gtkpaned
+ * @Short_description: Base class for widgets with two adjustable panes
+ * @Title: GtkPaned
+ *
+ * #GtkPaned is the base class for widgets with two panes, arranged either
+ * horizontally (#GtkHPaned) or vertically (#GtkVPaned). Child widgets are
+ * added to the panes of the widget with gtk_paned_pack1() and
+ * gtk_paned_pack2(). The division between the two children is set by default
+ * from the size requests of the children, but it can be adjusted by the
+ * user.
+ *
+ * A paned widget draws a separator between the two child widgets and a
+ * small handle that the user can drag to adjust the division. It does not
+ * draw any relief around the children or around the separator. (The space
+ * in which the separator is called the gutter.) Often, it is useful to put
+ * each child inside a #GtkFrame with the shadow type set to %GTK_SHADOW_IN
+ * so that the gutter appears as a ridge. No separator is drawn if one of
+ * the children is missing.
+ *
+ * Each child has two options that can be set, @resize and @shrink. If
+ * @resize is true, then when the #GtkPaned is resized, that child will
+ * expand or shrink along with the paned widget. If @shrink is true, then
+ * that child can be made smaller than its requisition by the user.
+ * Setting @shrink to %FALSE allows the application to set a minimum size.
+ * If @resize is false for both children, then this is treated as if
+ * @resize is true for both children.
+ *
+ * The application can set the position of the slider as if it were set
+ * by the user, by calling gtk_paned_set_position().
+ *
+ * <example>
+ * <title>Creating a paned widget with minimum sizes.</title>
+ * <programlisting>
+ * GtkWidget *hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+ * GtkWidget *frame1 = gtk_frame_new (NULL);
+ * GtkWidget *frame2 = gtk_frame_new (NULL);
+ * gtk_frame_set_shadow_type (GTK_FRAME (frame1), GTK_SHADOW_IN);
+ * gtk_frame_set_shadow_type (GTK_FRAME (frame2), GTK_SHADOW_IN);
+ *
+ * gtk_widget_set_size_request (hpaned, 200, -1);
+ *
+ * gtk_paned_pack1 (GTK_PANED (hpaned), frame1, TRUE, FALSE);
+ * gtk_widget_set_size_request (frame1, 50, -1);
+ *
+ * gtk_paned_pack2 (GTK_PANED (hpaned), frame2, FALSE, FALSE);
+ * gtk_widget_set_size_request (frame2, 50, -1);
+ * </programlisting>
+ * </example>
+ */
 
 struct _GtkPanedPrivate
 {
@@ -119,8 +169,13 @@ static void     gtk_paned_get_child_property    (GtkContainer     *container,
                                                  GParamSpec       *pspec);
 static void     gtk_paned_finalize              (GObject          *object);
 
-static void     gtk_paned_size_request          (GtkWidget        *widget,
-                                                 GtkRequisition   *requisition);
+static void     gtk_paned_get_preferred_width   (GtkWidget        *widget,
+                                                 gint             *minimum,
+                                                 gint             *natural);
+static void     gtk_paned_get_preferred_height  (GtkWidget        *widget,
+                                                 gint             *minimum,
+                                                 gint             *natural);
+
 static void     gtk_paned_size_allocate         (GtkWidget        *widget,
                                                  GtkAllocation    *allocation);
 static void     gtk_paned_realize               (GtkWidget        *widget);
@@ -228,7 +283,8 @@ gtk_paned_class_init (GtkPanedClass *class)
   object_class->get_property = gtk_paned_get_property;
   object_class->finalize = gtk_paned_finalize;
 
-  widget_class->size_request = gtk_paned_size_request;
+  widget_class->get_preferred_width = gtk_paned_get_preferred_width;
+  widget_class->get_preferred_height = gtk_paned_get_preferred_height;
   widget_class->size_allocate = gtk_paned_size_allocate;
   widget_class->realize = gtk_paned_realize;
   widget_class->unrealize = gtk_paned_unrealize;
@@ -792,41 +848,44 @@ gtk_paned_finalize (GObject *object)
 }
 
 static void
-gtk_paned_size_request (GtkWidget      *widget,
-                        GtkRequisition *requisition)
+gtk_paned_get_preferred_size (GtkWidget      *widget,
+                              GtkOrientation  orientation,
+                              gint           *minimum,
+                              gint           *natural)
 {
   GtkPaned *paned = GTK_PANED (widget);
   GtkPanedPrivate *priv = paned->priv;
-  GtkRequisition child_requisition;
+  gint child_min, child_nat;
 
-  requisition->width = 0;
-  requisition->height = 0;
+  *minimum = *natural = 0;
 
   if (priv->child1 && gtk_widget_get_visible (priv->child1))
     {
-      gtk_widget_get_preferred_size (priv->child1,
-                                     &child_requisition, NULL);
+      if (orientation == GTK_ORIENTATION_HORIZONTAL)
+        gtk_widget_get_preferred_width (priv->child1, &child_min, &child_nat);
+      else
+        gtk_widget_get_preferred_height (priv->child1, &child_min, &child_nat);
 
-      requisition->height = child_requisition.height;
-      requisition->width = child_requisition.width;
+      *minimum = child_min;
+      *natural = child_nat;
     }
 
   if (priv->child2 && gtk_widget_get_visible (priv->child2))
     {
-      gtk_widget_get_preferred_size (priv->child2,
-                                     &child_requisition, NULL);
+      if (orientation == GTK_ORIENTATION_HORIZONTAL)
+        gtk_widget_get_preferred_width (priv->child2, &child_min, &child_nat);
+      else
+        gtk_widget_get_preferred_height (priv->child2, &child_min, &child_nat);
 
-      if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
+      if (priv->orientation == orientation)
         {
-          requisition->height = MAX (requisition->height,
-                                     child_requisition.height);
-          requisition->width += child_requisition.width;
+          *minimum += child_min;
+          *natural += child_nat;
         }
       else
         {
-          requisition->width = MAX (requisition->width,
-                                    child_requisition.width);
-          requisition->height += child_requisition.height;
+          *minimum = MAX (*minimum, child_min);
+          *natural = MAX (*natural, child_nat);
         }
     }
 
@@ -837,11 +896,28 @@ gtk_paned_size_request (GtkWidget      *widget,
 
       gtk_widget_style_get (widget, "handle-size", &handle_size, NULL);
 
-      if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
-        requisition->width += handle_size;
-      else
-        requisition->height += handle_size;
+      if (priv->orientation == orientation)
+        {
+          *minimum += handle_size;
+          *natural += handle_size;
+        }
     }
+}
+
+static void
+gtk_paned_get_preferred_width (GtkWidget *widget,
+                               gint      *minimum,
+                               gint      *natural)
+{
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_HORIZONTAL, minimum, natural);
+}
+
+static void
+gtk_paned_get_preferred_height (GtkWidget *widget,
+                                gint      *minimum,
+                                gint      *natural)
+{
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_VERTICAL, minimum, natural);
 }
 
 static void
@@ -1418,6 +1494,15 @@ gtk_paned_new (GtkOrientation orientation)
                        NULL);
 }
 
+/**
+ * gtk_paned_add1:
+ * @paned: a paned widget
+ * @child: the child to add
+ *
+ * Adds a child to the top or left pane with default parameters. This is
+ * equivalent to
+ * <literal>gtk_paned_pack1 (paned, child, FALSE, TRUE)</literal>.
+ */
 void
 gtk_paned_add1 (GtkPaned  *paned,
 		GtkWidget *widget)
@@ -1425,6 +1510,15 @@ gtk_paned_add1 (GtkPaned  *paned,
   gtk_paned_pack1 (paned, widget, FALSE, TRUE);
 }
 
+/**
+ * gtk_paned_add2:
+ * @paned: a paned widget
+ * @child: the child to add
+ *
+ * Adds a child to the bottom or right pane with default parameters. This
+ * is equivalent to
+ * <literal>gtk_paned_pack2 (paned, child, TRUE, TRUE)</literal>.
+ */
 void
 gtk_paned_add2 (GtkPaned  *paned,
 		GtkWidget *widget)
@@ -1432,6 +1526,15 @@ gtk_paned_add2 (GtkPaned  *paned,
   gtk_paned_pack2 (paned, widget, TRUE, TRUE);
 }
 
+/**
+ * gtk_paned_pack1:
+ * @paned: a paned widget
+ * @child: the child to add
+ * @resize: should this child expand when the paned widget is resized.
+ * @shrink: can this child be made smaller than its requisition.
+ *
+ * Adds a child to the top or left pane.
+ */
 void
 gtk_paned_pack1 (GtkPaned  *paned,
 		 GtkWidget *child,
@@ -1455,6 +1558,15 @@ gtk_paned_pack1 (GtkPaned  *paned,
     }
 }
 
+/**
+ * gtk_paned_pack2:
+ * @paned: a paned widget
+ * @child: the child to add
+ * @resize: should this child expand when the paned widget is resized.
+ * @shrink: can this child be made smaller than its requisition.
+ *
+ * Adds a child to the bottom or right pane.
+ */
 void
 gtk_paned_pack2 (GtkPaned  *paned,
 		 GtkWidget *child,

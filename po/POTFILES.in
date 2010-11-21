@@ -55,7 +55,6 @@ gtk/gtkcolorbutton.c
 gtk/gtkcolorsel.c
 gtk/gtkcolorseldialog.c
 gtk/gtkcombobox.c
-gtk/gtkcomboboxentry.c
 gtk/gtkcontainer.c
 gtk/gtkcustompaperunixdialog.c
 gtk/gtkdialog.c
@@ -74,7 +73,6 @@ gtk/gtkfilechooserdefault.c
 gtk/gtkfilechooserdialog.c
 gtk/gtkfilechooserembed.c
 gtk/gtkfilechooserentry.c
-gtk/gtkfilechoosersettings.c
 gtk/gtkfilechooserutils.c
 gtk/gtkfilechooserwidget.c
 gtk/gtkfilefilter.c

@@ -72,17 +72,11 @@ struct _GtkToolPaletteClass
 {
   GtkContainerClass parent_class;
 
-  void (*set_scroll_adjustments) (GtkWidget     *widget,
-                                  GtkAdjustment *hadjustment,
-                                  GtkAdjustment *vadjustment);
-
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
   void (*_gtk_reserved3) (void);
   void (*_gtk_reserved4) (void);
-  void (*_gtk_reserved5) (void);
-  void (*_gtk_reserved6) (void);
 };
 
 GType                          gtk_tool_palette_get_type              (void) G_GNUC_CONST;
@@ -132,8 +126,12 @@ void                           gtk_tool_palette_add_drag_dest         (GtkToolPa
                                                                        GtkToolPaletteDragTargets  targets,
                                                                        GdkDragAction              actions);
 
+#ifndef GTK_DISABLE_DEPRECATED
+
 GtkAdjustment*                 gtk_tool_palette_get_hadjustment       (GtkToolPalette            *palette);
 GtkAdjustment*                 gtk_tool_palette_get_vadjustment       (GtkToolPalette            *palette);
+
+#endif
 
 G_CONST_RETURN GtkTargetEntry* gtk_tool_palette_get_drag_target_item  (void) G_GNUC_CONST;
 G_CONST_RETURN GtkTargetEntry* gtk_tool_palette_get_drag_target_group (void) G_GNUC_CONST;

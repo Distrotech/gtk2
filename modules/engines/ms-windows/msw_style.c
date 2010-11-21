@@ -467,7 +467,7 @@ msw_style_setup_system_settings (void)
   setup_menu_settings (settings);
 
   /*
-     http://developer.gnome.org/doc/API/2.0/gtk/GtkSettings.html
+     http://library.gnome.org/devel/gtk/stable/GtkSettings.html
      http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/systemparametersinfo.asp
      http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/getsystemmetrics.asp */
 }
@@ -1739,7 +1739,7 @@ draw_box (GtkStyle *style,
       HDC dc;
       int cx;
 
-      border = (GTK_TOGGLE_BUTTON (widget)->active ? DFCS_PUSHED | DFCS_FLAT : 0);
+      border = (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget)) ? DFCS_PUSHED | DFCS_FLAT : 0);
 
       dc = get_window_dc (style, cr, state_type, &dc_info, x, y, width, height, &rect);
       DrawFrameControl (dc, &rect, DFC_SCROLL, DFCS_SCROLLDOWN | border);
@@ -2430,11 +2430,11 @@ draw_themed_tab_button (GtkStyle *style,
     }
   else
     {
+/* FIXME: poop */
+#if 0
       GdkPixbuf *pixbuf;
       GdkPixbuf *rotated;
 
-/* FIXME: poop */
-#if 0
       if (gap_side == GTK_POS_LEFT || gap_side == GTK_POS_RIGHT)
 	{
 	  pixmap = gdk_pixmap_new (cr, draw_rect.height, draw_rect.width, -1);

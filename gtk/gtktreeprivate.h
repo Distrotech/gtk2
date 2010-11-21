@@ -102,6 +102,8 @@ struct _GtkTreeViewPrivate
   /* Adjustments */
   GtkAdjustment *hadjustment;
   GtkAdjustment *vadjustment;
+  gint           min_display_width;
+  gint           min_display_height;
 
   /* Sub windows */
   GdkWindow *bin_window;
@@ -240,7 +242,7 @@ struct _GtkTreeViewPrivate
   GDestroyNotify search_position_destroy;
   GtkWidget *search_window;
   GtkWidget *search_entry;
-  guint search_entry_changed_id;
+  gulong search_entry_changed_id;
   guint typeselect_flush_timeout;
 
   /* Grid and tree lines */
@@ -300,6 +302,11 @@ struct _GtkTreeViewPrivate
 
   /* Whether our key press handler is to avoid sending an unhandled binding to the search entry */
   guint search_entry_avoid_unhandled_binding : 1;
+
+  /* GtkScrollablePolicy needs to be checked when
+   * driving the scrollable adjustment values */
+  guint hscroll_policy : 1;
+  guint vscroll_policy : 1;
 };
 
 #ifdef __GNUC__

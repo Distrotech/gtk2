@@ -308,15 +308,6 @@ gtk_tool_item_group_header_draw_cb (GtkWidget *widget,
 }
 
 static void
-gtk_tool_item_group_header_size_request_cb (GtkWidget      *widget,
-                                            GtkRequisition *requisition,
-                                            gpointer        data)
-{
-  GtkToolItemGroup *group = GTK_TOOL_ITEM_GROUP (data);
-  requisition->height = MAX (requisition->height, group->priv->expander_size);
-}
-
-static void
 gtk_tool_item_group_header_clicked_cb (GtkButton *button,
                                        gpointer   data)
 {
@@ -344,6 +335,8 @@ gtk_tool_item_group_header_adjust_style (GtkToolItemGroup *group)
                         "header-spacing", &(priv->header_spacing),
                         "expander-size", &(priv->expander_size),
                         NULL);
+  
+  gtk_widget_set_size_request (alignment, -1, priv->expander_size);
 
   switch (gtk_tool_shell_get_orientation (GTK_TOOL_SHELL (group)))
     {
@@ -411,9 +404,6 @@ gtk_tool_item_group_init (GtkToolItemGroup *group)
 
   g_signal_connect_after (alignment, "draw",
                           G_CALLBACK (gtk_tool_item_group_header_draw_cb),
-                          group);
-  g_signal_connect_after (alignment, "size-request",
-                          G_CALLBACK (gtk_tool_item_group_header_size_request_cb),
                           group);
 
   g_signal_connect (priv->header, "clicked",
@@ -577,6 +567,31 @@ gtk_tool_item_group_size_request (GtkWidget      *widget,
   requisition->width += border_width * 2;
   requisition->height += border_width * 2;
 }
+
+static void
+gtk_tool_item_group_get_preferred_width (GtkWidget *widget,
+					 gint      *minimum,
+					 gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_tool_item_group_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_tool_item_group_get_preferred_height (GtkWidget *widget,
+					  gint      *minimum,
+					  gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_tool_item_group_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.height;
+}
+
 
 static gboolean
 gtk_tool_item_group_is_item_visible (GtkToolItemGroup      *group,
@@ -870,10 +885,11 @@ gtk_tool_item_group_real_size_allocate (GtkWidget     *widget,
   gint n_columns, n_rows = 1;
   gint min_rows;
   guint border_width;
+  GtkTextDirection direction;
 
   border_width = gtk_container_get_border_width (GTK_CONTAINER (widget));
 
-  GtkTextDirection direction = gtk_widget_get_direction (widget);
+  direction = gtk_widget_get_direction (widget);
 
   orientation = gtk_tool_shell_get_orientation (GTK_TOOL_SHELL (group));
   style = gtk_tool_shell_get_style (GTK_TOOL_SHELL (group));
@@ -1083,7 +1099,7 @@ gtk_tool_item_group_set_focus_cb (GtkWidget *window,
       /* Check that the focused widgets is fully visible within
        * the group's parent widget and make it visible otherwise. */
 
-      adjustment = gtk_tool_palette_get_vadjustment (GTK_TOOL_PALETTE (p));
+      adjustment = gtk_scrollable_get_vadjustment (GTK_SCROLLABLE (p));
 
       if (adjustment)
         {
@@ -1107,7 +1123,7 @@ gtk_tool_item_group_set_focus_cb (GtkWidget *window,
             }
         }
 
-      adjustment = gtk_tool_palette_get_hadjustment (GTK_TOOL_PALETTE (p));
+      adjustment = gtk_scrollable_get_hadjustment (GTK_SCROLLABLE (p));
 
       if (adjustment)
         {
@@ -1552,12 +1568,13 @@ gtk_tool_item_group_class_init (GtkToolItemGroupClass *cls)
   oclass->finalize           = gtk_tool_item_group_finalize;
   oclass->dispose            = gtk_tool_item_group_dispose;
 
-  wclass->size_request       = gtk_tool_item_group_size_request;
-  wclass->size_allocate      = gtk_tool_item_group_size_allocate;
-  wclass->realize            = gtk_tool_item_group_realize;
-  wclass->unrealize          = gtk_tool_item_group_unrealize;
-  wclass->style_set          = gtk_tool_item_group_style_set;
-  wclass->screen_changed     = gtk_tool_item_group_screen_changed;
+  wclass->get_preferred_width  = gtk_tool_item_group_get_preferred_width;
+  wclass->get_preferred_height = gtk_tool_item_group_get_preferred_height;
+  wclass->size_allocate        = gtk_tool_item_group_size_allocate;
+  wclass->realize              = gtk_tool_item_group_realize;
+  wclass->unrealize            = gtk_tool_item_group_unrealize;
+  wclass->style_set            = gtk_tool_item_group_style_set;
+  wclass->screen_changed       = gtk_tool_item_group_screen_changed;
 
   cclass->add                = gtk_tool_item_group_add;
   cclass->remove             = gtk_tool_item_group_remove;
@@ -1782,10 +1799,8 @@ gtk_tool_item_group_set_header_relief (GtkToolItemGroup *group,
 static gint64
 gtk_tool_item_group_get_animation_timestamp (GtkToolItemGroup *group)
 {
-  GTimeVal now;
-
-  g_source_get_current_time (group->priv->animation_timeout, &now);
-  return (now.tv_sec * G_USEC_PER_SEC + now.tv_usec - group->priv->animation_start) / 1000;
+  return (g_source_get_time (group->priv->animation_timeout) -
+          group->priv->animation_start) / 1000;
 }
 
 static void
@@ -1908,14 +1923,10 @@ gtk_tool_item_group_set_collapsed (GtkToolItemGroup *group,
     {
       if (priv->animation)
         {
-          GTimeVal now;
-
-          g_get_current_time (&now);
-
           if (priv->animation_timeout)
             g_source_destroy (priv->animation_timeout);
 
-          priv->animation_start = (now.tv_sec * G_USEC_PER_SEC + now.tv_usec);
+          priv->animation_start = g_get_monotonic_time ();
           priv->animation_timeout = g_timeout_source_new (ANIMATION_TIMEOUT);
 
           g_source_set_callback (priv->animation_timeout,

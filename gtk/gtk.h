@@ -71,7 +71,7 @@
 #include <gtk/gtkcolorsel.h>
 #include <gtk/gtkcolorseldialog.h>
 #include <gtk/gtkcombobox.h>
-#include <gtk/gtkcomboboxentry.h>
+#include <gtk/gtkcomboboxtext.h>
 #include <gtk/gtkcontainer.h>
 #include <gtk/gtkdebug.h>
 #include <gtk/gtkdialog.h>
@@ -93,6 +93,7 @@
 #include <gtk/gtkfontbutton.h>
 #include <gtk/gtkfontsel.h>
 #include <gtk/gtkframe.h>
+#include <gtk/gtkgrid.h>
 #include <gtk/gtkhandlebox.h>
 #include <gtk/gtkhbbox.h>
 #include <gtk/gtkhbox.h>
@@ -154,6 +155,7 @@
 #include <gtk/gtkruler.h>
 #include <gtk/gtkscale.h>
 #include <gtk/gtkscalebutton.h>
+#include <gtk/gtkscrollable.h>
 #include <gtk/gtkscrollbar.h>
 #include <gtk/gtkscrolledwindow.h>
 #include <gtk/gtkselection.h>

@@ -28,6 +28,18 @@
 
 G_BEGIN_DECLS
 
+
+/**
+ * GtkCellRendererState:
+ * @GTK_CELL_RENDERER_SELECTED: The cell is currently selected, and
+ *  probably has a selection colored background to render to.
+ * @GTK_CELL_RENDERER_PRELIT: The mouse is hovering over the cell.
+ * @GTK_CELL_RENDERER_INSENSITIVE: The cell is drawn in an insensitive manner
+ * @GTK_CELL_RENDERER_SORTED: The cell is in a sorted row
+ * @GTK_CELL_RENDERER_FOCUSED: The cell is in the focus row.
+ *
+ * Tells how a cell is to be rendererd.
+ */
 typedef enum
 {
   GTK_CELL_RENDERER_SELECTED    = 1 << 0,
@@ -38,6 +50,17 @@ typedef enum
   GTK_CELL_RENDERER_FOCUSED     = 1 << 4
 } GtkCellRendererState;
 
+/**
+ * GtkCellRendererMode:
+ * @GTK_CELL_RENDERER_MODE_INERT: The cell is just for display
+ *  and cannot be interacted with.  Note that this doesn't mean that eg. the
+ *  row being drawn can't be selected -- just that a particular element of
+ *  it cannot be individually modified.
+ * @GTK_CELL_RENDERER_MODE_ACTIVATABLE: The cell can be clicked.
+ * @GTK_CELL_RENDERER_MODE_EDITABLE: The cell can be edited or otherwise modified.
+ *
+ * Identifies how the user can interact with a particular cell.
+ */
 typedef enum
 {
   GTK_CELL_RENDERER_MODE_INERT,
@@ -60,7 +83,7 @@ struct _GtkCellRenderer
 {
   GInitiallyUnowned parent_instance;
 
-  /* <private> */
+  /*< private >*/
   GtkCellRendererPrivate *priv;
 };
 
@@ -125,6 +148,8 @@ struct _GtkCellRendererClass
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 GType              gtk_cell_renderer_get_type       (void) G_GNUC_CONST;
@@ -217,12 +242,12 @@ void             gtk_cell_renderer_stop_editing   (GtkCellRenderer      *cell,
 
 
 void            _gtk_cell_renderer_calc_offset    (GtkCellRenderer      *cell,
-						   const GdkRectangle   *cell_area,
-						   GtkTextDirection      direction,
-						   gint                  width,
-						   gint                  height,
-						   gint                 *x_offset,
-						   gint                 *y_offset);
+                                                   const GdkRectangle   *cell_area,
+                                                   GtkTextDirection      direction,
+                                                   gint                  width,
+                                                   gint                  height,
+                                                   gint                 *x_offset,
+                                                   gint                 *y_offset);
 
 G_END_DECLS
 

@@ -35,8 +35,12 @@ GtkWidget* gtk_mirror_bin_new       (void);
 
 static void     gtk_mirror_bin_realize       (GtkWidget       *widget);
 static void     gtk_mirror_bin_unrealize     (GtkWidget       *widget);
-static void     gtk_mirror_bin_size_request  (GtkWidget       *widget,
-                                               GtkRequisition  *requisition);
+static void     gtk_mirror_bin_get_preferred_width  (GtkWidget *widget,
+                                                     gint      *minimum,
+                                                     gint      *natural);
+static void     gtk_mirror_bin_get_preferred_height (GtkWidget *widget,
+                                                     gint      *minimum,
+                                                     gint      *natural);
 static void     gtk_mirror_bin_size_allocate (GtkWidget       *widget,
                                                GtkAllocation   *allocation);
 static gboolean gtk_mirror_bin_damage        (GtkWidget       *widget,
@@ -86,7 +90,8 @@ gtk_mirror_bin_class_init (GtkMirrorBinClass *klass)
 
   widget_class->realize = gtk_mirror_bin_realize;
   widget_class->unrealize = gtk_mirror_bin_unrealize;
-  widget_class->size_request = gtk_mirror_bin_size_request;
+  widget_class->get_preferred_width = gtk_mirror_bin_get_preferred_width;
+  widget_class->get_preferred_height = gtk_mirror_bin_get_preferred_height;
   widget_class->size_allocate = gtk_mirror_bin_size_allocate;
   widget_class->draw = gtk_mirror_bin_draw;
 
@@ -324,6 +329,30 @@ gtk_mirror_bin_size_request (GtkWidget      *widget,
 }
 
 static void
+gtk_mirror_bin_get_preferred_width (GtkWidget *widget,
+                                    gint      *minimum,
+                                    gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_mirror_bin_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_mirror_bin_get_preferred_height (GtkWidget *widget,
+                                     gint      *minimum,
+                                     gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_mirror_bin_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
 gtk_mirror_bin_size_allocate (GtkWidget     *widget,
                                GtkAllocation *allocation)
 {
@@ -461,13 +490,13 @@ do_offscreen_window2 (GtkWidget *do_widget)
 
       gtk_container_set_border_width (GTK_CONTAINER (window), 10);
 
-      vbox = gtk_vbox_new (0, FALSE);
+      vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 
       bin = gtk_mirror_bin_new ();
 
       group = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
 
-      hbox = gtk_hbox_new (FALSE, 6);
+      hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
       backbutton = gtk_button_new ();
       gtk_container_add (GTK_CONTAINER (backbutton),
                          gtk_image_new_from_stock (GTK_STOCK_GO_BACK, 4));

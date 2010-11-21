@@ -43,13 +43,19 @@ struct _GtkCellRendererSpin
 {
   GtkCellRendererText parent;
 
-  /* <private> */
+  /*< private >*/
   GtkCellRendererSpinPrivate *priv;
 };
 
 struct _GtkCellRendererSpinClass
 {
   GtkCellRendererTextClass parent;
+
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 GType            gtk_cell_renderer_spin_get_type (void);

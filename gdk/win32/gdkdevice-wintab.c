@@ -42,7 +42,7 @@ static gboolean gdk_device_wintab_get_history (GdkDevice      *device,
                                                guint32         start,
                                                guint32         stop,
                                                GdkTimeCoord ***events,
-                                               guint          *n_events);
+                                               gint           *n_events);
 static void gdk_device_wintab_get_state (GdkDevice       *device,
                                          GdkWindow       *window,
                                          gdouble         *axes,
@@ -116,7 +116,7 @@ gdk_device_wintab_get_history (GdkDevice      *device,
                                guint32         start,
                                guint32         stop,
                                GdkTimeCoord ***events,
-                               guint          *n_events)
+                               gint           *n_events)
 {
   return FALSE;
 }
@@ -145,7 +145,7 @@ gdk_device_wintab_get_state (GdkDevice       *device,
     }
 
   if (device_wintab->last_axis_data)
-    _gdk_device_wintab_translate_axes (device, window, axes, NULL, NULL);
+    _gdk_device_wintab_translate_axes (device_wintab, window, axes, NULL, NULL);
 }
 
 static void

@@ -47,8 +47,8 @@
 #include "gtkicontheme.h"
 #include "gtkmarshalers.h"
 #include "gtkplug.h"
-#include "gtkprivate.h"
 #include "gtkbuildable.h"
+#include "gtkwidgetprivate.h"
 
 #ifdef GDK_WINDOWING_X11
 #include "x11/gdkx.h"
@@ -112,6 +112,8 @@ struct _GtkWindowPrivate
   GdkScreen             *screen;
   GdkWindow             *frame;
   GdkWindowTypeHint      gdk_type_hint;
+
+  GtkApplication        *application;
 
   gdouble  opacity;
 
@@ -223,7 +225,7 @@ enum {
   PROP_OPACITY,
   PROP_HAS_RESIZE_GRIP,
   PROP_RESIZE_GRIP_VISIBLE,
-
+  PROP_APPLICATION,
   /* Readonly properties */
   PROP_IS_ACTIVE,
   PROP_HAS_TOPLEVEL_FOCUS,
@@ -352,6 +354,8 @@ static gboolean gtk_window_state_event    (GtkWidget          *widget,
 static void gtk_window_check_resize       (GtkContainer      *container);
 static gint gtk_window_focus              (GtkWidget        *widget,
 				           GtkDirectionType  direction);
+static void gtk_window_move_focus         (GtkWidget         *widget,
+                                           GtkDirectionType   dir);
 static void gtk_window_real_set_focus     (GtkWindow         *window,
 					   GtkWidget         *focus);
 static void gtk_window_direction_changed  (GtkWidget         *widget,
@@ -361,8 +365,6 @@ static void gtk_window_state_changed      (GtkWidget         *widget,
 
 static void gtk_window_real_activate_default (GtkWindow         *window);
 static void gtk_window_real_activate_focus   (GtkWindow         *window);
-static void gtk_window_move_focus            (GtkWindow         *window,
-                                              GtkDirectionType   dir);
 static void gtk_window_keys_changed          (GtkWindow         *window);
 static gint gtk_window_draw                  (GtkWidget         *widget,
 					      cairo_t           *cr);
@@ -529,9 +531,10 @@ extract_time_from_startup_id (const gchar* startup_id)
       /* Skip past the "_TIME" part */
       timestr += 5;
 
+      end = NULL;
       errno = 0;
-      timestamp = strtoul (timestr, &end, 0);
-      if (end != timestr && errno == 0)
+      timestamp = g_ascii_strtoull (timestr, &end, 0);
+      if (errno == 0 && end != timestr)
         retval = timestamp;
     }
 
@@ -585,6 +588,7 @@ gtk_window_class_init (GtkWindowClass *klass)
   widget_class->focus_out_event = gtk_window_focus_out_event;
   widget_class->client_event = gtk_window_client_event;
   widget_class->focus = gtk_window_focus;
+  widget_class->move_focus = gtk_window_move_focus;
   widget_class->draw = gtk_window_draw;
   widget_class->get_preferred_width = gtk_window_get_preferred_width;
   widget_class->get_preferred_height = gtk_window_get_preferred_height;
@@ -600,7 +604,6 @@ gtk_window_class_init (GtkWindowClass *klass)
 
   klass->activate_default = gtk_window_real_activate_default;
   klass->activate_focus = gtk_window_real_activate_focus;
-  klass->move_focus = gtk_window_move_focus;
   klass->keys_changed = gtk_window_keys_changed;
 
   g_type_class_add_private (gobject_class, sizeof (GtkWindowPrivate));
@@ -937,7 +940,6 @@ gtk_window_class_init (GtkWindowClass *klass)
 							1.0,
 							GTK_PARAM_READWRITE));
 
-
   /* Style properties.
    */
   gtk_widget_class_install_style_property (widget_class,
@@ -955,6 +957,24 @@ gtk_window_class_init (GtkWindowClass *klass)
 
   /* Signals
    */
+  /**
+   * GtkWindow:application:
+   *
+   * The #GtkApplication associated with the window.
+   *
+   * The application will be kept alive for at least as long as the
+   * window is open.
+   *
+   * Since: 3.0
+   */
+  g_object_class_install_property (gobject_class,
+                                   PROP_APPLICATION,
+                                   g_param_spec_object ("application",
+                                                        P_("GtkApplication"),
+                                                        P_("The GtkApplication for the window"),
+                                                        GTK_TYPE_APPLICATION,
+                                                        GTK_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
   window_signals[SET_FOCUS] =
     g_signal_new (I_("set-focus"),
                   G_TYPE_FROM_CLASS (gobject_class),
@@ -1219,6 +1239,9 @@ gtk_window_set_property (GObject      *object,
     case PROP_HAS_RESIZE_GRIP:
       gtk_window_set_has_resize_grip (window, g_value_get_boolean (value));
       break;
+    case PROP_APPLICATION:
+      gtk_window_set_application (window, g_value_get_object (value));
+      break;
     case PROP_MNEMONICS_VISIBLE:
       gtk_window_set_mnemonics_visible (window, g_value_get_boolean (value));
       break;
@@ -1333,6 +1356,9 @@ gtk_window_get_property (GObject      *object,
       break;
     case PROP_RESIZE_GRIP_VISIBLE:
       g_value_set_boolean (value, gtk_window_resize_grip_is_visible (window));
+      break;
+    case PROP_APPLICATION:
+      g_value_set_object (value, gtk_window_get_application (window));
       break;
     case PROP_MNEMONICS_VISIBLE:
       g_value_set_boolean (value, priv->mnemonics_visible);
@@ -2599,6 +2625,78 @@ gtk_window_get_opacity (GtkWindow *window)
 }
 
 /**
+ * gtk_window_get_application:
+ * @window: a #GtkWindow
+ *
+ * Gets the #GtkApplication associated with the window (if any).
+ *
+ * Return value: a #GtkApplication, or %NULL
+ *
+ * Since: 3.0
+ **/
+GtkApplication *
+gtk_window_get_application (GtkWindow *window)
+{
+  g_return_val_if_fail (GTK_IS_WINDOW (window), NULL);
+
+  return window->priv->application;
+}
+
+static void
+gtk_window_release_application (GtkWindow *window)
+{
+  if (window->priv->application)
+    {
+      GtkApplication *application;
+
+      /* steal reference into temp variable */
+      application = window->priv->application;
+      window->priv->application = NULL;
+
+      gtk_application_remove_window (application, window);
+      g_object_unref (application);
+    }
+}
+
+/**
+ * gtk_window_set_application:
+ * @window: a #GtkWindow
+ * @application: a #GtkApplication, or %NULL
+ *
+ * Sets or unsets the #GtkApplication associated with the window.
+ *
+ * The application will be kept alive for at least as long as the window
+ * is open.
+ *
+ * Since: 3.0
+ **/
+void
+gtk_window_set_application (GtkWindow      *window,
+                            GtkApplication *application)
+{
+  GtkWindowPrivate *priv;
+
+  g_return_if_fail (GTK_IS_WINDOW (window));
+
+  priv = window->priv;
+  if (priv->application != application)
+    {
+      gtk_window_release_application (window);
+
+      priv->application = application;
+
+      if (priv->application != NULL)
+        {
+          g_object_ref (priv->application);
+
+          gtk_application_add_window (priv->application, window);
+        }
+
+      g_object_notify (G_OBJECT (window), "application");
+    }
+}
+
+/**
  * gtk_window_set_type_hint:
  * @window: a #GtkWindow
  * @hint: the window type
@@ -3314,6 +3412,8 @@ gtk_window_realize_icon (GtkWindow *window)
     }
 
   info->realized = TRUE;
+
+  gdk_window_set_icon_list (gtk_widget_get_window (widget), icon_list);
   
   if (info->using_themed_icon) 
     {
@@ -4488,6 +4588,7 @@ gtk_window_finalize (GObject *object)
   g_free (priv->wmclass_name);
   g_free (priv->wmclass_class);
   g_free (priv->wm_role);
+  gtk_window_release_application (window);
 
   mnemonic_hash = gtk_window_get_mnemonic_hash (window, FALSE);
   if (mnemonic_hash)
@@ -4595,7 +4696,7 @@ gtk_window_show (GtkWidget *widget)
   /* Try to make sure that we have some focused widget
    */
   if (!priv->focus_widget && !GTK_IS_PLUG (window))
-    gtk_window_move_focus (window, GTK_DIR_TAB_FORWARD);
+    gtk_window_move_focus (widget, GTK_DIR_TAB_FORWARD);
   
   if (priv->modal)
     gtk_grab_add (widget);
@@ -5788,16 +5889,6 @@ gtk_window_real_activate_focus (GtkWindow *window)
   gtk_window_activate_focus (window);
 }
 
-static void
-gtk_window_move_focus (GtkWindow       *window,
-                       GtkDirectionType dir)
-{
-  gtk_widget_child_focus (GTK_WIDGET (window), dir);
-  
-  if (!gtk_container_get_focus_child (GTK_CONTAINER (window)))
-    gtk_window_set_focus (window, NULL);
-}
-
 static gint
 gtk_window_enter_notify_event (GtkWidget        *widget,
 			       GdkEventCrossing *event)
@@ -6022,6 +6113,16 @@ gtk_window_focus (GtkWidget        *widget,
     }
 
   return FALSE;
+}
+
+static void
+gtk_window_move_focus (GtkWidget       *widget,
+                       GtkDirectionType dir)
+{
+  gtk_widget_child_focus (widget, dir);
+
+  if (! gtk_container_get_focus_child (GTK_CONTAINER (widget)))
+    gtk_window_set_focus (GTK_WINDOW (widget), NULL);
 }
 
 static void
@@ -7464,10 +7565,11 @@ gtk_window_set_frame_dimensions (GtkWindow *window,
 
   if (gtk_widget_get_realized (widget) && priv->frame)
     {
-      gtk_widget_get_allocation (widget, &allocation);
+	  gint width, height;
+	  gtk_widget_get_allocation (widget, &allocation);
 
-      gint width = allocation.width + left + right;
-      gint height = allocation.height + top + bottom;
+      width = allocation.width + left + right;
+      height = allocation.height + top + bottom;
       gdk_window_resize (priv->frame, width, height);
       gtk_decorated_window_move_resize_window (window,
 					       left, top,
@@ -8967,7 +9069,7 @@ gtk_XParseGeometry (const char   *string,
  *   gtk_init (&argc, &argv);
  *   
  *   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
- *   vbox = gtk_vbox_new (FALSE, 0);
+ *   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, FALSE, 0);
  *   
  *   gtk_container_add (GTK_CONTAINER (window), vbox);
  *   fill_with_content (vbox);

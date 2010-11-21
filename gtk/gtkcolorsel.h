@@ -51,6 +51,15 @@ typedef struct _GtkColorSelectionClass  GtkColorSelectionClass;
 
 typedef void (* GtkColorSelectionChangePaletteFunc) (const GdkColor    *colors,
                                                      gint               n_colors);
+
+/**
+ * GtkColorSelectionChangePaletteWithScreenFunc:
+ * @screen:
+ * @colors:
+ * @n_colors:
+ *
+ * Since: 2.2
+ */
 typedef void (* GtkColorSelectionChangePaletteWithScreenFunc) (GdkScreen         *screen,
 							       const GdkColor    *colors,
 							       gint               n_colors);
@@ -103,6 +112,15 @@ void     gtk_color_selection_set_previous_alpha  (GtkColorSelection *colorsel,
 void     gtk_color_selection_get_previous_color  (GtkColorSelection *colorsel,
 						  GdkColor          *color);
 guint16  gtk_color_selection_get_previous_alpha  (GtkColorSelection *colorsel);
+
+void     gtk_color_selection_set_current_rgba    (GtkColorSelection *colorsel,
+                                                  const GdkRGBA     *rgba);
+void     gtk_color_selection_get_current_rgba    (GtkColorSelection *colorsel,
+                                                  GdkRGBA           *rgba);
+void     gtk_color_selection_set_previous_rgba   (GtkColorSelection *colorsel,
+                                                  const GdkRGBA     *rgba);
+void     gtk_color_selection_get_previous_rgba   (GtkColorSelection *colorsel,
+                                                  GdkRGBA           *rgba);
 
 gboolean gtk_color_selection_is_adjusting        (GtkColorSelection *colorsel);
 

@@ -1300,7 +1300,7 @@ gtk_drag_dest_set_proxy (GtkWidget      *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (!proxy_window || GDK_IS_WINDOW (proxy_window));
 
-  site = g_new (GtkDragDestSite, 1);
+  site = g_slice_new (GtkDragDestSite);
 
   site->flags = 0;
   site->have_drag = FALSE;
@@ -3241,16 +3241,16 @@ _gtk_cairo_surface_extents (cairo_surface_t *surface,
 
 /**
  * gtk_drag_set_icon_surface:
- * @context: the context for a drag. (This must be called 
- *            with a  context for the source side of a drag)
- * @surface: the surface to use as icon 
- * 
+ * @context: the context for a drag. (This must be called
+ *            with a context for the source side of a drag)
+ * @surface: the surface to use as icon
+ *
  * Sets @surface as the icon for a given drag. GTK+ retains
  * references for the arguments, and will release them when
  * they are no longer needed.
  *
- * To position the surface realtive to the mouse, use
- * cairo_surface_set_device_offset() on @usrface. The mouse
+ * To position the surface relative to the mouse, use
+ * cairo_surface_set_device_offset() on @surface. The mouse
  * cursor will be positioned at the (0,0) coordinate of the
  * surface.
  **/

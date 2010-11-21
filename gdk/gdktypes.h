@@ -46,6 +46,12 @@
 #include <gdkconfig.h>
 
 /* some common magic values */
+
+/**
+ * GDK_CURRENT_TIME:
+ *
+ * Represents the current time, and can be used anywhere a time is expected.
+ */
 #define GDK_CURRENT_TIME     0L
 
 /**
@@ -73,9 +79,29 @@ typedef struct _GdkPoint	      GdkPoint;
  */
 typedef cairo_rectangle_int_t	      GdkRectangle;
 
+/**
+ * GdkAtom:
+ *
+ * An opaque type representing a string as an index into a table
+ * of strings on the X server.
+ */
 typedef struct _GdkAtom            *GdkAtom;
 
+/**
+ * GDK_ATOM_TO_POINTER:
+ * @atom: a #GdkAtom.
+ *
+ * Converts a #GdkAtom into a pointer type.
+ */
 #define GDK_ATOM_TO_POINTER(atom) (atom)
+
+/**
+ * GDK_POINTER_TO_ATOM:
+ * @ptr: a pointer containing a #GdkAtom.
+ *
+ * Extracts a #GdkAtom from a pointer. The #GdkAtom must have been
+ * stored in the pointer with GDK_ATOM_TO_POINTER().
+ */
 #define GDK_POINTER_TO_ATOM(ptr)  ((GdkAtom)(ptr))
 
 #ifdef GDK_NATIVE_WINDOW_POINTER
@@ -85,8 +111,21 @@ typedef struct _GdkAtom            *GdkAtom;
 #endif
 
 #define _GDK_MAKE_ATOM(val) ((GdkAtom)GUINT_TO_POINTER(val))
+
+/**
+ * GDK_NONE:
+ *
+ * A null value for #GdkAtom, used in a similar way as
+ * <literal>None</literal> in the Xlib API.
+ */
 #define GDK_NONE            _GDK_MAKE_ATOM (0)
 
+/**
+ * GdkNativeWindow:
+ *
+ * Used to represent native windows (<type>Window</type>s for the X11
+ * backend, <type>HWND</type>s for Win32).
+ */
 #ifdef GDK_NATIVE_WINDOW_POINTER
 typedef gpointer GdkNativeWindow;
 #else
@@ -96,6 +135,7 @@ typedef guint32 GdkNativeWindow;
 /* Forward declarations of commonly used types
  */
 typedef struct _GdkColor	      GdkColor;
+typedef struct _GdkRGBA               GdkRGBA;
 typedef struct _GdkCursor	      GdkCursor;
 typedef struct _GdkVisual             GdkVisual;
 
@@ -110,6 +150,18 @@ typedef struct _GdkDrawable           GdkWindow;
 typedef struct _GdkDisplay	      GdkDisplay;
 typedef struct _GdkScreen	      GdkScreen;
 
+/**
+ * GdkByteOrder:
+ * @GDK_LSB_FIRST: The values are stored with the least-significant byte
+ *   first. For instance, the 32-bit value 0xffeecc would be stored
+ *   in memory as 0xcc, 0xee, 0xff, 0x00.
+ * @GDK_MSB_FIRST: The values are stored with the most-significant byte
+ *   first. For instance, the 32-bit value 0xffeecc would be stored
+ *   in memory as 0x00, 0xcc, 0xee, 0xff.
+ *
+ * A set of values describing the possible byte-orders
+ * for storing pixel values in memory.
+ */
 typedef enum
 {
   GDK_LSB_FIRST,
@@ -195,9 +247,18 @@ typedef enum
   GDK_ERROR_MEM	  = -4
 } GdkStatus;
 
-/* We define specific numeric values for these constants,
- * since old application code may depend on them matching the X values
- * We don't actually depend on the matchup ourselves.
+/**
+ * GdkGrabStatus:
+ * @GDK_GRAB_SUCCESS: the resource was successfully grabbed.
+ * @GDK_GRAB_ALREADY_GRABBED: the resource is actively grabbed by another client.
+ * @GDK_GRAB_INVALID_TIME: the resource was grabbed more recently than the
+ *  specified time.
+ * @GDK_GRAB_NOT_VIEWABLE: the grab window or the @confine_to window are not
+ *  viewable.
+ * @GDK_GRAB_FROZEN: the resource is frozen by an active grab of another client.
+ *
+ * Returned by gdk_pointer_grab() and gdk_keyboard_grab() to indicate
+ * success or the reason for the failure of the grab attempt.
  */
 typedef enum
 {
@@ -223,9 +284,46 @@ typedef enum
   GDK_OWNERSHIP_APPLICATION
 } GdkGrabOwnership;
 
-/* Event masks. (Used to select what types of events a window
- *  *  will receive).
- *   */
+/**
+ * GdkEventMask:
+ * @GDK_EXPOSURE_MASK: receive expose events
+ * @GDK_POINTER_MOTION_MASK: receive all pointer motion events
+ * @GDK_POINTER_MOTION_HINT_MASK: see the explanation above
+ * @GDK_BUTTON_MOTION_MASK: receive pointer motion events while any button is pressed
+ * @GDK_BUTTON1_MOTION_MASK: receive pointer motion events while 1 button is pressed
+ * @GDK_BUTTON2_MOTION_MASK: receive pointer motion events while 2 button is pressed
+ * @GDK_BUTTON3_MOTION_MASK: receive pointer motion events while 3 button is pressed
+ * @GDK_BUTTON_PRESS_MASK: receive button press events
+ * @GDK_BUTTON_RELEASE_MASK: receive button release events
+ * @GDK_KEY_PRESS_MASK: receive key press events
+ * @GDK_KEY_RELEASE_MASK: receive key release events
+ * @GDK_ENTER_NOTIFY_MASK: receive window enter events
+ * @GDK_LEAVE_NOTIFY_MASK: receive window leave events
+ * @GDK_FOCUS_CHANGE_MASK: receive focus change events
+ * @GDK_STRUCTURE_MASK: receive events about window configuration change
+ * @GDK_PROPERTY_CHANGE_MASK: receive property change events
+ * @GDK_VISIBILITY_NOTIFY_MASK: receive visibility change events
+ * @GDK_PROXIMITY_IN_MASK: receive proximity in events
+ * @GDK_PROXIMITY_OUT_MASK: receive proximity out events
+ * @GDK_SUBSTRUCTURE_MASK: receive events about window configuration changes of
+ *   child windows
+ * @GDK_SCROLL_MASK: receive scroll events
+ * @GDK_ALL_EVENTS_MASK: the combination of all the above event masks.
+ *
+ * A set of bit-flags to indicate which events a window is to receive.
+ * Most of these masks map onto one or more of the #GdkEventType event types
+ * above.
+ *
+ * %GDK_POINTER_MOTION_HINT_MASK is a special mask which is used to reduce the
+ * number of %GDK_MOTION_NOTIFY events received. Normally a %GDK_MOTION_NOTIFY
+ * event is received each time the mouse moves. However, if the application
+ * spends a lot of time processing the event (updating the display, for example),
+ * it can lag behind the position of the mouse. When using
+ * %GDK_POINTER_MOTION_HINT_MASK, fewer %GDK_MOTION_NOTIFY events will be sent,
+ * some of which are marked as a hint (the is_hint member is %TRUE).
+ * To receive more motion events after a motion hint event, the application
+ * needs to asks for more, by calling gdk_event_request_motions().
+ */
 typedef enum
 {
   GDK_EXPOSURE_MASK             = 1 << 1,

@@ -251,14 +251,10 @@ gtk_alignment_set_padding
 #if IN_HEADER(__GTK_APPLICATION_H__)
 #if IN_FILE(__GTK_APPLICATION_C__)
 gtk_application_get_type G_GNUC_CONST
-gtk_application_new
-gtk_application_set_action_group
-gtk_application_create_window
-gtk_application_get_window
-gtk_application_get_windows
 gtk_application_add_window
-gtk_application_run
-gtk_application_quit
+gtk_application_new
+gtk_application_get_windows
+gtk_application_remove_window
 #endif
 #endif
 
@@ -266,6 +262,8 @@ gtk_application_quit
 #if IN_FILE(__GTK_ASSISTANT_C__)
 gtk_assistant_get_type G_GNUC_CONST
 gtk_assistant_new
+gtk_assistant_next_page
+gtk_assistant_previous_page
 gtk_assistant_get_current_page
 gtk_assistant_set_current_page
 gtk_assistant_get_n_pages
@@ -370,6 +368,7 @@ gtk_scroll_type_get_type G_GNUC_CONST
 gtk_selection_mode_get_type G_GNUC_CONST
 gtk_shadow_type_get_type G_GNUC_CONST
 gtk_size_group_mode_get_type G_GNUC_CONST
+gtk_size_request_mode_get_type G_GNUC_CONST
 gtk_sort_type_get_type G_GNUC_CONST
 gtk_spin_type_get_type G_GNUC_CONST
 gtk_state_type_get_type G_GNUC_CONST
@@ -603,7 +602,6 @@ gtk_cell_renderer_set_sensitive
 gtk_cell_renderer_set_visible
 gtk_cell_renderer_start_editing
 gtk_cell_renderer_stop_editing
-_gtk_cell_renderer_calc_offset
 #endif
 #endif
 
@@ -685,6 +683,7 @@ gtk_cell_view_new_with_markup
 gtk_cell_view_new_with_pixbuf
 gtk_cell_view_new_with_text
 gtk_cell_view_set_background_color
+gtk_cell_view_set_background_rgba
 gtk_cell_view_set_displayed_row
 gtk_cell_view_set_model
 #endif
@@ -753,13 +752,16 @@ gtk_clipboard_wait_is_target_available
 #if IN_FILE(__GTK_COLOR_BUTTON_C__)
 gtk_color_button_get_alpha
 gtk_color_button_get_color
+gtk_color_button_get_rgba
 gtk_color_button_get_title
 gtk_color_button_get_type G_GNUC_CONST
 gtk_color_button_get_use_alpha
 gtk_color_button_new
 gtk_color_button_new_with_color
+gtk_color_button_new_with_rgba
 gtk_color_button_set_alpha
 gtk_color_button_set_color
+gtk_color_button_set_rgba
 gtk_color_button_set_title
 gtk_color_button_set_use_alpha
 #endif
@@ -769,10 +771,12 @@ gtk_color_button_set_use_alpha
 #if IN_FILE(__GTK_COLOR_SELECTION_C__)
 gtk_color_selection_get_current_alpha
 gtk_color_selection_get_current_color
+gtk_color_selection_get_current_rgba
 gtk_color_selection_get_has_opacity_control
 gtk_color_selection_get_has_palette
 gtk_color_selection_get_previous_alpha
 gtk_color_selection_get_previous_color
+gtk_color_selection_get_previous_rgba
 gtk_color_selection_get_type G_GNUC_CONST
 gtk_color_selection_is_adjusting
 gtk_color_selection_new
@@ -781,10 +785,12 @@ gtk_color_selection_palette_to_string
 gtk_color_selection_set_change_palette_with_screen_hook
 gtk_color_selection_set_current_alpha
 gtk_color_selection_set_current_color
+gtk_color_selection_set_current_rgba
 gtk_color_selection_set_has_opacity_control
 gtk_color_selection_set_has_palette
 gtk_color_selection_set_previous_alpha
 gtk_color_selection_set_previous_color
+gtk_color_selection_set_previous_rgba
 #endif
 #endif
 
@@ -798,10 +804,8 @@ gtk_color_selection_dialog_get_color_selection
 
 #if IN_HEADER(__GTK_COMBO_BOX_H__)
 #if IN_FILE(__GTK_COMBO_BOX_C__)
-gtk_combo_box_append_text
 gtk_combo_box_get_active
 gtk_combo_box_get_active_iter
-gtk_combo_box_get_active_text
 gtk_combo_box_get_add_tearoffs
 gtk_combo_box_get_column_span_column
 gtk_combo_box_get_entry_text_column
@@ -809,22 +813,20 @@ gtk_combo_box_get_focus_on_click
 gtk_combo_box_get_has_entry
 gtk_combo_box_get_model
 gtk_combo_box_get_popup_accessible
+gtk_combo_box_get_popup_fixed_width
 gtk_combo_box_get_row_separator_func
 gtk_combo_box_get_row_span_column
 gtk_combo_box_get_button_sensitivity
 gtk_combo_box_get_title
 gtk_combo_box_get_type G_GNUC_CONST
 gtk_combo_box_get_wrap_width
-gtk_combo_box_insert_text
 gtk_combo_box_new
-gtk_combo_box_new_text
 gtk_combo_box_new_with_entry
 gtk_combo_box_new_with_model
+gtk_combo_box_new_with_model_and_entry
 gtk_combo_box_popdown
 gtk_combo_box_popup
 gtk_combo_box_popup_for_device
-gtk_combo_box_prepend_text
-gtk_combo_box_remove_text
 gtk_combo_box_set_active
 gtk_combo_box_set_active_iter
 gtk_combo_box_set_add_tearoffs
@@ -832,6 +834,7 @@ gtk_combo_box_set_column_span_column
 gtk_combo_box_set_entry_text_column
 gtk_combo_box_set_focus_on_click
 gtk_combo_box_set_model
+gtk_combo_box_set_popup_fixed_width
 gtk_combo_box_set_row_separator_func
 gtk_combo_box_set_row_span_column
 gtk_combo_box_set_button_sensitivity
@@ -840,16 +843,17 @@ gtk_combo_box_set_wrap_width
 #endif
 #endif
 
-#if IN_HEADER(__GTK_COMBO_BOX_ENTRY_H__)
-#if IN_FILE(__GTK_COMBO_BOX_ENTRY_C__)
-#ifndef GTK_DISABLE_DEPRECATED
-gtk_combo_box_entry_get_text_column
-gtk_combo_box_entry_get_type G_GNUC_CONST
-gtk_combo_box_entry_new
-gtk_combo_box_entry_new_text
-gtk_combo_box_entry_new_with_model
-gtk_combo_box_entry_set_text_column
-#endif
+#if IN_HEADER(__GTK_COMBO_BOX_TEXT_H__)
+#if IN_FILE(__GTK_COMBO_BOX_TEXT_C__)
+gtk_combo_box_text_append_text
+gtk_combo_box_text_get_active_text
+gtk_combo_box_text_get_type G_GNUC_CONST
+gtk_combo_box_text_insert_text
+gtk_combo_box_text_new
+gtk_combo_box_text_new_with_entry
+gtk_combo_box_text_prepend_text
+gtk_combo_box_text_remove
+gtk_combo_box_text_remove_all
 #endif
 #endif
 
@@ -1082,6 +1086,7 @@ gtk_entry_get_current_icon_drag_source
 gtk_entry_get_cursor_hadjustment
 gtk_entry_get_has_frame
 gtk_entry_get_icon_activatable
+gtk_entry_get_icon_area
 gtk_entry_get_icon_at_pos
 gtk_entry_get_icon_gicon
 gtk_entry_get_icon_name
@@ -1091,7 +1096,6 @@ gtk_entry_get_icon_stock
 gtk_entry_get_icon_storage_type
 gtk_entry_get_icon_tooltip_markup
 gtk_entry_get_icon_tooltip_text
-gtk_entry_get_icon_window
 gtk_entry_get_inner_border
 gtk_entry_get_invisible_char
 gtk_entry_get_layout
@@ -1101,11 +1105,11 @@ gtk_entry_get_overwrite_mode
 gtk_entry_get_progress_fraction
 gtk_entry_get_progress_pulse_step
 gtk_entry_get_text
+gtk_entry_get_text_area
 gtk_entry_get_text_length
 gtk_entry_get_type G_GNUC_CONST
 gtk_entry_get_visibility
 gtk_entry_get_width_chars
-gtk_entry_get_text_window
 gtk_entry_im_context_filter_keypress
 gtk_entry_layout_index_to_text_index
 gtk_entry_new
@@ -1874,7 +1878,6 @@ gtk_init
 #ifdef G_OS_WIN32
 gtk_init_abi_check
 #endif
-gtk_init_add
 gtk_init_check
 #ifdef G_OS_WIN32
 gtk_init_check_abi_check
@@ -2802,9 +2805,11 @@ gtk_recent_info_get_application_info
 gtk_recent_info_get_applications G_GNUC_MALLOC
 gtk_recent_info_last_application G_GNUC_MALLOC
 gtk_recent_info_has_application
+gtk_recent_info_create_app_info
 gtk_recent_info_get_groups G_GNUC_MALLOC
 gtk_recent_info_has_group
 gtk_recent_info_get_icon
+gtk_recent_info_get_gicon
 gtk_recent_info_get_short_name G_GNUC_MALLOC
 gtk_recent_info_get_uri_display G_GNUC_MALLOC
 gtk_recent_info_get_age
@@ -2896,6 +2901,21 @@ gtk_scale_button_get_popup
 #endif
 #endif
 
+#if IN_HEADER(__GTK_SCROLLABLE_H__)
+#if IN_FILE(__GTK_SCROLLABLE_C__)
+gtk_scrollable_get_type G_GNUC_CONST
+gtk_scrollable_get_hadjustment
+gtk_scrollable_get_hscroll_policy
+gtk_scrollable_get_vadjustment
+gtk_scrollable_get_vscroll_policy
+gtk_scrollable_policy_get_type G_GNUC_CONST
+gtk_scrollable_set_hadjustment
+gtk_scrollable_set_hscroll_policy
+gtk_scrollable_set_vadjustment
+gtk_scrollable_set_vscroll_policy
+#endif
+#endif
+
 #if IN_HEADER(__GTK_SCROLLBAR_H__)
 #if IN_FILE(__GTK_SCROLLBAR_C__)
 gtk_scrollbar_get_type G_GNUC_CONST
@@ -2921,6 +2941,10 @@ gtk_scrolled_window_set_policy
 gtk_scrolled_window_set_shadow_type
 gtk_scrolled_window_set_vadjustment
 gtk_scrolled_window_unset_placement
+gtk_scrolled_window_get_min_content_width
+gtk_scrolled_window_set_min_content_width
+gtk_scrolled_window_get_min_content_height
+gtk_scrolled_window_set_min_content_height
 #endif
 #endif
 
@@ -2972,10 +2996,11 @@ gtk_target_list_ref
 gtk_target_list_remove
 gtk_target_list_unref
 gtk_target_table_new_from_list
-gtk_target_entry_get_type G_GNUC_CONST
 gtk_target_table_free
+gtk_target_entry_get_type G_GNUC_CONST
 gtk_target_entry_new
 gtk_target_entry_copy
+gtk_target_entry_free
 #endif
 #endif
 
@@ -4027,7 +4052,6 @@ gtk_tree_view_set_enable_tree_lines
 gtk_tree_view_set_expander_column
 gtk_tree_view_set_fixed_height_mode
 gtk_tree_view_set_grid_lines
-gtk_tree_view_set_hadjustment
 gtk_tree_view_set_headers_clickable
 gtk_tree_view_set_headers_visible
 gtk_tree_view_set_hover_expand
@@ -4046,7 +4070,6 @@ gtk_tree_view_set_show_expanders
 gtk_tree_view_set_tooltip_row
 gtk_tree_view_set_tooltip_cell
 gtk_tree_view_set_tooltip_column
-gtk_tree_view_set_vadjustment
 gtk_tree_view_unset_rows_drag_dest
 gtk_tree_view_unset_rows_drag_source
 gtk_tree_view_columns_autosize
@@ -4238,7 +4261,6 @@ gtk_widget_has_grab
 gtk_widget_has_rc_style
 gtk_widget_has_screen
 gtk_widget_hide
-gtk_widget_hide_all
 gtk_widget_hide_on_delete
 gtk_widget_intersect
 gtk_widget_is_ancestor
@@ -4265,6 +4287,7 @@ gtk_widget_pop_composite_child
 gtk_widget_push_composite_child
 gtk_widget_queue_draw
 gtk_widget_queue_draw_area
+gtk_widget_queue_draw_region
 gtk_widget_queue_resize
 gtk_widget_queue_resize_no_redraw
 gtk_widget_realize
@@ -4295,7 +4318,6 @@ gtk_widget_set_parent
 gtk_widget_set_parent_window
 gtk_widget_set_receives_default
 gtk_widget_set_redraw_on_allocate
-gtk_widget_set_scroll_adjustments
 gtk_widget_set_sensitive
 gtk_widget_set_size_request
 gtk_widget_set_state
@@ -4383,6 +4405,7 @@ gtk_window_begin_resize_drag
 gtk_window_deiconify
 gtk_window_fullscreen
 gtk_window_get_accept_focus
+gtk_window_get_application
 gtk_window_get_decorated
 gtk_window_get_deletable
 gtk_window_get_default_widget
@@ -4445,6 +4468,7 @@ gtk_window_resize
 gtk_window_resize_grip_is_visible
 gtk_window_resize_to_geometry
 gtk_window_set_accept_focus
+gtk_window_set_application
 gtk_window_set_auto_startup_notification
 gtk_window_set_decorated
 gtk_window_set_deletable
@@ -4517,5 +4541,22 @@ gtk_info_bar_set_default_response
 gtk_info_bar_response
 gtk_info_bar_set_message_type
 gtk_info_bar_get_message_type
+#endif
+#endif
+
+#if IN_HEADER(__GTK_GRID_H__)
+#if IN_FILE(__GTK_GRID_c__)
+gtk_grid_get_type G_GNUC_CONST
+gtk_grid_new
+gtk_grid_attach
+gtk_grid_attach_next_to
+gtk_grid_set_row_homogeneous
+gtk_grid_get_row_homogeneous
+gtk_grid_set_row_spacing
+gtk_grid_get_row_spacing
+gtk_grid_set_column_homogeneous
+gtk_grid_get_column_homogeneous
+gtk_grid_set_column_spacing
+gtk_grid_get_column_spacing
 #endif
 #endif

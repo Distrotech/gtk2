@@ -238,12 +238,12 @@ is_capital_sensitive (GtkCellLayout   *cell_layout,
 }
 
 static void
-fill_combo_entry (GtkWidget *entry)
+fill_combo_entry (GtkWidget *combo)
 {
-  gtk_combo_box_append_text (GTK_COMBO_BOX (entry), "One");
-  gtk_combo_box_append_text (GTK_COMBO_BOX (entry), "Two");
-  gtk_combo_box_append_text (GTK_COMBO_BOX (entry), "2\302\275");
-  gtk_combo_box_append_text (GTK_COMBO_BOX (entry), "Three");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), "One");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), "Two");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), "2\302\275");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), "Three");
 }
 
 
@@ -345,7 +345,7 @@ do_combobox (GtkWidget *do_widget)
     
     gtk_container_set_border_width (GTK_CONTAINER (window), 10);
 
-    vbox = gtk_vbox_new (FALSE, 2);
+    vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
     gtk_container_add (GTK_CONTAINER (window), vbox);
 
     /* A combobox demonstrating cell renderers, separators and
@@ -354,7 +354,7 @@ do_combobox (GtkWidget *do_widget)
     frame = gtk_frame_new ("Some stock icons");
     gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
     
-    box = gtk_vbox_new (FALSE, 0);
+    box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_set_border_width (GTK_CONTAINER (box), 5);
     gtk_container_add (GTK_CONTAINER (frame), box);
     
@@ -395,7 +395,7 @@ do_combobox (GtkWidget *do_widget)
     frame = gtk_frame_new ("Where are we ?");
     gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
 
-    box = gtk_vbox_new (FALSE, 0);
+    box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_set_border_width (GTK_CONTAINER (box), 5);
     gtk_container_add (GTK_CONTAINER (frame), box);
     
@@ -424,18 +424,11 @@ do_combobox (GtkWidget *do_widget)
     frame = gtk_frame_new ("Editable");
     gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
     
-    box = gtk_vbox_new (FALSE, 0);
+    box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_set_border_width (GTK_CONTAINER (box), 5);
     gtk_container_add (GTK_CONTAINER (frame), box);
     
-    model = (GtkTreeModel *)gtk_list_store_new (1, G_TYPE_STRING);
-    combo = g_object_new (GTK_TYPE_COMBO_BOX,
-                          "has-entry", TRUE,
-                          "model", model,
-                          "entry-text-column", 0,
-                          NULL);
-    g_object_unref (model);
-
+    combo = gtk_combo_box_text_new_with_entry ();
     fill_combo_entry (combo);
     gtk_container_add (GTK_CONTAINER (box), combo);
     

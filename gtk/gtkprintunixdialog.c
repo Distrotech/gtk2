@@ -248,7 +248,7 @@ struct GtkPrintUnixDialogPrivate
 
   GtkPrinter *current_printer;
   GtkPrinter *request_details_printer;
-  guint request_details_tag;
+  gulong request_details_tag;
   GtkPrinterOptionSet *options;
   gulong options_changed_handler;
   gulong mark_conflicts_id;
@@ -1140,7 +1140,7 @@ wrap_in_frame (const gchar *label,
   gtk_label_set_markup (GTK_LABEL (label_widget), bold_text);
   g_free (bold_text);
 
-  frame = gtk_vbox_new (FALSE, 6);
+  frame = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_box_pack_start (GTK_BOX (frame), label_widget, FALSE, FALSE, 0);
 
   alignment = gtk_alignment_new (0.0, 0.0, 1.0, 1.0);
@@ -1189,7 +1189,7 @@ add_option_to_extension_point (GtkPrinterOption *option,
       gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
       gtk_label_set_mnemonic_widget (GTK_LABEL (label), widget);
 
-      hbox = gtk_hbox_new (FALSE, 12);
+      hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
       gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
       gtk_box_pack_start (GTK_BOX (hbox), widget, FALSE, FALSE, 0);
       gtk_widget_show (hbox);
@@ -2100,11 +2100,11 @@ create_main_page (GtkPrintUnixDialog *dialog)
   GtkWidget *custom_input;
   const gchar *range_tooltip;
 
-  main_vbox = gtk_vbox_new (FALSE, 18);
+  main_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 18);
   gtk_container_set_border_width (GTK_CONTAINER (main_vbox), 12);
   gtk_widget_show (main_vbox);
 
-  vbox = gtk_vbox_new (FALSE, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_box_pack_start (GTK_BOX (main_vbox), vbox, TRUE, TRUE, 0);
   gtk_widget_show (vbox);
 
@@ -2170,12 +2170,12 @@ create_main_page (GtkPrintUnixDialog *dialog)
   gtk_widget_show (treeview);
   gtk_container_add (GTK_CONTAINER (scrolled), treeview);
 
-  custom_input = gtk_hbox_new (FALSE, 18);
+  custom_input = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 18);
   gtk_widget_show (custom_input);
   gtk_box_pack_start (GTK_BOX (vbox), custom_input, FALSE, FALSE, 0);
   priv->extension_point = custom_input;
 
-  hbox = gtk_hbox_new (FALSE, 18);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 18);
   gtk_widget_show (hbox);
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
 
@@ -2564,6 +2564,13 @@ dialog_get_number_up_layout (GtkPrintUnixDialog *dialog)
 
   if (val == NULL)
     return layout;
+
+  if (val[0] == '\0' && priv->options)
+    {
+      GtkPrinterOption *option = gtk_printer_option_set_lookup (priv->options, "gtk-n-up-layout");
+      if (option)
+        val = option->value;
+    }
 
   enum_class = g_type_class_ref (GTK_TYPE_NUMBER_UP_LAYOUT);
   enum_value = g_enum_get_value_by_nick (enum_class, val);
@@ -3293,11 +3300,11 @@ create_page_setup_page (GtkPrintUnixDialog *dialog)
   GtkWidget *combo, *spinbutton, *draw;
   GtkCellRenderer *cell;
 
-  main_vbox = gtk_vbox_new (FALSE, 18);
+  main_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 18);
   gtk_container_set_border_width (GTK_CONTAINER (main_vbox), 12);
   gtk_widget_show (main_vbox);
 
-  hbox = gtk_hbox_new (FALSE, 18);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 18);
   gtk_widget_show (hbox);
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
 
@@ -3363,7 +3370,7 @@ create_page_setup_page (GtkPrintUnixDialog *dialog)
                     0, 1, 3, 4,  GTK_FILL, 0,
                     0, 0);
 
-  combo = gtk_combo_box_new_text ();
+  combo = gtk_combo_box_text_new ();
   priv->page_set_combo = combo;
   gtk_widget_show (combo);
   gtk_table_attach (GTK_TABLE (table), combo,
@@ -3371,9 +3378,9 @@ create_page_setup_page (GtkPrintUnixDialog *dialog)
                     0, 0);
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
   /* In enum order */
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("All sheets"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Even sheets"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Odd sheets"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("All sheets"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Even sheets"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Odd sheets"));
   gtk_combo_box_set_active (GTK_COMBO_BOX (combo), 0);
 
   label = gtk_label_new_with_mnemonic (_("Sc_ale:"));
@@ -3383,7 +3390,7 @@ create_page_setup_page (GtkPrintUnixDialog *dialog)
                     0, 1, 4, 5,  GTK_FILL, 0,
                     0, 0);
 
-  hbox2 = gtk_hbox_new (FALSE, 6);
+  hbox2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_widget_show (hbox2);
   gtk_table_attach (GTK_TABLE (table), hbox2,
                     1, 2, 4, 5,  GTK_FILL, 0,
@@ -3485,24 +3492,24 @@ create_page_setup_page (GtkPrintUnixDialog *dialog)
 		    0, 1, 4, 5,
 		    GTK_FILL, 0, 0, 0);
 
-  combo = gtk_combo_box_new_text ();
+  combo = gtk_combo_box_text_new ();
   priv->orientation_combo = GTK_WIDGET (combo);
   gtk_table_attach (GTK_TABLE (table), combo,
 		    1, 2, 4, 5,  GTK_FILL, 0,
 		    0, 0);
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
   /* In enum order */
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Portrait"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Landscape"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Reverse portrait"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Reverse landscape"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Portrait"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Landscape"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Reverse portrait"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Reverse landscape"));
   gtk_combo_box_set_active (GTK_COMBO_BOX (combo), 0);
   gtk_widget_set_sensitive (combo, FALSE);
   gtk_widget_show (combo);
 
 
   /* Add the page layout preview */
-  hbox2 = gtk_hbox_new (FALSE, 0);
+  hbox2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_show (hbox2);
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox2, TRUE, TRUE, 0);
 
@@ -3752,7 +3759,7 @@ create_advanced_page (GtkPrintUnixDialog *dialog)
                                   GTK_POLICY_NEVER,
                                   GTK_POLICY_AUTOMATIC);
 
-  main_vbox = gtk_vbox_new (FALSE, 18);
+  main_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 18);
   gtk_container_set_border_width (GTK_CONTAINER (main_vbox), 12);
   gtk_widget_show (main_vbox);
 
@@ -3786,7 +3793,7 @@ populate_dialog (GtkPrintUnixDialog *print_dialog)
   gtk_container_set_border_width (GTK_CONTAINER (action_area), 5);
   gtk_box_set_spacing (GTK_BOX (action_area), 6);
 
-  vbox = gtk_vbox_new (FALSE, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), 5);
   gtk_box_pack_start (GTK_BOX (content_area), vbox, TRUE, TRUE, 0);
   gtk_widget_show (vbox);
@@ -3815,7 +3822,7 @@ populate_dialog (GtkPrintUnixDialog *print_dialog)
                         &priv->finishing_page);
   create_advanced_page (print_dialog);
 
-  priv->conflicts_widget = conflict_hbox = gtk_hbox_new (FALSE, 12);
+  priv->conflicts_widget = conflict_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   gtk_box_pack_end (GTK_BOX (vbox), conflict_hbox, FALSE, FALSE, 0);
   image = gtk_image_new_from_stock (GTK_STOCK_DIALOG_WARNING, GTK_ICON_SIZE_MENU);
   gtk_widget_show (image);

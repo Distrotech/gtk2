@@ -22,11 +22,14 @@
  */
 
 #include <config.h>
+
 #include "gtksizerequest.h"
-#include "gtksizegroup-private.h"
+
 #include "gtkdebug.h"
-#include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtkprivate.h"
+#include "gtksizegroup-private.h"
+#include "gtkwidgetprivate.h"
 
 /* looks for a cached size request for this for_size. If not
  * found, returns the oldest entry so it can be overwritten
@@ -101,22 +104,13 @@ get_cached_size (SizeRequestCache  *cache,
   return FALSE;
 }
 
-static void
-do_size_request (GtkWidget      *widget,
-		 GtkRequisition *requisition)
-{
-  /* Now we dont bother caching the deprecated "size-request" returns,
-   * just unconditionally invoke here just in case we run into legacy stuff */
-  gtk_widget_ensure_style (widget);
-  g_signal_emit_by_name (widget, "size-request", requisition);
-}
 
 #ifndef G_DISABLE_CHECKS
 static GQuark recursion_check_quark = 0;
 #endif /* G_DISABLE_CHECKS */
 
 static void
-push_recursion_check (GtkWidget       *request,
+push_recursion_check (GtkWidget       *widget,
                       GtkSizeGroupMode orientation,
                       gint             for_size)
 {
@@ -127,7 +121,7 @@ push_recursion_check (GtkWidget       *request,
   if (recursion_check_quark == 0)
     recursion_check_quark = g_quark_from_static_string ("gtk-size-request-in-progress");
 
-  previous_method = g_object_get_qdata (G_OBJECT (request), recursion_check_quark);
+  previous_method = g_object_get_qdata (G_OBJECT (widget), recursion_check_quark);
 
   if (orientation == GTK_SIZE_GROUP_HORIZONTAL)
     {
@@ -144,26 +138,26 @@ push_recursion_check (GtkWidget       *request,
                  " GtkWidget     ::%s implementation. "
                  "Should just invoke GTK_WIDGET_GET_CLASS(widget)->%s "
                  "directly rather than using gtk_widget_%s",
-                 G_OBJECT_TYPE_NAME (request), request,
+                 G_OBJECT_TYPE_NAME (widget), widget,
                  method, previous_method,
                  method, method);
     }
 
-  g_object_set_qdata (G_OBJECT (request), recursion_check_quark, (char*) method);
+  g_object_set_qdata (G_OBJECT (widget), recursion_check_quark, (char*) method);
 #endif /* G_DISABLE_CHECKS */
 }
 
 static void
-pop_recursion_check (GtkWidget       *request,
+pop_recursion_check (GtkWidget       *widget,
                      GtkSizeGroupMode orientation)
 {
 #ifndef G_DISABLE_CHECKS
-  g_object_set_qdata (G_OBJECT (request), recursion_check_quark, NULL);
+  g_object_set_qdata (G_OBJECT (widget), recursion_check_quark, NULL);
 #endif
 }
 
 static void
-compute_size_for_orientation (GtkWidget         *request,
+compute_size_for_orientation (GtkWidget         *widget,
                               GtkSizeGroupMode   orientation,
                               gint               for_size,
                               gint              *minimum_size,
@@ -171,14 +165,12 @@ compute_size_for_orientation (GtkWidget         *request,
 {
   SizeRequestCache *cache;
   SizeRequest      *cached_size;
-  GtkWidget        *widget;
   gboolean          found_in_cache = FALSE;
   int adjusted_min, adjusted_natural;
 
-  g_return_if_fail (GTK_IS_WIDGET (request));
+  g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (minimum_size != NULL || natural_size != NULL);
 
-  widget = GTK_WIDGET (request);
   cache  = _gtk_widget_peek_request_cache (widget);
 
   if (orientation == GTK_SIZE_GROUP_HORIZONTAL)
@@ -210,47 +202,77 @@ compute_size_for_orientation (GtkWidget         *request,
 
   if (!found_in_cache)
     {
-      GtkRequisition requisition = { 0, 0 };
-      gint min_size = 0, nat_size = 0;
-      gint requisition_size;
+      gint min_size = 0;
+      gint nat_size = 0;
 
-      /* Unconditional size request runs but is often unhandled. */
-      do_size_request (widget, &requisition);
+      gtk_widget_ensure_style (widget);
 
-      push_recursion_check (request, orientation, for_size);
       if (orientation == GTK_SIZE_GROUP_HORIZONTAL)
         {
-          requisition_size = requisition.width;
-
           if (for_size < 0)
-            GTK_WIDGET_GET_CLASS (request)->get_preferred_width (request, &min_size, &nat_size);
+            {
+	      push_recursion_check (widget, orientation, for_size);
+              GTK_WIDGET_GET_CLASS (widget)->get_preferred_width (widget, &min_size, &nat_size);
+	      pop_recursion_check (widget, orientation);
+            }
           else
-            GTK_WIDGET_GET_CLASS (request)->get_preferred_width_for_height (request, for_size, 
-                                                                                  &min_size, &nat_size);
+            {
+              int ignored_position = 0;
+              int natural_height;
+
+	      /* Pull the base natural height from the cache as it's needed to adjust
+	       * the proposed 'for_size' */
+	      gtk_widget_get_preferred_height (widget, NULL, &natural_height);
+
+              /* convert for_size to unadjusted height (for_size is a proposed allocation) */
+              GTK_WIDGET_GET_CLASS (widget)->adjust_size_allocation (widget,
+                                                                     GTK_ORIENTATION_VERTICAL,
+                                                                     &natural_height,
+                                                                     &ignored_position,
+                                                                     &for_size);
+
+	      push_recursion_check (widget, orientation, for_size);
+              GTK_WIDGET_GET_CLASS (widget)->get_preferred_width_for_height (widget, for_size,
+                                                                              &min_size, &nat_size);
+	      pop_recursion_check (widget, orientation);
+            }
         }
       else
         {
-          requisition_size = requisition.height;
-
           if (for_size < 0)
-            GTK_WIDGET_GET_CLASS (request)->get_preferred_height (request, &min_size, &nat_size);
+            {
+	      push_recursion_check (widget, orientation, for_size);
+              GTK_WIDGET_GET_CLASS (widget)->get_preferred_height (widget, &min_size, &nat_size);
+	      pop_recursion_check (widget, orientation);
+            }
           else
-            GTK_WIDGET_GET_CLASS (request)->get_preferred_height_for_width (request, for_size, 
-                                                                                  &min_size, &nat_size);
+            {
+              int ignored_position = 0;
+              int natural_width;
+
+	      /* Pull the base natural width from the cache as it's needed to adjust
+	       * the proposed 'for_size' */
+	      gtk_widget_get_preferred_width (widget, NULL, &natural_width);
+
+              /* convert for_size to unadjusted width (for_size is a proposed allocation) */
+              GTK_WIDGET_GET_CLASS (widget)->adjust_size_allocation (widget,
+                                                                     GTK_ORIENTATION_HORIZONTAL,
+                                                                     &natural_width,
+                                                                     &ignored_position,
+                                                                     &for_size);
+
+	      push_recursion_check (widget, orientation, for_size);
+              GTK_WIDGET_GET_CLASS (widget)->get_preferred_height_for_width (widget, for_size,
+                                                                              &min_size, &nat_size);
+	      pop_recursion_check (widget, orientation);
+            }
         }
-      pop_recursion_check (request, orientation);
 
       if (min_size > nat_size)
         {
           g_warning ("%s %p reported min size %d and natural size %d; natural size must be >= min size",
-                     G_OBJECT_TYPE_NAME (request), request, min_size, nat_size);
+                     G_OBJECT_TYPE_NAME (widget), widget, min_size, nat_size);
         }
-
-      /* Support for dangling "size-request" signal implementations on
-       * legacy widgets
-       */
-      min_size = MAX (min_size, requisition_size);
-      nat_size = MAX (nat_size, requisition_size);
 
       cached_size->minimum_size = min_size;
       cached_size->natural_size = nat_size;
@@ -263,19 +285,18 @@ compute_size_for_orientation (GtkWidget         *request,
 
       adjusted_min = cached_size->minimum_size;
       adjusted_natural = cached_size->natural_size;
-      GTK_WIDGET_GET_CLASS (request)->adjust_size_request (GTK_WIDGET (request),
-                                                           orientation == GTK_SIZE_GROUP_HORIZONTAL ?
-                                                           GTK_ORIENTATION_HORIZONTAL :
-                                                           GTK_ORIENTATION_VERTICAL,
-                                                           cached_size->for_size,
-                                                           &adjusted_min,
-                                                           &adjusted_natural);
+      GTK_WIDGET_GET_CLASS (widget)->adjust_size_request (widget,
+                                                          orientation == GTK_SIZE_GROUP_HORIZONTAL ?
+                                                          GTK_ORIENTATION_HORIZONTAL :
+                                                          GTK_ORIENTATION_VERTICAL,
+                                                          &adjusted_min,
+                                                          &adjusted_natural);
 
       if (adjusted_min < cached_size->minimum_size ||
           adjusted_natural < cached_size->natural_size)
         {
           g_warning ("%s %p adjusted size %s min %d natural %d must not decrease below min %d natural %d",
-                     G_OBJECT_TYPE_NAME (request), request,
+                     G_OBJECT_TYPE_NAME (widget), widget,
                      orientation == GTK_SIZE_GROUP_VERTICAL ? "vertical" : "horizontal",
                      adjusted_min, adjusted_natural,
                      cached_size->minimum_size, cached_size->natural_size);
@@ -284,7 +305,7 @@ compute_size_for_orientation (GtkWidget         *request,
       else if (adjusted_min > adjusted_natural)
         {
           g_warning ("%s %p adjusted size %s min %d natural %d original min %d natural %d has min greater than natural",
-                     G_OBJECT_TYPE_NAME (request), request,
+                     G_OBJECT_TYPE_NAME (widget), widget,
                      orientation == GTK_SIZE_GROUP_VERTICAL ? "vertical" : "horizontal",
                      adjusted_min, adjusted_natural,
                      cached_size->minimum_size, cached_size->natural_size);
@@ -297,11 +318,11 @@ compute_size_for_orientation (GtkWidget         *request,
           cached_size->natural_size = adjusted_natural;
         }
 
-      /* Update size-groups with our request and update our cached requests 
+      /* Update size-groups with our request and update our cached requests
        * with the size-group values in a single pass.
        */
-      _gtk_size_group_bump_requisition (GTK_WIDGET (request),
-					orientation, 
+      _gtk_size_group_bump_requisition (widget,
+					orientation,
 					&cached_size->minimum_size,
 					&cached_size->natural_size);
     }
@@ -316,7 +337,7 @@ compute_size_for_orientation (GtkWidget         *request,
 
   GTK_NOTE (SIZE_REQUEST,
             g_print ("[%p] %s\t%s: %d is minimum %d and natural: %d (hit cache: %s)\n",
-                     request, G_OBJECT_TYPE_NAME (request),
+                     widget, G_OBJECT_TYPE_NAME (widget),
                      orientation == GTK_SIZE_GROUP_HORIZONTAL ?
                      "width for height" : "height for width" ,
                      for_size,
@@ -370,7 +391,7 @@ gtk_widget_get_request_mode (GtkWidget *widget)
  *
  * The returned request will be modified by the
  * GtkWidgetClass::adjust_size_request virtual method and by any
- * #GtkSizeGroup that have been applied. That is, the returned request
+ * #GtkSizeGroup<!-- -->s that have been applied. That is, the returned request
  * is the one that should be used for layout, not necessarily the one
  * returned by the widget itself.
  *
@@ -398,7 +419,7 @@ gtk_widget_get_preferred_width (GtkWidget *widget,
  *
  * The returned request will be modified by the
  * GtkWidgetClass::adjust_size_request virtual method and by any
- * #GtkSizeGroup that have been applied. That is, the returned request
+ * #GtkSizeGroup<!-- -->s that have been applied. That is, the returned request
  * is the one that should be used for layout, not necessarily the one
  * returned by the widget itself.
  *
@@ -427,7 +448,7 @@ gtk_widget_get_preferred_height (GtkWidget *widget,
  *
  * The returned request will be modified by the
  * GtkWidgetClass::adjust_size_request virtual method and by any
- * #GtkSizeGroup that have been applied. That is, the returned request
+ * #GtkSizeGroup<!-- -->s that have been applied. That is, the returned request
  * is the one that should be used for layout, not necessarily the one
  * returned by the widget itself.
  *
@@ -455,7 +476,7 @@ gtk_widget_get_preferred_width_for_height (GtkWidget *widget,
  *
  * The returned request will be modified by the
  * GtkWidgetClass::adjust_size_request virtual method and by any
- * #GtkSizeGroup that have been applied. That is, the returned request
+ * #GtkSizeGroup<!-- -->s that have been applied. That is, the returned request
  * is the one that should be used for layout, not necessarily the one
  * returned by the widget itself.
  *
@@ -477,15 +498,15 @@ gtk_widget_get_preferred_height_for_width (GtkWidget *widget,
  * @minimum_size: (out) (allow-none): location for storing the minimum size, or %NULL
  * @natural_size: (out) (allow-none): location for storing the natural size, or %NULL
  *
- * Retrieves the minimum and natural size of a widget taking
+ * Retrieves the minimum and natural size of a widget, taking
  * into account the widget's preference for height-for-width management.
  *
  * This is used to retrieve a suitable size by container widgets which do
  * not impose any restrictions on the child placement. It can be used
  * to deduce toplevel window and menu sizes as well as child widgets in
- * free form containers such as GtkLayout.
+ * free-form containers such as GtkLayout.
  *
- * <note><para>Handle with care, note that the natural height of a height-for-width
+ * <note><para>Handle with care. Note that the natural height of a height-for-width
  * widget will generally be a smaller size than the minimum height, since the required
  * height for the natural width is generally smaller than the required height for
  * the minimum width.</para></note>
@@ -566,14 +587,14 @@ compare_gap (gconstpointer p1,
 }
 
 /**
- * gtk_distribute_natural_allocation: 
+ * gtk_distribute_natural_allocation:
  * @extra_space: Extra space to redistribute among children after subtracting
  *               minimum sizes and any child padding from the overall allocation
  * @n_requested_sizes: Number of requests to fit into the allocation
  * @sizes: An array of structs with a client pointer and a minimum/natural size
  *         in the orientation of the allocation.
  *
- * Distributes @extra_space to child @sizes by bringing up smaller
+ * Distributes @extra_space to child @sizes by bringing smaller
  * children up to natural size first.
  *
  * The remaining space will be added to the @minimum_size member of the
@@ -583,7 +604,7 @@ compare_gap (gconstpointer p1,
  * Returns: The remainder of @extra_space after redistributing space
  * to @sizes.
  */
-gint 
+gint
 gtk_distribute_natural_allocation (gint              extra_space,
 				   guint             n_requested_sizes,
 				   GtkRequestedSize *sizes)
@@ -614,12 +635,12 @@ gtk_distribute_natural_allocation (gint              extra_space,
    * The following code distributes the additional space by following
    * these rules.
    */
-  
+
   /* Sort descending by gap and position. */
   g_qsort_with_data (spreading,
 		     n_requested_sizes, sizeof (guint),
 		     compare_gap, sizes);
-  
+
   /* Distribute available space.
    * This master piece of a loop was conceived by Behdad Esfahbod.
    */
@@ -632,14 +653,13 @@ gtk_distribute_natural_allocation (gint              extra_space,
       gint glue = (extra_space + i) / (i + 1);
       gint gap = sizes[(spreading[i])].natural_size
 	- sizes[(spreading[i])].minimum_size;
-      
+
       gint extra = MIN (glue, gap);
-      
+
       sizes[spreading[i]].minimum_size += extra;
-      
+
       extra_space -= extra;
     }
 
   return extra_space;
 }
-

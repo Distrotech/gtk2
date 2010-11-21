@@ -44,9 +44,6 @@
 #include "gtkprivate.h"
 #include "gtkintl.h"
 
-#define DEFAULT_POPUP_DELAY     225
-#define DEFAULT_POPDOWN_DELAY  1000
-
 #define NAVIGATION_REGION_OVERSHOOT 50  /* How much the navigation region
 					 * extends below the submenu
 					 */
@@ -241,8 +238,8 @@ static void     gtk_menu_set_submenu_navigation_region (GtkMenu          *menu,
  
 static void gtk_menu_deactivate	    (GtkMenuShell      *menu_shell);
 static void gtk_menu_show_all       (GtkWidget         *widget);
-static void gtk_menu_hide_all       (GtkWidget         *widget);
-static void gtk_menu_position       (GtkMenu           *menu);
+static void gtk_menu_position       (GtkMenu           *menu,
+                                     gboolean           set_scroll_offset);
 static void gtk_menu_reparent       (GtkMenu           *menu, 
 				     GtkWidget         *new_parent, 
 				     gboolean           unrealize);
@@ -479,7 +476,6 @@ gtk_menu_class_init (GtkMenuClass *class)
   widget_class->button_release_event = gtk_menu_button_release;
   widget_class->motion_notify_event = gtk_menu_motion_notify;
   widget_class->show_all = gtk_menu_show_all;
-  widget_class->hide_all = gtk_menu_hide_all;
   widget_class->enter_notify_event = gtk_menu_enter_notify;
   widget_class->leave_notify_event = gtk_menu_leave_notify;
   widget_class->style_set = gtk_menu_style_set;
@@ -819,28 +815,6 @@ gtk_menu_class_init (GtkMenuClass *class)
 				GTK_TYPE_SCROLL_TYPE,
 				GTK_SCROLL_PAGE_DOWN);
 
-  gtk_settings_install_property (g_param_spec_boolean ("gtk-can-change-accels",
-						       P_("Can change accelerators"),
-						       P_("Whether menu accelerators can be changed by pressing a key over the menu item"),
-						       FALSE,
-						       GTK_PARAM_READWRITE));
-
-  gtk_settings_install_property (g_param_spec_int ("gtk-menu-popup-delay",
-						   P_("Delay before submenus appear"),
-						   P_("Minimum time the pointer must stay over a menu item before the submenu appear"),
-						   0,
-						   G_MAXINT,
-						   DEFAULT_POPUP_DELAY,
-						   GTK_PARAM_READWRITE));
-
-  gtk_settings_install_property (g_param_spec_int ("gtk-menu-popdown-delay",
-						   P_("Delay before hiding a submenu"),
-						   P_("The time before hiding a submenu when the pointer is moving towards the submenu"),
-						   0,
-						   G_MAXINT,
-						   DEFAULT_POPDOWN_DELAY,
-						   GTK_PARAM_READWRITE));
-
   g_type_class_add_private (gobject_class, sizeof (GtkMenuPrivate));
 }
 
@@ -1158,7 +1132,7 @@ menu_change_screen (GtkMenu   *menu,
   if (menu->torn_off)
     {
       gtk_window_set_screen (GTK_WINDOW (menu->tearoff_window), new_screen);
-      gtk_menu_position (menu);
+      gtk_menu_position (menu, TRUE);
     }
 
   gtk_window_set_screen (GTK_WINDOW (menu->toplevel), new_screen);
@@ -1645,7 +1619,7 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
 
   /* Position the menu, possibly changing the size request
    */
-  gtk_menu_position (menu);
+  gtk_menu_position (menu, TRUE);
 
   /* Compute the size of the toplevel and realize it so we
    * can scroll correctly.
@@ -2038,7 +2012,7 @@ gtk_menu_reposition (GtkMenu *menu)
   g_return_if_fail (GTK_IS_MENU (menu));
 
   if (!menu->torn_off && gtk_widget_is_drawable (GTK_WIDGET (menu)))
-    gtk_menu_position (menu);
+    gtk_menu_position (menu, FALSE);
 }
 
 static void
@@ -2185,8 +2159,8 @@ gtk_menu_set_tearoff_state (GtkMenu  *menu,
 	      if (toplevel != NULL)
 		gtk_window_set_transient_for (GTK_WINDOW (menu->tearoff_window),
 					      GTK_WINDOW (toplevel));
-	      
-	      menu->tearoff_hbox = gtk_hbox_new (FALSE, FALSE);
+
+	      menu->tearoff_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 	      gtk_container_add (GTK_CONTAINER (menu->tearoff_window), menu->tearoff_hbox);
 
               height = gdk_window_get_height (gtk_widget_get_window (GTK_WIDGET (menu)));
@@ -2198,7 +2172,7 @@ gtk_menu_set_tearoff_state (GtkMenu  *menu,
 	      g_object_connect (menu->tearoff_adjustment,
 				"signal::value-changed", gtk_menu_scrollbar_changed, menu,
 				NULL);
-	      menu->tearoff_scrollbar = gtk_vscrollbar_new (menu->tearoff_adjustment);
+	      menu->tearoff_scrollbar = gtk_scrollbar_new (GTK_ORIENTATION_VERTICAL, menu->tearoff_adjustment);
 
 	      gtk_box_pack_end (GTK_BOX (menu->tearoff_hbox),
 				menu->tearoff_scrollbar,
@@ -2220,7 +2194,7 @@ gtk_menu_set_tearoff_state (GtkMenu  *menu,
 	  gtk_menu_set_tearoff_hints (menu, gdk_window_get_width (gtk_widget_get_window (GTK_WIDGET (menu))));
 	    
 	  gtk_widget_realize (menu->tearoff_window);
-	  gtk_menu_position (menu);
+	  gtk_menu_position (menu, TRUE);
 	  
 	  gtk_widget_show (GTK_WIDGET (menu));
 	  gtk_widget_show (menu->tearoff_window);
@@ -4499,7 +4473,8 @@ gtk_menu_deactivate (GtkMenuShell *menu_shell)
 }
 
 static void
-gtk_menu_position (GtkMenu *menu)
+gtk_menu_position (GtkMenu  *menu,
+                   gboolean  set_scroll_offset)
 {
   GtkWidget *widget;
   GtkRequisition requisition;
@@ -4731,7 +4706,8 @@ gtk_menu_position (GtkMenu *menu)
 			 requisition.width, requisition.height);
     }
 
-  menu->scroll_offset = scroll_offset;
+  if (set_scroll_offset)
+    menu->scroll_offset = scroll_offset;
 }
 
 static void
@@ -5134,14 +5110,6 @@ gtk_menu_show_all (GtkWidget *widget)
 {
   /* Show children, but not self. */
   gtk_container_foreach (GTK_CONTAINER (widget), (GtkCallback) gtk_widget_show_all, NULL);
-}
-
-
-static void
-gtk_menu_hide_all (GtkWidget *widget)
-{
-  /* Hide children, but not self. */
-  gtk_container_foreach (GTK_CONTAINER (widget), (GtkCallback) gtk_widget_hide_all, NULL);
 }
 
 /**

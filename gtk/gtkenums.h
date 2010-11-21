@@ -49,8 +49,8 @@ G_BEGIN_DECLS
  * Controls how a widget deals with extra space in a single (x or y)
  * dimension.
  *
- * Alignment only matters if the widget receives a "too large"
- * allocation, for example if you packed the widget with the "expand"
+ * Alignment only matters if the widget receives a "too large" allocation,
+ * for example if you packed the widget with the #GtkWidget:expand
  * flag inside a #GtkBox, then the widget might get extra space.  If
  * you have for example a 16x16 icon inside a 32x32 space, the icon
  * could be scaled and stretched, it could be centered, or it could be
@@ -509,6 +509,15 @@ typedef enum
   GTK_UNIT_MM
 } GtkUnit;
 
+/**
+ * GtkTreeViewGridLines:
+ * @GTK_TREE_VIEW_GRID_LINES_NONE: No grid lines.
+ * @GTK_TREE_VIEW_GRID_LINES_HORIZONTAL: Horizontal grid lines.
+ * @GTK_TREE_VIEW_GRID_LINES_VERTICAL: Vertical grid lines.
+ * @GTK_TREE_VIEW_GRID_LINES_BOTH: Horizontal and vertical grid lines.
+ *
+ * Used to indicate which grid lines to draw in a tree view.
+ */
 typedef enum
 {
   GTK_TREE_VIEW_GRID_LINES_NONE,
@@ -541,6 +550,22 @@ typedef enum
   GTK_SIZE_REQUEST_WIDTH_FOR_HEIGHT
 } GtkSizeRequestMode;
 
+/**
+ * GtkScrollablePolicy:
+ * @GTK_SCROLL_MINIMUM: Scrollable adjustments are based on the minimum size
+ * @GTK_SCROLL_NATURAL: Scrollable adjustments are based on the natural size
+ *
+ * Defines the policy to be used in a scrollable widget when updating
+ * the scrolled window adjustments in a given orientation.
+ */
+typedef enum
+{
+  GTK_SCROLL_MINIMUM = 0,
+  GTK_SCROLL_NATURAL
+} GtkScrollablePolicy;
+
+
 G_END_DECLS
+
 
 #endif /* __GTK_ENUMS_H__ */

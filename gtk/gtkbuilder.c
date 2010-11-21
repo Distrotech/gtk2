@@ -221,7 +221,6 @@
  * <link linkend="GtkCellLayout-BUILDER-UI">GtkCellLayout</link>,
  * <link linkend="GtkColorSelectionDialog-BUILDER-UI">GtkColorSelectionDialog</link>,
  * <link linkend="GtkFontSelectionDialog-BUILDER-UI">GtkFontSelectionDialog</link>,
- * <link linkend="GtkComboBoxEntry-BUILDER-UI">GtkComboBoxEntry</link>,
  * <link linkend="GtkExpander-BUILDER-UI">GtkExpander</link>,
  * <link linkend="GtkFrame-BUILDER-UI">GtkFrame</link>,
  * <link linkend="GtkListStore-BUILDER-UI">GtkListStore</link>,
@@ -240,7 +239,7 @@
 
 #include "config.h"
 #include <errno.h> /* errno */
-#include <stdlib.h> /* strtol, strtoul */
+#include <stdlib.h>
 #include <string.h> /* strlen */
 
 #include "gtkbuilder.h"
@@ -1452,9 +1451,9 @@ gtk_builder_value_from_string_type (GtkBuilder   *builder,
     case G_TYPE_LONG:
       {
         long l;
-        gchar *endptr;
+        gchar *endptr = NULL;
         errno = 0;
-        l = strtol (string, &endptr, 0);
+        l = g_ascii_strtoll (string, &endptr, 0);
         if (errno || endptr == string)
           {
 	    g_set_error (error,
@@ -1475,9 +1474,9 @@ gtk_builder_value_from_string_type (GtkBuilder   *builder,
     case G_TYPE_ULONG:
       {
         gulong ul;
-        gchar *endptr;
+        gchar *endptr = NULL;
         errno = 0;
-        ul = strtoul (string, &endptr, 0);
+        ul = g_ascii_strtoull (string, &endptr, 0);
         if (errno || endptr == string)
           {
 	    g_set_error (error,
@@ -1521,7 +1520,7 @@ gtk_builder_value_from_string_type (GtkBuilder   *builder,
     case G_TYPE_DOUBLE:
       {
         gdouble d;
-        gchar *endptr;
+        gchar *endptr = NULL;
         errno = 0;
         d = g_ascii_strtod (string, &endptr);
         if (errno || endptr == string)
@@ -1557,6 +1556,22 @@ gtk_builder_value_from_string_type (GtkBuilder   *builder,
 			   GTK_BUILDER_ERROR_INVALID_VALUE,
 			   "Could not parse color `%s'",
 			   string);
+              ret = FALSE;
+            }
+        }
+      else if (G_VALUE_HOLDS (value, GDK_TYPE_RGBA))
+        {
+          GdkRGBA rgba = { 0 };
+
+          if (gdk_rgba_parse (string, &rgba))
+            g_value_set_boxed (value, &rgba);
+          else
+            {
+              g_set_error (error,
+                           GTK_BUILDER_ERROR,
+                           GTK_BUILDER_ERROR_INVALID_VALUE,
+                           "Could not parse RGBA color '%s'",
+                           string);
               ret = FALSE;
             }
         }
@@ -1661,8 +1676,10 @@ _gtk_builder_enum_from_string (GType         type,
   
   ret = TRUE;
 
-  value = strtoul (string, &endptr, 0);
-  if (endptr != string) /* parsed a number */
+  endptr = NULL;
+  errno = 0;
+  value = g_ascii_strtoull (string, &endptr, 0);
+  if (errno == 0 && endptr != string) /* parsed a number */
     *enum_value = value;
   else
     {
@@ -1708,9 +1725,11 @@ _gtk_builder_flags_from_string (GType         type,
   g_return_val_if_fail (string != 0, FALSE);
 
   ret = TRUE;
-  
-  value = strtoul (string, &endptr, 0);
-  if (endptr != string) /* parsed a number */
+
+  endptr = NULL;
+  errno = 0;
+  value = g_ascii_strtoull (string, &endptr, 0);
+  if (errno == 0 && endptr != string) /* parsed a number */
     *flags_value = value;
   else
     {

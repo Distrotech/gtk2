@@ -1,14 +1,4 @@
 # Process this file with autoconf to produce a configure script.
-# require autoconf 2.54
-AC_PREREQ([2.62])
-
-AC_INIT([gtk+], [gtk_version],
-        [http://bugzilla.gnome.org/enter_bug.cgi?product=gtk%2B],
-        [gtk+])
-
-AC_CONFIG_HEADER([config.h])
-AC_CONFIG_SRCDIR([gdk/gdktypes.h])
-AC_CONFIG_MACRO_DIR([m4])
 
 # Making releases:
 #   GTK_MICRO_VERSION += 1;
@@ -20,7 +10,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 m4_define([gtk_major_version], [2])
 m4_define([gtk_minor_version], [91])
-m4_define([gtk_micro_version], [1])
+m4_define([gtk_micro_version], [5])
 m4_define([gtk_interface_age], [0])
 m4_define([gtk_binary_age],
           [m4_eval(100 * gtk_minor_version + gtk_micro_version)])
@@ -28,6 +18,15 @@ m4_define([gtk_version],
           [gtk_major_version.gtk_minor_version.gtk_micro_version])
 # This is the X.Y used in -lgtk-FOO-X.Y
 m4_define([gtk_api_version], [3.0])
+
+AC_PREREQ([2.64])
+AC_INIT([gtk+], [gtk_version],
+        [http://bugzilla.gnome.org/enter_bug.cgi?product=gtk%2B],
+        [gtk+])
+
+AC_CONFIG_HEADER([config.h])
+AC_CONFIG_SRCDIR([gdk/gdktypes.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Define a string for the earliest version that this release has
 # backwards binary compatibility with for all interfaces a module
@@ -39,7 +38,7 @@ m4_define([gtk_api_version], [3.0])
 m4_define([gtk_binary_version], [3.0.0])
 
 # required versions of other packages
-m4_define([glib_required_version], [2.27.0])
+m4_define([glib_required_version], [2.27.3])
 m4_define([pango_required_version], [1.20])
 m4_define([atk_required_version], [1.29.2])
 m4_define([cairo_required_version], [1.10.0])
@@ -65,7 +64,7 @@ AM_MAINTAINER_MODE([enable])
 # Support silent build rules, requires at least automake-1.11. Enable
 # by either passing --enable-silent-rules to configure or passing V=0
 # to make
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([no])])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 #
 # For each of the libraries we build, we define the following
@@ -1649,9 +1648,7 @@ docs/reference/gdk/version.xml
 docs/reference/gtk/Makefile
 docs/reference/gtk/version.xml
 docs/reference/libgail-util/Makefile
-docs/faq/Makefile
 docs/tools/Makefile
-docs/tutorial/Makefile
 build/Makefile
 build/win32/Makefile
 build/win32/vs9/Makefile

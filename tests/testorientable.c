@@ -61,7 +61,7 @@ main (int argc, char **argv)
   gtk_table_set_col_spacings (GTK_TABLE (table), 12);
 
   /* GtkBox */
-  box = gtk_hbox_new (6, FALSE);
+  box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   orientables = g_list_prepend (orientables, box);
   gtk_table_attach_defaults (GTK_TABLE (table), box, 0, 1, 1, 2);
   gtk_box_pack_start (GTK_BOX (box),
@@ -75,7 +75,7 @@ main (int argc, char **argv)
                   TRUE, TRUE, 0);
 
   /* GtkButtonBox */
-  box = gtk_hbutton_box_new ();
+  box = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
   orientables = g_list_prepend (orientables, box);
   gtk_table_attach_defaults (GTK_TABLE (table), box, 1, 2, 1, 2);
   gtk_box_pack_start (GTK_BOX (box),
@@ -89,7 +89,7 @@ main (int argc, char **argv)
                   TRUE, TRUE, 0);
 
   /* GtkSeparator */
-  box = gtk_hseparator_new ();
+  box = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
   orientables = g_list_prepend (orientables, box);
   gtk_table_attach_defaults (GTK_TABLE (table), box, 2, 3, 1, 2);
 

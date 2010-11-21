@@ -16,7 +16,7 @@ GTK_PRINT_PREVIEW_COMMAND="evince --unlink-tempfile --preview --print-settings %
 endif
 
 SUBDIRS = theme-bits . tests
-DIST_SUBDIRS=theme-bits tests
+DIST_SUBDIRS = theme-bits tests
 
 if HAVE_PAPI_CUPS
 GTK_PRINT_BACKENDS=file,papi,cups
@@ -187,7 +187,7 @@ gtk_public_h_sources =          \
 	gtkcolorsel.h		\
 	gtkcolorseldialog.h	\
 	gtkcombobox.h		\
-	gtkcomboboxentry.h	\
+	gtkcomboboxtext.h	\
 	gtkcontainer.h		\
 	gtkdebug.h              \
 	gtkdialog.h		\
@@ -209,6 +209,7 @@ gtk_public_h_sources =          \
 	gtkfontbutton.h		\
 	gtkfontsel.h		\
 	gtkframe.h		\
+	gtkgrid.h		\
 	gtkhandlebox.h		\
 	gtkhbbox.h		\
 	gtkhbox.h		\
@@ -254,7 +255,6 @@ gtk_public_h_sources =          \
 	gtkprintoperation.h	\
 	gtkprintoperationpreview.h	\
 	gtkprintsettings.h	\
-	gtkprivate.h		\
 	gtkprogressbar.h	\
 	gtkradioaction.h	\
 	gtkradiobutton.h	\
@@ -272,6 +272,7 @@ gtk_public_h_sources =          \
 	gtkruler.h		\
 	gtkscale.h		\
 	gtkscalebutton.h	\
+	gtkscrollable.h         \
 	gtkscrollbar.h		\
 	gtkscrolledwindow.h	\
 	gtkselection.h		\
@@ -350,6 +351,7 @@ gtk_semi_private_h_sources =    \
 
 # GTK+ header files that don't get installed
 gtk_private_h_sources =		\
+	gtkbuttonprivate.h	\
 	gtkquery.h		\
 	gtksearchengine.h	\
 	gtksearchenginesimple.h	\
@@ -376,6 +378,7 @@ gtk_private_h_sources =		\
 	gtkplugprivate.h	\
 	gtkprintoperation-private.h\
 	gtkprintutils.h		\
+	gtkprivate.h		\
 	gtkrbtree.h		\
 	gtkrecentchooserdefault.h \
 	gtkrecentchooserprivate.h \
@@ -396,6 +399,7 @@ gtk_private_h_sources =		\
 	gtktreedatalist.h	\
 	gtktreeprivate.h	\
 	gtkwindow-decorate.h	\
+	gtkwidgetprivate.h	\
 	$(gtk_clipboard_dnd_h_sources)
 
 # GTK+ C sources to build the library from
@@ -445,7 +449,7 @@ gtk_base_c_sources =            \
 	gtkcolorsel.c		\
 	gtkcolorseldialog.c	\
 	gtkcombobox.c		\
-	gtkcomboboxentry.c	\
+	gtkcomboboxtext.c 	\
 	gtkcontainer.c		\
 	gtkdialog.c		\
 	gtkdrawingarea.c	\
@@ -470,6 +474,7 @@ gtk_base_c_sources =            \
 	gtkfontbutton.c         \
 	gtkfontsel.c            \
 	gtkframe.c		\
+	gtkgrid.c		\
 	gtkhandlebox.c		\
 	gtkhbbox.c		\
 	gtkhbox.c		\
@@ -543,6 +548,7 @@ gtk_base_c_sources =            \
 	gtkruler.c		\
 	gtkscale.c		\
 	gtkscalebutton.c	\
+	gtkscrollable.c         \
 	gtkscrollbar.c		\
 	gtkscrolledwindow.c	\
 	gtkselection.c		\
@@ -893,7 +899,7 @@ LDADDS =								\
 
 if HAVE_INTROSPECTION
 introspection_files = \
-    $(filter-out gtktextlayout.h, $(gtkinclude_HEADERS)) \
+    $(filter-out %private.h gtktextlayout.h, $(gtkinclude_HEADERS)) \
     $(gtk_base_c_sources) \
     gtktypebuiltins.h \
     gtktypebuiltins.c
@@ -910,6 +916,9 @@ Gtk_3_0_gir_CFLAGS = \
 		-UGTK_DISABLE_DEPRECATED \
 		-DGTK_TEXT_USE_INTERNAL_UNSUPPORTED_API
 Gtk_3_0_gir_LIBS = $(gtktargetlib)
+if USE_X11
+Gtk_3_0_gir_LIBS += $(top_builddir)/gdk/libgdk-x11-3.0.la
+endif
 Gtk_3_0_gir_FILES = $(introspection_files)
 INTROSPECTION_GIRS += Gtk-3.0.gir
 
@@ -1301,8 +1310,9 @@ EXTRA_DIST +=                   \
 	makefile.msc		\
 	makefile.msc.in		\
 	abicheck.sh		\
-	gtktypebuiltins.c.template      \
-	gtktypebuiltins.h.template
+	gtktypebuiltins.c.template \
+	gtktypebuiltins.h.template \
+	org.gtk.Settings.FileChooser.gschema.xml
 
 gsettings_SCHEMAS = \
 	org.gtk.Settings.FileChooser.gschema.xml

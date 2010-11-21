@@ -586,9 +586,10 @@ _create_select_tests_window (AtkObject    *obj,
                          scrolledWindow);
       
       /* Setup Layout */
-      md[window_no]->vbox = gtk_vbox_new (TRUE, 0);
+      md[window_no]->vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+      gtk_box_set_homogeneous (GTK_BOX (md[window_no]->vbox), TRUE);
       md[window_no]->button = gtk_button_new_with_mnemonic ("_Run Tests");
-      hbuttonbox = gtk_hbutton_box_new ();
+      hbuttonbox = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
       gtk_button_box_set_layout (GTK_BUTTON_BOX (hbuttonbox),
                                  GTK_BUTTONBOX_SPREAD);
       gtk_box_pack_end (GTK_BOX (hbuttonbox),
@@ -645,7 +646,7 @@ add_test (gint   window,
     return FALSE;
   else
     {
-      md[window]->hbox = gtk_hbox_new (FALSE, 0);
+      md[window]->hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
       gtk_box_set_spacing (GTK_BOX (md[window]->hbox), 10);
       gtk_container_set_border_width (GTK_CONTAINER (md[window]->hbox), 10);
       gtk_container_add (GTK_CONTAINER (md[window]->vbox), md[window]->hbox);
@@ -713,7 +714,7 @@ gchar **tests_set(gint window, int *count)
   for (i = 0; i < testcount[window]; i++)
     {
       nullparam = FALSE;
-      if (GTK_TOGGLE_BUTTON(listoftests[window][i].toggleButton)->active)
+      if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (listoftests[window][i].toggleButton)))
         {
           num = listoftests[window][i].numParameters;
           for (j = 0; j < num; j++)

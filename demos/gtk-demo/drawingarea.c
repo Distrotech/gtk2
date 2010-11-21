@@ -193,7 +193,7 @@ close_window (void)
   window = NULL;
 
   if (surface)
-    g_object_unref (surface);
+    cairo_surface_destroy (surface);
   surface = NULL;
 }
 
@@ -216,7 +216,7 @@ do_drawingarea (GtkWidget *do_widget)
 
       gtk_container_set_border_width (GTK_CONTAINER (window), 8);
 
-      vbox = gtk_vbox_new (FALSE, 8);
+      vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
       gtk_container_set_border_width (GTK_CONTAINER (vbox), 8);
       gtk_container_add (GTK_CONTAINER (window), vbox);
 

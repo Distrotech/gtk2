@@ -27,42 +27,9 @@
 #ifndef __GTK_PRIVATE_H__
 #define __GTK_PRIVATE_H__
 
-#include <gtk/gtkwidget.h>
+#include <glib.h>
 
 G_BEGIN_DECLS
-
-void         _gtk_widget_set_visible_flag   (GtkWidget *widget,
-                                             gboolean   visible);
-gboolean     _gtk_widget_get_resize_pending (GtkWidget *widget);
-void         _gtk_widget_set_resize_pending (GtkWidget *widget,
-                                             gboolean   resize_pending);
-gboolean     _gtk_widget_get_in_reparent    (GtkWidget *widget);
-void         _gtk_widget_set_in_reparent    (GtkWidget *widget,
-                                             gboolean   in_reparent);
-gboolean     _gtk_widget_get_anchored       (GtkWidget *widget);
-void         _gtk_widget_set_anchored       (GtkWidget *widget,
-                                             gboolean   anchored);
-gboolean     _gtk_widget_get_shadowed       (GtkWidget *widget);
-void         _gtk_widget_set_shadowed       (GtkWidget *widget,
-                                             gboolean   shadowed);
-gboolean     _gtk_widget_get_alloc_needed   (GtkWidget *widget);
-void         _gtk_widget_set_alloc_needed   (GtkWidget *widget,
-                                             gboolean   alloc_needed);
-gboolean     _gtk_widget_get_width_request_needed  (GtkWidget *widget);
-void         _gtk_widget_set_width_request_needed  (GtkWidget *widget,
-                                                    gboolean   width_request_needed);
-gboolean     _gtk_widget_get_height_request_needed (GtkWidget *widget);
-void         _gtk_widget_set_height_request_needed (GtkWidget *widget,
-                                                    gboolean   height_request_needed);
-
-void _gtk_widget_override_size_request (GtkWidget *widget,
-					int        width,
-					int        height,
-					int       *old_width,
-					int       *old_height);
-void _gtk_widget_restore_size_request  (GtkWidget *widget,
-					int        old_width,
-					int        old_height);
 
 #ifdef G_OS_WIN32
 
@@ -85,10 +52,6 @@ const gchar *_gtk_get_data_prefix ();
 
 #endif /* G_OS_WIN32 */
 
-gboolean _gtk_fnmatch (const char *pattern,
-		       const char *string,
-		       gboolean    no_leading_period);
-
 #define GTK_PARAM_READABLE G_PARAM_READABLE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
 #define GTK_PARAM_WRITABLE G_PARAM_WRITABLE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
 #define GTK_PARAM_READWRITE G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
@@ -102,30 +65,9 @@ gboolean _gtk_fnmatch (const char *pattern,
 #define GTK_DEFAULT_ACCEL_MOD_MASK GDK_META_MASK
 #endif
 
-
-/* With GtkWidget     , a widget may be requested
- * its width for 2 or maximum 3 heights in one resize
- * (Note this define is limited by the bitfield sizes
- * defined on the SizeRequestCache structure).
- */
-#define GTK_SIZE_REQUEST_CACHED_SIZES 3
-
-typedef struct
-{
-  gint   for_size;
-  gint   minimum_size;
-  gint   natural_size;
-} SizeRequest;
-
-typedef struct {
-  SizeRequest widths[GTK_SIZE_REQUEST_CACHED_SIZES];
-  SizeRequest heights[GTK_SIZE_REQUEST_CACHED_SIZES];
-  guint       cached_widths : 2;
-  guint       cached_heights : 2;
-  guint       last_cached_width : 2;
-  guint       last_cached_height : 2;
-} SizeRequestCache;
-
+gboolean _gtk_fnmatch (const char *pattern,
+		       const char *string,
+		       gboolean    no_leading_period);
 
 G_END_DECLS
 

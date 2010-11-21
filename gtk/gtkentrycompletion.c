@@ -527,8 +527,8 @@ gtk_entry_completion_init (GtkEntryCompletion *completion)
 			     GTK_SHADOW_ETCHED_IN);
   gtk_widget_show (popup_frame);
   gtk_container_add (GTK_CONTAINER (priv->popup_window), popup_frame);
-  
-  priv->vbox = gtk_vbox_new (FALSE, 0);
+
+  priv->vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add (GTK_CONTAINER (popup_frame), priv->vbox);
 
   gtk_container_add (GTK_CONTAINER (priv->scrolled_window), priv->tree_view);
@@ -1400,7 +1400,14 @@ _gtk_entry_completion_resize_popup (GtkEntryCompletion *completion)
   if (!window)
     return FALSE;
 
+  gtk_widget_get_allocation (completion->priv->entry, &allocation);
+  gtk_widget_get_preferred_size (completion->priv->entry,
+                                 &entry_req, NULL);
+
   gdk_window_get_origin (window, &x, &y);
+  x += allocation.x;
+  y += allocation.y + (allocation.height - entry_req.height) / 2;
+
   _gtk_entry_get_borders (GTK_ENTRY (completion->priv->entry), &x_border, &y_border);
 
   matches = gtk_tree_model_iter_n_children (GTK_TREE_MODEL (completion->priv->filter_model), NULL);
@@ -1436,14 +1443,15 @@ _gtk_entry_completion_resize_popup (GtkEntryCompletion *completion)
   else
     gtk_widget_show (completion->priv->scrolled_window);
 
-  gtk_widget_get_allocation (completion->priv->entry, &allocation);
   if (completion->priv->popup_set_width)
     width = MIN (allocation.width, monitor.width) - 2 * x_border;
   else
     width = -1;
 
   gtk_tree_view_columns_autosize (GTK_TREE_VIEW (completion->priv->tree_view));
-  gtk_widget_set_size_request (completion->priv->tree_view, width, items * height);
+  gtk_scrolled_window_set_min_content_width (GTK_SCROLLED_WINDOW (completion->priv->scrolled_window), width);
+  gtk_widget_set_size_request (completion->priv->scrolled_window, width, -1);
+  gtk_scrolled_window_set_min_content_height (GTK_SCROLLED_WINDOW (completion->priv->scrolled_window), items * height);
 
   if (actions)
     {
@@ -1455,8 +1463,6 @@ _gtk_entry_completion_resize_popup (GtkEntryCompletion *completion)
 
   gtk_widget_get_preferred_size (completion->priv->popup_window,
                                  &popup_req, NULL);
-  gtk_widget_get_preferred_size (completion->priv->entry,
-                                 &entry_req, NULL);
 
   if (x < monitor.x)
     x = monitor.x;

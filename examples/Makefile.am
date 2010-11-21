@@ -1,5 +1,9 @@
 
-DIST_SUBDIRS = 	arrow \
+# these have a handrolled Makefile that gets in the way of distchecking
+# so they will not be included in tarballs until they get integrated
+# in the new 'getting started' section of the docs
+OLD_EXAMPLES = \
+		arrow \
 		aspectframe \
 		base \
 		buttonbox \
@@ -28,12 +32,13 @@ DIST_SUBDIRS = 	arrow \
 		spinbutton \
 		statusbar \
 		table \
-		tictactoe
-# wheelbarrow
+		tictactoe \
+		wheelbarrow
 
 INCLUDES = \
 	-I$(top_srcdir)				\
 	-I$(top_srcdir)/gdk			\
+	-I$(top_builddir)/gdk			\
 	-DGDK_DISABLE_DEPRECATED		\
 	-DGTK_DISABLE_DEPRECATED		\
 	$(GTK_DEBUG_FLAGS)			\
@@ -44,4 +49,4 @@ LDADD = \
 	$(top_builddir)/gtk/$(gtktargetlib)		\
 	$(GTK_DEP_LIBS)
 
-bin_PROGRAMS = hello-world window-default
+noinst_PROGRAMS = hello-world window-default

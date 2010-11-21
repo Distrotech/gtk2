@@ -68,6 +68,12 @@ static void gtk_menu_bar_get_property      (GObject             *object,
 					    GParamSpec          *pspec);
 static void gtk_menu_bar_size_request      (GtkWidget       *widget,
 					    GtkRequisition  *requisition);
+static void gtk_menu_bar_get_preferred_width (GtkWidget     *widget,
+					      gint          *minimum,
+					      gint          *natural);
+static void gtk_menu_bar_get_preferred_height (GtkWidget    *widget,
+					       gint         *minimum,
+					       gint         *natural);
 static void gtk_menu_bar_size_allocate     (GtkWidget       *widget,
 					    GtkAllocation   *allocation);
 static gint gtk_menu_bar_draw              (GtkWidget       *widget,
@@ -98,7 +104,8 @@ gtk_menu_bar_class_init (GtkMenuBarClass *class)
   gobject_class->get_property = gtk_menu_bar_get_property;
   gobject_class->set_property = gtk_menu_bar_set_property;
 
-  widget_class->size_request = gtk_menu_bar_size_request;
+  widget_class->get_preferred_width = gtk_menu_bar_get_preferred_width;
+  widget_class->get_preferred_height = gtk_menu_bar_get_preferred_height;
   widget_class->size_allocate = gtk_menu_bar_size_allocate;
   widget_class->draw = gtk_menu_bar_draw;
   widget_class->hierarchy_changed = gtk_menu_bar_hierarchy_changed;
@@ -200,14 +207,6 @@ gtk_menu_bar_class_init (GtkMenuBarClass *class)
 							     G_MAXINT,
                                                              DEFAULT_IPADDING,
                                                              GTK_PARAM_READABLE));
-
-  gtk_settings_install_property (g_param_spec_int ("gtk-menu-bar-popup-delay",
-						   P_("Delay before drop down menus appear"),
-						   P_("Delay before the submenus of a menu bar appear"),
-						   0,
-						   G_MAXINT,
-						   0,
-						   GTK_PARAM_READWRITE));
 
   g_type_class_add_private (gobject_class, sizeof (GtkMenuBarPrivate));
 }
@@ -353,6 +352,30 @@ gtk_menu_bar_size_request (GtkWidget      *widget,
 	  requisition->height += style->ythickness * 2;
 	}
     }
+}
+
+static void
+gtk_menu_bar_get_preferred_width (GtkWidget *widget,
+				  gint      *minimum,
+				  gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_menu_bar_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.width;
+}
+
+static void
+gtk_menu_bar_get_preferred_height (GtkWidget *widget,
+				   gint      *minimum,
+				   gint      *natural)
+{
+  GtkRequisition requisition;
+
+  gtk_menu_bar_size_request (widget, &requisition);
+
+  *minimum = *natural = requisition.height;
 }
 
 static void

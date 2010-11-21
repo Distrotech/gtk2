@@ -28,7 +28,7 @@ typedef struct
 {
   gpointer instance;
   GObject *alive_object;
-  guint id;
+  gulong id;
 } DisconnectData;
 
 static void
@@ -102,7 +102,7 @@ typedef struct
 {
   GObject *obj;
   GParamSpec *spec;
-  gint modified_id;
+  gulong modified_id;
 } ObjectProperty;
 
 static void
@@ -364,11 +364,12 @@ bool_modified (GtkToggleButton *tb, gpointer data)
       GtkWidget *widget = GTK_WIDGET (p->obj);
       GtkWidget *parent = gtk_widget_get_parent (widget);
 
-      gtk_container_child_set (GTK_CONTAINER (parent), 
-			       widget, p->spec->name, (int) tb->active, NULL);
+      gtk_container_child_set (GTK_CONTAINER (parent), widget,
+                               p->spec->name, (int) gtk_toggle_button_get_active (tb),
+                               NULL);
     }
   else
-    g_object_set (p->obj, p->spec->name, (int) tb->active, NULL);
+    g_object_set (p->obj, p->spec->name, (int) gtk_toggle_button_get_active (tb), NULL);
 }
 
 static void
@@ -381,7 +382,7 @@ bool_changed (GObject *object, GParamSpec *pspec, gpointer data)
   g_value_init (&val, G_TYPE_BOOLEAN);
   get_property_value (object, pspec, &val);
 
-  if (g_value_get_boolean (&val) != tb->active)
+  if (g_value_get_boolean (&val) != gtk_toggle_button_get_active (tb))
     {
       block_controller (G_OBJECT (tb));
       gtk_toggle_button_set_active (tb, g_value_get_boolean (&val));
@@ -819,15 +820,15 @@ property_widget (GObject    *object,
 	GEnumClass *eclass;
 	gint j;
 	
-	prop_edit = gtk_combo_box_new_text ();
+	prop_edit = gtk_combo_box_text_new ();
 	
 	eclass = G_ENUM_CLASS (g_type_class_ref (spec->value_type));
 	
 	j = 0;
 	while (j < eclass->n_values)
 	  {
-	    gtk_combo_box_append_text (GTK_COMBO_BOX (prop_edit),
-	                               eclass->values[j].value_name);
+	    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (prop_edit),
+	                                    eclass->values[j].value_name);
 	    ++j;
 	  }
 	
@@ -848,7 +849,7 @@ property_widget (GObject    *object,
 	GFlagsClass *fclass;
 	gint j;
 	
-	prop_edit = gtk_vbox_new (FALSE, 0);
+	prop_edit = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 	
 	fclass = G_FLAGS_CLASS (g_type_class_ref (spec->value_type));
 	
@@ -897,7 +898,7 @@ property_widget (GObject    *object,
     {
       GtkWidget *label, *button;
 
-      prop_edit = gtk_hbox_new (FALSE, 5);
+      prop_edit = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
 
       label = gtk_label_new ("");
       button = gtk_button_new_with_label ("Properties");
@@ -1019,7 +1020,7 @@ properties_from_type (GObject *object,
     }
 
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
 
   sw = gtk_scrolled_window_new (NULL, NULL);
@@ -1101,7 +1102,7 @@ child_properties_from_object (GObject *object)
       ++i;
     }
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
 
   sw = gtk_scrolled_window_new (NULL, NULL);
@@ -1147,7 +1148,7 @@ children_from_object (GObject *object)
       gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
       gtk_table_attach_defaults (GTK_TABLE (table), label, 0, 1, i, i + 1);
 
-      prop_edit = gtk_hbox_new (FALSE, 5);
+      prop_edit = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
 
       str = object_label (object, NULL);
       label = gtk_label_new (str);
@@ -1163,7 +1164,7 @@ children_from_object (GObject *object)
       gtk_table_attach_defaults (GTK_TABLE (table), prop_edit, 1, 2, i, i + 1);
     }
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
 
   sw = gtk_scrolled_window_new (NULL, NULL);
@@ -1202,7 +1203,7 @@ cells_from_object (GObject *object)
       gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
       gtk_table_attach_defaults (GTK_TABLE (table), label, 0, 1, i, i + 1);
 
-      prop_edit = gtk_hbox_new (FALSE, 5);
+      prop_edit = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
 
       str = object_label (object, NULL);
       label = gtk_label_new (str);
@@ -1218,7 +1219,7 @@ cells_from_object (GObject *object)
       gtk_table_attach_defaults (GTK_TABLE (table), prop_edit, 1, 2, i, i + 1);
     }
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
 
   sw = gtk_scrolled_window_new (NULL, NULL);

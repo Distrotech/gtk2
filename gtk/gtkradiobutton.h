@@ -53,7 +53,7 @@ struct _GtkRadioButton
 {
   GtkCheckButton check_button;
 
-  /* <private> */
+  /*< private >*/
   GtkRadioButtonPrivate *priv;
 };
 
@@ -65,6 +65,7 @@ struct _GtkRadioButtonClass
   void (*group_changed) (GtkRadioButton *radio_button);
 
   /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
   void (*_gtk_reserved3) (void);
   void (*_gtk_reserved4) (void);

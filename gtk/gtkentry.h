@@ -54,70 +54,31 @@ G_BEGIN_DECLS
 #define GTK_IS_ENTRY_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), GTK_TYPE_ENTRY))
 #define GTK_ENTRY_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_ENTRY, GtkEntryClass))
 
+/**
+ * GtkEntryIconPosition:
+ * @GTK_ENTRY_ICON_PRIMARY: At the beginning of the entry (depending on the text direction).
+ * @GTK_ENTRY_ICON_SECONDARY: At the end of the entry (depending on the text direction).
+ *
+ * Specifies the side of the entry at which an icon is placed.
+ *
+ * Since: 2.16
+ */
 typedef enum
 {
   GTK_ENTRY_ICON_PRIMARY,
   GTK_ENTRY_ICON_SECONDARY
 } GtkEntryIconPosition;
 
-typedef struct _GtkEntry       GtkEntry;
-typedef struct _GtkEntryClass  GtkEntryClass;
+typedef struct _GtkEntry              GtkEntry;
+typedef struct _GtkEntryPrivate       GtkEntryPrivate;
+typedef struct _GtkEntryClass         GtkEntryClass;
 
 struct _GtkEntry
 {
-  GtkWidget  widget;
-
-  guint        GSEAL (editable) : 1;
-  guint        GSEAL (visible)  : 1;
-  guint        GSEAL (overwrite_mode) : 1;
-  guint        GSEAL (in_drag) : 1;	            /* FIXME: Should be private?
-                                                       Dragging within the selection */
-
   /*< private >*/
-  GdkWindow    *GSEAL (text_area);
-  GtkIMContext *GSEAL (im_context);
-  GtkWidget    *GSEAL (popup_menu);
+  GtkWidget  parent_instance;
 
-  gint          GSEAL (current_pos);
-  gint          GSEAL (selection_bound);
-
-  PangoLayout  *GSEAL (cached_layout);
-
-  guint         GSEAL (cache_includes_preedit) : 1;
-  guint         GSEAL (need_im_reset)          : 1;
-  guint         GSEAL (has_frame)              : 1;
-  guint         GSEAL (activates_default)      : 1;
-  guint         GSEAL (cursor_visible)         : 1;
-  guint         GSEAL (in_click)               : 1; /* Flag so we don't select all when clicking in entry to focus in */
-  guint         GSEAL (is_cell_renderer)       : 1;
-  guint         GSEAL (editing_canceled)       : 1; /* Only used by GtkCellRendererText */ 
-  guint         GSEAL (mouse_cursor_obscured)  : 1;
-  guint         GSEAL (select_words)           : 1;
-  guint         GSEAL (select_lines)           : 1;
-  guint         GSEAL (resolved_dir)           : 4; /* PangoDirection */
-  guint         GSEAL (truncate_multiline)     : 1;
-
-  guint         GSEAL (button);
-  guint         GSEAL (blink_timeout);
-  guint         GSEAL (recompute_idle);
-  gint          GSEAL (scroll_offset);
-  gint          GSEAL (ascent);	                    /* font ascent in pango units  */
-  gint          GSEAL (descent);	            /* font descent in pango units */
-
-  guint16       GSEAL (x_text_size);	            /* allocated size, in bytes */
-  guint16       GSEAL (x_n_bytes);	            /* length in use, in bytes */
-
-  guint16       GSEAL (preedit_length);	            /* length of preedit string, in bytes */
-  guint16       GSEAL (preedit_cursor);	            /* offset of cursor within preedit string, in chars */
-
-  gint          GSEAL (dnd_position);		    /* In chars, -1 == no DND cursor */
-
-  gint          GSEAL (drag_start_x);
-  gint          GSEAL (drag_start_y);
-
-  gunichar      GSEAL (invisible_char);
-
-  gint          GSEAL (width_chars);
+  GtkEntryPrivate *priv;
 };
 
 struct _GtkEntryClass
@@ -156,6 +117,12 @@ struct _GtkEntryClass
   /* Padding for future expansion */
   void (*_gtk_reserved1)      (void);
   void (*_gtk_reserved2)      (void);
+  void (*_gtk_reserved3)      (void);
+  void (*_gtk_reserved4)      (void);
+  void (*_gtk_reserved5)      (void);
+  void (*_gtk_reserved6)      (void);
+  void (*_gtk_reserved7)      (void);
+  void (*_gtk_reserved8)      (void);
 };
 
 GType      gtk_entry_get_type       		(void) G_GNUC_CONST;
@@ -166,7 +133,8 @@ GtkEntryBuffer* gtk_entry_get_buffer            (GtkEntry       *entry);
 void       gtk_entry_set_buffer                 (GtkEntry       *entry,
                                                  GtkEntryBuffer *buffer);
 
-GdkWindow *gtk_entry_get_text_window            (GtkEntry      *entry);
+void       gtk_entry_get_text_area              (GtkEntry       *entry,
+                                                 GdkRectangle   *text_area);
 
 void       gtk_entry_set_visibility 		(GtkEntry      *entry,
 						 gboolean       visible);
@@ -297,8 +265,9 @@ void         gtk_entry_set_icon_drag_source              (GtkEntry             *
 							  GtkTargetList        *target_list,
 							  GdkDragAction         actions);
 gint         gtk_entry_get_current_icon_drag_source      (GtkEntry             *entry);
-GdkWindow*   gtk_entry_get_icon_window                   (GtkEntry             *entry,
-                                                          GtkEntryIconPosition  icon_pos);
+void         gtk_entry_get_icon_area                     (GtkEntry             *entry,
+                                                          GtkEntryIconPosition  icon_pos,
+                                                          GdkRectangle         *icon_area);
 
 gboolean    gtk_entry_im_context_filter_keypress         (GtkEntry             *entry,
                                                           GdkEventKey          *event);

@@ -132,28 +132,21 @@ add_buttons (GtkWidget *widget, GtkWidget *box)
 static GtkWidget *
 create_combo (void)
 {
-  GtkComboBox *combo;
+  GtkComboBoxText *combo;
   GtkWidget *entry;
-  GtkListStore *store;
 
-  store = gtk_list_store_new (1, G_TYPE_STRING);
-  combo = g_object_new (GTK_TYPE_COMBO_BOX,
-			"has-entry", TRUE,
-			"model", store,
-			"entry-text-column", 0,
-			NULL);
-  g_object_unref (store);
+  combo = GTK_COMBO_BOX_TEXT (gtk_combo_box_text_new_with_entry ());
 
-  gtk_combo_box_append_text (combo, "item0");
-  gtk_combo_box_append_text (combo, "item1 item1");
-  gtk_combo_box_append_text (combo, "item2 item2 item2");
-  gtk_combo_box_append_text (combo, "item3 item3 item3 item3");
-  gtk_combo_box_append_text (combo, "item4 item4 item4 item4 item4");
-  gtk_combo_box_append_text (combo, "item5 item5 item5 item5 item5 item5");
-  gtk_combo_box_append_text (combo, "item6 item6 item6 item6 item6");
-  gtk_combo_box_append_text (combo, "item7 item7 item7 item7");
-  gtk_combo_box_append_text (combo, "item8 item8 item8");
-  gtk_combo_box_append_text (combo, "item9 item9");
+  gtk_combo_box_text_append_text (combo, "item0");
+  gtk_combo_box_text_append_text (combo, "item1 item1");
+  gtk_combo_box_text_append_text (combo, "item2 item2 item2");
+  gtk_combo_box_text_append_text (combo, "item3 item3 item3 item3");
+  gtk_combo_box_text_append_text (combo, "item4 item4 item4 item4 item4");
+  gtk_combo_box_text_append_text (combo, "item5 item5 item5 item5 item5 item5");
+  gtk_combo_box_text_append_text (combo, "item6 item6 item6 item6 item6");
+  gtk_combo_box_text_append_text (combo, "item7 item7 item7 item7");
+  gtk_combo_box_text_append_text (combo, "item8 item8 item8");
+  gtk_combo_box_text_append_text (combo, "item9 item9");
 
   entry = gtk_bin_get_child (GTK_BIN (combo));
   gtk_entry_set_text (GTK_ENTRY (entry), "hello world");
@@ -205,12 +198,12 @@ create_menubar (GtkWindow *window)
 static GtkWidget *
 create_combo_box (void)
 {
-  GtkComboBox *combo_box = GTK_COMBO_BOX (gtk_combo_box_new_text ());
+  GtkComboBoxText *combo_box = GTK_COMBO_BOX_TEXT (gtk_combo_box_text_new ());
 
-  gtk_combo_box_append_text (combo_box, "This");
-  gtk_combo_box_append_text (combo_box, "Is");
-  gtk_combo_box_append_text (combo_box, "A");
-  gtk_combo_box_append_text (combo_box, "ComboBox");
+  gtk_combo_box_text_append_text (combo_box, "This");
+  gtk_combo_box_text_append_text (combo_box, "Is");
+  gtk_combo_box_text_append_text (combo_box, "A");
+  gtk_combo_box_text_append_text (combo_box, "ComboBox");
   
   return GTK_WIDGET (combo_box);
 }
@@ -224,7 +217,8 @@ create_content (GtkWindow *window, gboolean local)
 
   frame = gtk_frame_new (local? "Local" : "Remote");
   gtk_container_set_border_width (GTK_CONTAINER (frame), 3);
-  vbox = gtk_vbox_new (TRUE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  gtk_box_set_homogeneous (GTK_BOX (vbox), TRUE);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), 3);
 
   gtk_container_add (GTK_CONTAINER (frame), vbox);

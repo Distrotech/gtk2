@@ -31,6 +31,23 @@
 #include <string.h>
 #include <math.h>
 
+
+/**
+ * SECTION:events
+ * @Short_description: Functions for handling events from the window system
+ * @Title: Events
+ * @See_also: <link linkend="gdk-Event-Structures">Event Structures</link>
+ *
+ * This section describes functions dealing with events from the window
+ * system.
+ *
+ * In GTK+ applications the events are handled automatically in
+ * gtk_main_do_event() and passed on to the appropriate widgets, so these
+ * functions are rarely needed. Though some of the fields in the
+ * <link linkend="gdk-Event-Structures">Event Structures</link> are useful.
+ */
+
+
 typedef struct _GdkIOClosure GdkIOClosure;
 
 struct _GdkIOClosure
@@ -1032,8 +1049,8 @@ gdk_event_get_device (const GdkEvent *event)
     case GDK_KEY_RELEASE:
       {
         GdkDisplay *display;
-        GdkDevice *core_pointer;
         GdkDeviceManager *device_manager;
+        GdkDevice *client_pointer;
 
         g_warning ("Event with type %d not holding a GdkDevice. "
                    "It is most likely synthesized outside Gdk/GTK+\n",
@@ -1041,13 +1058,13 @@ gdk_event_get_device (const GdkEvent *event)
 
         display = gdk_window_get_display (event->any.window);
         device_manager = gdk_display_get_device_manager (display);
-        core_pointer = gdk_display_get_core_pointer (display);
+        client_pointer = gdk_device_manager_get_client_pointer (device_manager);
 
         if (event->type == GDK_KEY_PRESS ||
             event->type == GDK_KEY_RELEASE)
-          return gdk_device_get_associated_device (core_pointer);
+          return gdk_device_get_associated_device (client_pointer);
         else
-          return core_pointer;
+          return client_pointer;
       }
       break;
     default:

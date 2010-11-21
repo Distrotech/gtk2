@@ -25,9 +25,12 @@
  */
 
 #include "config.h"
+
+#include "gtkradiobutton.h"
+
+#include "gtkbuttonprivate.h"
 #include "gtklabel.h"
 #include "gtkmarshalers.h"
-#include "gtkradiobutton.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
 
@@ -73,7 +76,7 @@
  *
  *    GtkWidget *window, *radio1, *radio2, *box, *entry;
  *    window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
- *    box = gtk_vbox_new (TRUE, 2);
+ *    box = gtk_box_new (GTK_ORIENTATION_VERTICAL, TRUE, 2);
  *
  *    /&ast; Create a radio button with a GtkEntry widget &ast;/
  *    radio1 = gtk_radio_button_new (NULL);
@@ -207,9 +210,9 @@ gtk_radio_button_init (GtkRadioButton *radio_button)
   gtk_widget_set_has_window (GTK_WIDGET (radio_button), FALSE);
   gtk_widget_set_receives_default (GTK_WIDGET (radio_button), FALSE);
 
-  GTK_TOGGLE_BUTTON (radio_button)->active = TRUE;
+  _gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (radio_button), TRUE);
 
-  GTK_BUTTON (radio_button)->depress_on_activate = FALSE;
+  GTK_BUTTON (radio_button)->priv->depress_on_activate = FALSE;
 
   priv->group = g_slist_prepend (NULL, radio_button);
 
@@ -400,7 +403,8 @@ gtk_radio_button_join_group (GtkRadioButton *radio_button,
 
 /**
  * gtk_radio_button_new:
- * @group: an existing radio button group, or %NULL if you are creating a new group.
+ * @group: (allow-none): an existing radio button group, or %NULL if you are
+ *  creating a new group.
  *
  * Creates a new #GtkRadioButton. To be of any practical value, a widget should
  * then be packed into the radio button.
@@ -422,8 +426,8 @@ gtk_radio_button_new (GSList *group)
 
 /**
  * gtk_radio_button_new_with_label:
- * @group: an existing radio button group, or %NULL if you are creating a new
- *  group.
+ * @group: (allow-none): an existing radio button group, or %NULL if you are
+ *  creating a new group.
  * @label: the text label to display next to the radio button.
  *
  * Creates a new #GtkRadioButton with a text label.
@@ -447,7 +451,7 @@ gtk_radio_button_new_with_label (GSList      *group,
 
 /**
  * gtk_radio_button_new_with_mnemonic:
- * @group: the radio button group
+ * @group: (allow-none): the radio button group
  * @label: the text of the button, with an underscore in front of the
  *         mnemonic character
  *
@@ -477,7 +481,7 @@ gtk_radio_button_new_with_mnemonic (GSList      *group,
 
 /**
  * gtk_radio_button_new_from_widget:
- * @radio_group_member: an existing #GtkRadioButton.
+ * @radio_group_member: (allow-none): an existing #GtkRadioButton.
  *
  * Creates a new #GtkRadioButton, adding it to the same group as
  * @radio_group_member. As with gtk_radio_button_new(), a widget
@@ -496,7 +500,7 @@ gtk_radio_button_new_from_widget (GtkRadioButton *radio_group_member)
 
 /**
  * gtk_radio_button_new_with_label_from_widget:
- * @radio_group_member: widget to get radio group from or %NULL
+ * @radio_group_member: (allow-none): widget to get radio group from or %NULL
  * @label: a text string to display next to the radio button.
  *
  * Creates a new #GtkRadioButton with a text label, adding it to
@@ -652,7 +656,7 @@ gtk_radio_button_focus (GtkWidget         *widget,
   /* Radio buttons with draw_indicator unset focus "normally", since
    * they look like buttons to the user.
    */
-  if (!GTK_TOGGLE_BUTTON (widget)->draw_indicator)
+  if (!gtk_toggle_button_get_mode (GTK_TOGGLE_BUTTON (widget)))
     return GTK_WIDGET_CLASS (gtk_radio_button_parent_class)->focus (widget, direction);
   
   if (gtk_widget_is_focus (widget))
@@ -766,7 +770,7 @@ gtk_radio_button_focus (GtkWidget         *widget,
       tmp_slist = priv->group;
       while (tmp_slist)
 	{
-	  if (GTK_TOGGLE_BUTTON (tmp_slist->data)->active)
+	  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (tmp_slist->data)))
 	    selected_button = tmp_slist->data;
 	  tmp_slist = tmp_slist->next;
 	}
@@ -795,7 +799,7 @@ gtk_radio_button_clicked (GtkButton *button)
 
   g_object_ref (GTK_WIDGET (button));
 
-  if (toggle_button->active)
+  if (gtk_toggle_button_get_active (toggle_button))
     {
       tmp_button = NULL;
       tmp_list = priv->group;
@@ -805,7 +809,8 @@ gtk_radio_button_clicked (GtkButton *button)
 	  tmp_button = tmp_list->data;
 	  tmp_list = tmp_list->next;
 
-	  if (tmp_button->active && tmp_button != toggle_button)
+          if (tmp_button != toggle_button &&
+              gtk_toggle_button_get_active (tmp_button))
 	    break;
 
 	  tmp_button = NULL;
@@ -813,19 +818,21 @@ gtk_radio_button_clicked (GtkButton *button)
 
       if (!tmp_button)
 	{
-	  new_state = (button->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_ACTIVE);
+	  new_state = (button->priv->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_ACTIVE);
 	}
       else
 	{
 	  toggled = TRUE;
-	  toggle_button->active = !toggle_button->active;
-	  new_state = (button->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_NORMAL);
+          _gtk_toggle_button_set_active (toggle_button,
+                                         !gtk_toggle_button_get_active (toggle_button));
+	  new_state = (button->priv->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_NORMAL);
 	}
     }
   else
     {
       toggled = TRUE;
-      toggle_button->active = !toggle_button->active;
+      _gtk_toggle_button_set_active (toggle_button,
+                                     !gtk_toggle_button_get_active (toggle_button));
 
       tmp_list = priv->group;
       while (tmp_list)
@@ -833,22 +840,22 @@ gtk_radio_button_clicked (GtkButton *button)
 	  tmp_button = tmp_list->data;
 	  tmp_list = tmp_list->next;
 
-	  if (tmp_button->active && (tmp_button != toggle_button))
+	  if (gtk_toggle_button_get_active (tmp_button) && (tmp_button != toggle_button))
 	    {
 	      gtk_button_clicked (GTK_BUTTON (tmp_button));
 	      break;
 	    }
 	}
 
-      new_state = (button->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_ACTIVE);
+      new_state = (button->priv->in_button ? GTK_STATE_PRELIGHT : GTK_STATE_ACTIVE);
     }
 
-  if (toggle_button->inconsistent)
+  if (gtk_toggle_button_get_inconsistent (toggle_button))
     depressed = FALSE;
-  else if (button->in_button && button->button_down)
-    depressed = !toggle_button->active;
+  else if (button->priv->in_button && button->priv->button_down)
+    depressed = !gtk_toggle_button_get_active (toggle_button);
   else
-    depressed = toggle_button->active;
+    depressed = gtk_toggle_button_get_active (toggle_button);
 
   if (gtk_widget_get_state (GTK_WIDGET (button)) != new_state)
     gtk_widget_set_state (GTK_WIDGET (button), new_state);
@@ -913,16 +920,16 @@ gtk_radio_button_draw_indicator (GtkCheckButton *check_button,
   if (!interior_focus || !(child && gtk_widget_get_visible (child)))
     x += focus_width + focus_pad;      
 
-  if (toggle_button->inconsistent)
+  if (gtk_toggle_button_get_inconsistent (toggle_button))
     shadow_type = GTK_SHADOW_ETCHED_IN;
-  else if (toggle_button->active)
+  else if (gtk_toggle_button_get_active (toggle_button))
     shadow_type = GTK_SHADOW_IN;
   else
     shadow_type = GTK_SHADOW_OUT;
 
-  if (button->activate_timeout || (button->button_down && button->in_button))
+  if (button->priv->activate_timeout || (button->priv->button_down && button->priv->in_button))
     state_type = GTK_STATE_ACTIVE;
-  else if (button->in_button)
+  else if (button->priv->in_button)
     state_type = GTK_STATE_PRELIGHT;
   else if (!gtk_widget_is_sensitive (widget))
     state_type = GTK_STATE_INSENSITIVE;

@@ -56,6 +56,12 @@ typedef enum
   GTK_TEXT_WINDOW_BOTTOM
 } GtkTextWindowType;
 
+/**
+ * GTK_TEXT_VIEW_PRIORITY_VALIDATE:
+ *
+ * The priority at which the text view validates onscreen lines
+ * in an idle job in the background.
+ */
 #define GTK_TEXT_VIEW_PRIORITY_VALIDATE (GDK_PRIORITY_REDRAW + 5)
 
 typedef struct _GtkTextView        GtkTextView;
@@ -72,10 +78,6 @@ struct _GtkTextView
 struct _GtkTextViewClass
 {
   GtkContainerClass parent_class;
-
-  void (* set_scroll_adjustments)   (GtkTextView    *text_view,
-                                     GtkAdjustment  *hadjustment,
-                                     GtkAdjustment  *vadjustment);
 
   void (* populate_popup)           (GtkTextView    *text_view,
                                      GtkMenu        *menu);
@@ -106,13 +108,6 @@ struct _GtkTextViewClass
   /* overwrite */
   void (* toggle_overwrite) (GtkTextView *text_view);
 
-  /* as of GTK+ 2.12 the "move-focus" signal has been moved to GtkWidget,
-   * so this is merley a virtual function now. Overriding it in subclasses
-   * continues to work though.
-   */
-  void (* move_focus)       (GtkTextView     *text_view,
-                             GtkDirectionType direction);
-
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
@@ -121,6 +116,7 @@ struct _GtkTextViewClass
   void (*_gtk_reserved5) (void);
   void (*_gtk_reserved6) (void);
   void (*_gtk_reserved7) (void);
+  void (*_gtk_reserved8) (void);
 };
 
 GType          gtk_text_view_get_type              (void) G_GNUC_CONST;
@@ -188,8 +184,10 @@ void gtk_text_view_window_to_buffer_coords (GtkTextView       *text_view,
                                             gint              *buffer_x,
                                             gint              *buffer_y);
 
-GtkAdjustment* gtk_text_view_get_hadjustment (GtkTextView *text_view);
-GtkAdjustment* gtk_text_view_get_vadjustment (GtkTextView *text_view);
+#ifndef GTK_DISABLE_DEPRECATED
+GtkAdjustment*   gtk_text_view_get_hadjustment (GtkTextView   *text_view);
+GtkAdjustment*   gtk_text_view_get_vadjustment (GtkTextView   *text_view);
+#endif
 
 GdkWindow*        gtk_text_view_get_window      (GtkTextView       *text_view,
                                                  GtkTextWindowType  win);

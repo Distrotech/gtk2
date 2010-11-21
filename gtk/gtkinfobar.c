@@ -612,11 +612,11 @@ gtk_info_bar_init (GtkInfoBar *info_bar)
                                                 GTK_TYPE_INFO_BAR,
                                                 GtkInfoBarPrivate);
 
-  content_area = gtk_hbox_new (FALSE, 0);
+  content_area = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_show (content_area);
   gtk_box_pack_start (GTK_BOX (info_bar), content_area, TRUE, TRUE, 0);
 
-  action_area = gtk_vbutton_box_new ();
+  action_area = gtk_button_box_new (GTK_ORIENTATION_VERTICAL);
   gtk_widget_show (action_area);
   gtk_button_box_set_layout (GTK_BUTTON_BOX (action_area), GTK_BUTTONBOX_END);
   gtk_box_pack_start (GTK_BOX (info_bar), action_area, FALSE, TRUE, 0);

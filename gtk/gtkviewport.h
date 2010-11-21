@@ -55,7 +55,7 @@ struct _GtkViewport
 {
   GtkBin bin;
 
-  /* <private> */
+  /*< private >*/
   GtkViewportPrivate *priv;
 };
 
@@ -63,21 +63,29 @@ struct _GtkViewportClass
 {
   GtkBinClass parent_class;
 
-  void	(*set_scroll_adjustments)	(GtkViewport	*viewport,
-					 GtkAdjustment	*hadjustment,
-					 GtkAdjustment	*vadjustment);
+  /* Padding for future expansion */
+  void (*_gtk_reserved1) (void);
+  void (*_gtk_reserved2) (void);
+  void (*_gtk_reserved3) (void);
+  void (*_gtk_reserved4) (void);
 };
 
 
 GType          gtk_viewport_get_type        (void) G_GNUC_CONST;
 GtkWidget*     gtk_viewport_new             (GtkAdjustment *hadjustment,
 					     GtkAdjustment *vadjustment);
+
+#if !defined (GTK_DISABLE_DEPRECATED) || defined (GTK_COMPILATION)
+
 GtkAdjustment* gtk_viewport_get_hadjustment (GtkViewport   *viewport);
 GtkAdjustment* gtk_viewport_get_vadjustment (GtkViewport   *viewport);
 void           gtk_viewport_set_hadjustment (GtkViewport   *viewport,
 					     GtkAdjustment *adjustment);
 void           gtk_viewport_set_vadjustment (GtkViewport   *viewport,
 					     GtkAdjustment *adjustment);
+
+#endif
+
 void           gtk_viewport_set_shadow_type (GtkViewport   *viewport,
 					     GtkShadowType  type);
 GtkShadowType  gtk_viewport_get_shadow_type (GtkViewport   *viewport);

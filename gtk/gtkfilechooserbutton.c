@@ -217,7 +217,6 @@ static void     gtk_file_chooser_button_drag_data_received (GtkWidget        *wi
 							    guint             type,
 							    guint             drag_time);
 static void     gtk_file_chooser_button_show_all           (GtkWidget        *widget);
-static void     gtk_file_chooser_button_hide_all           (GtkWidget        *widget);
 static void     gtk_file_chooser_button_show               (GtkWidget        *widget);
 static void     gtk_file_chooser_button_hide               (GtkWidget        *widget);
 static void     gtk_file_chooser_button_map                (GtkWidget        *widget);
@@ -328,7 +327,6 @@ gtk_file_chooser_button_class_init (GtkFileChooserButtonClass * class)
   widget_class->destroy = gtk_file_chooser_button_destroy;
   widget_class->drag_data_received = gtk_file_chooser_button_drag_data_received;
   widget_class->show_all = gtk_file_chooser_button_show_all;
-  widget_class->hide_all = gtk_file_chooser_button_hide_all;
   widget_class->show = gtk_file_chooser_button_show;
   widget_class->hide = gtk_file_chooser_button_hide;
   widget_class->map = gtk_file_chooser_button_map;
@@ -443,7 +441,7 @@ gtk_file_chooser_button_init (GtkFileChooserButton *button)
   gtk_container_add (GTK_CONTAINER (button), priv->button);
   gtk_widget_show (priv->button);
 
-  box = gtk_hbox_new (FALSE, 4);
+  box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
   gtk_container_add (GTK_CONTAINER (priv->button), box);
   gtk_widget_show (box);
 
@@ -454,10 +452,11 @@ gtk_file_chooser_button_init (GtkFileChooserButton *button)
   priv->label = gtk_label_new (_(FALLBACK_DISPLAY_NAME));
   gtk_label_set_ellipsize (GTK_LABEL (priv->label), PANGO_ELLIPSIZE_END);
   gtk_misc_set_alignment (GTK_MISC (priv->label), 0.0, 0.5);
-  gtk_container_add (GTK_CONTAINER (box), priv->label);
+  gtk_box_pack_start (GTK_BOX (box), priv->label, TRUE, TRUE, 0);
+  //gtk_container_add (GTK_CONTAINER (box), priv->label);
   gtk_widget_show (priv->label);
 
-  sep = gtk_vseparator_new ();
+  sep = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
   gtk_box_pack_start (GTK_BOX (box), sep, FALSE, FALSE, 0);
   gtk_widget_show (sep);
 
@@ -1101,12 +1100,6 @@ gtk_file_chooser_button_show_all (GtkWidget *widget)
 }
 
 static void
-gtk_file_chooser_button_hide_all (GtkWidget *widget)
-{
-  gtk_widget_hide (widget);
-}
-
-static void
 gtk_file_chooser_button_show (GtkWidget *widget)
 {
   GtkFileChooserButton *button = GTK_FILE_CHOOSER_BUTTON (widget);
@@ -1693,7 +1686,10 @@ model_add_special (GtkFileChooserButton *button)
 
   desktopdir = g_get_user_special_dir (G_USER_DIRECTORY_DESKTOP);
 
-  if (desktopdir)
+  /* "To disable a directory, point it to the homedir."
+   * See http://freedesktop.org/wiki/Software/xdg-user-dirs
+   **/
+  if (g_strcmp0 (desktopdir, g_get_home_dir ()) != 0)
     {
       GtkTreePath *tree_path;
       GCancellable *cancellable;

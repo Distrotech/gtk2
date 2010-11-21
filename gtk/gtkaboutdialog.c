@@ -574,7 +574,7 @@ gtk_about_dialog_init (GtkAboutDialog *about)
   /* Widgets */
   gtk_widget_push_composite_child ();
 
-  vbox = gtk_vbox_new (FALSE, 8);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), 5);
   gtk_box_pack_start (GTK_BOX (content_area), vbox, TRUE, TRUE, 0);
 
@@ -597,7 +597,8 @@ gtk_about_dialog_init (GtkAboutDialog *about)
   gtk_label_set_justify (GTK_LABEL (priv->copyright_label), GTK_JUSTIFY_CENTER);
   gtk_box_pack_start (GTK_BOX (vbox), priv->copyright_label, FALSE, FALSE, 0);
 
-  hbox = gtk_hbox_new (TRUE, 0);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_box_set_homogeneous (GTK_BOX (hbox), TRUE);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, TRUE, FALSE, 0);
 
   priv->website_label = button = gtk_label_new ("");
@@ -1400,7 +1401,7 @@ update_credits_button_visibility (GtkAboutDialog *about)
 /**
  * gtk_about_dialog_set_authors:
  * @about: a #GtkAboutDialog
- * @authors: a %NULL-terminated array of strings
+ * @authors: (array zero-terminated=1): a %NULL-terminated array of strings
  *
  * Sets the strings which are displayed in the authors tab
  * of the secondary credits dialog.
@@ -1455,7 +1456,7 @@ gtk_about_dialog_get_documenters (GtkAboutDialog *about)
 /**
  * gtk_about_dialog_set_documenters:
  * @about: a #GtkAboutDialog
- * @documenters: a %NULL-terminated array of strings
+ * @documenters: (array zero-terminated=1): a %NULL-terminated array of strings
  *
  * Sets the strings which are displayed in the documenters tab
  * of the secondary credits dialog.
@@ -1510,7 +1511,7 @@ gtk_about_dialog_get_artists (GtkAboutDialog *about)
 /**
  * gtk_about_dialog_set_artists:
  * @about: a #GtkAboutDialog
- * @artists: a %NULL-terminated array of strings
+ * @artists: (array zero-terminated=1): a %NULL-terminated array of strings
  *
  * Sets the strings which are displayed in the artists tab
  * of the secondary credits dialog.

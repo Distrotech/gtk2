@@ -344,6 +344,207 @@ cairo_destroy (cr);
   </para>
 
   <section>
+    <title>Replace size_request by get_preferred_width/height</title>
+
+    <para>
+      The request-phase of the traditional GTK+ geometry management
+      has been replaced by a more flexible height-for-width system,
+      which is described in detail in the API documentation
+      (see <xref linkend="geometry-management"/>). As a consequence,
+      the ::size-request signal and vfunc has been removed from
+      #GtkWidgetClass. The replacement for size_request() can
+      take several levels of sophistication:
+      <itemizedlist>
+        <listitem>
+        <para>
+        As a minimal replacement to keep current functionality,
+        you can simply implement the #GtkWidgetClass.get_preferred_width() and
+        #GtkWidgetClass.get_preferred_height() vfuncs by calling your existing
+        size_request() function. So you go from
+        <informalexample><programlisting>
+static void
+my_widget_class_init (MyWidgetClass *class)
+{
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (class);
+
+  /* ... */
+
+  widget_class->size_request = my_widget_size_request;
+
+  /* ... */
+}
+        </programlisting></informalexample>
+        <para>
+        to something that looks more like this:
+        </para>
+        <informalexample><programlisting>
+static void
+my_widget_get_preferred_width (GtkWidget *widget,
+                               gint      *minimal_width,
+                               gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  my_widget_size_request (widget, &amp;requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+my_widget_get_preferred_height (GtkWidget *widget,
+                                gint      *minimal_height,
+                                gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  my_widget_size_request (widget, &amp;requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
+ /* ... */
+
+static void
+my_widget_class_init (MyWidgetClass *class)
+{
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (class);
+
+  /* ... */
+
+  widget_class->get_preferred_width = my_widget_get_preferred_width;
+  widget_class->get_preferred_height = my_widget_get_preferred_height;
+
+  /* ... */
+
+}
+        </programlisting></informalexample>
+          <para>
+          Sometimes you can make things a little more streamlined
+          by replacing your existing size_request() implementation by
+          one that takes an orientation parameter:
+          </para>
+          <informalexample><programlisting>
+static void
+my_widget_get_preferred_size (GtkWidget      *widget,
+                              GtkOrientation  orientation,
+                               gint          *minimal_size,
+                               gint          *natural_size)
+{
+
+  /* do things that are common for both orientations ... */
+
+  if (orientation == GTK_ORIENTATION_HORIZONTAL)
+    {
+      /* do stuff that only applies to width... */
+
+      *minimal_size = *natural_size = ...
+    }
+  else
+   {
+      /* do stuff that only applies to height... */
+
+      *minimal_size = *natural_size = ...
+   }
+}
+
+static void
+my_widget_get_preferred_width (GtkWidget *widget,
+                               gint      *minimal_width,
+                               gint      *natural_width)
+{
+  my_widget_get_preferred_size (widget,
+                                GTK_ORIENTATION_HORIZONTAL,
+                                minimal_width,
+                                natural_width);
+}
+
+static void
+my_widget_get_preferred_height (GtkWidget *widget,
+                                gint      *minimal_height,
+                                gint      *natural_height)
+{
+  my_widget_get_preferred_size (widget,
+                                GTK_ORIENTATION_VERTICAL,
+                                minimal_height,
+                                natural_height);
+}
+
+ /* ... */
+          </programlisting></informalexample>
+          </para>
+        </listitem>
+        <listitem>
+          <para>If your widget can cope with a small size,
+          but would appreciate getting some more space (a common
+          example would be that it contains ellipsizable labels),
+          you can do that by making your #GtkWidgetClass.get_preferred_width() /
+          #GtkWidgetClass.get_preferred_height()
+          functions return a smaller value for @minimal than for @natural.
+          For @minimal, you probably want to return the same value
+          that your size_request() function returned before (since
+          size_request() was defined as returning the minimal size
+          a widget can work with). A simple way to obtain good
+          values for @natural, in the case of containers, is to use
+          gtk_widget_get_preferred_width() and
+          gtk_widget_get_preferred_height() on the children of the
+          container, as in the following example:
+          <informalexample><programlisting>
+static void
+gtk_fixed_get_preferred_height (GtkWidget *widget,
+                                gint      *minimum,
+                                gint      *natural)
+{
+  GtkFixed *fixed = GTK_FIXED (widget);
+  GtkFixedPrivate *priv = fixed->priv;
+  GtkFixedChild *child;
+  GList *children;
+  gint child_min, child_nat;
+
+  *minimum = 0;
+  *natural = 0;
+
+  for (children = priv->children; children; children = children->next)
+    {
+      child = children->data;
+
+      if (!gtk_widget_get_visible (child->widget))
+        continue;
+
+      gtk_widget_get_preferred_height (child->widget, &amp;child_min, &amp;child_nat);
+
+      *minimum = MAX (*minimum, child->y + child_min);
+      *natural = MAX (*natural, child->y + child_nat);
+    }
+}
+          </programlisting></informalexample>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Note that the #GtkWidgetClass.get_preferred_width() /
+          #GtkWidgetClass.get_preferred_height() functions
+          only allow you to deal with one dimension at a time. If your
+          size_request() handler is doing things that involve both
+          width and height at the same time (e.g. limiting the aspect
+          ratio), you will have to implement
+          #GtkWidgetClass.get_preferred_height_for_width()
+          and #GtkWidgetClass.get_preferred_width_for_height().
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          To make full use of the new capabilities of the
+          height-for-width geometry management, you need to additionally
+          implement the #GtkWidgetClass.get_preferred_height_for_width() and
+          #GtkWidgetClass.get_preferred_width_for_height(). For details on
+          these functions, see <xref linkend="geometry-management"/>.
+          </para>
+        </listitem>
+      </itemizedlist>
+    </para>
+  </section>
+
+  <section>
     <title>Replace GdkRegion by cairo_region_t</title>
 
     <para>
@@ -624,13 +825,35 @@ gtk_arrow_draw (GtkWidget *widget,
   </section>
 
   <section>
-    <title>GtkScrolledWindow policy</title>
+    <title>Check your expand flags</title>
+
+    <para>
+      The behaviour of expanding widgets has changed slightly in GTK+ 3,
+      compared to GTK+ 2.x. It is now 'inherited', i.e. a container that
+      has an expanding child is considered expanding itself. This is often
+      the desired behaviour. In places where you don't want this to happen,
+      setting the container explicity as not expanding will stop the
+      expand flag of the child from being inherited. See
+      gtk_widget_set_hexpand() and gtk_widget_set_vexpand().
+    </para>
+  </section>
+
+  <section>
+    <title>Scrolling changes</title>
 
     <para>
       The default values for the #GtkScrolledWindow:hscrollbar-policy and
       #GtkScrolledWindow:vscrollbar-policy properties have been changed from
       'never' to 'automatic'. If your application was relying on the default
       value, you will have explicitly set it explicitly.
+    </para>
+
+    <para>
+      The ::set-scroll-adjustments signal on GtkWidget has been replaced
+      by the #GtkScrollable interface which must be implemented by a widget
+      that wants to be placed in a #GtkScrolledWindow. Instead of emitting
+      ::set-scroll-adjustments, the scrolled window simply sets the
+      #GtkScrollable::hadjustment and #GtkScrollable::vadjustment properties.
     </para>
   </section>
 

@@ -530,12 +530,12 @@ main (gint argc, gchar **argv)
   gtk_table_attach (GTK_TABLE (table), toolbar,
 		    0,2, 0,1, GTK_FILL|GTK_EXPAND, GTK_FILL, 0, 0);
 
-  hbox1 = gtk_hbox_new (FALSE, 3);
+  hbox1 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 3);
   gtk_container_set_border_width (GTK_CONTAINER (hbox1), 5);
   gtk_table_attach (GTK_TABLE (table), hbox1,
 		    1,2, 1,2, GTK_FILL|GTK_EXPAND, GTK_FILL, 0, 0);
 
-  hbox2 = gtk_hbox_new (FALSE, 2);
+  hbox2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
   gtk_container_set_border_width (GTK_CONTAINER (hbox2), 5);
   gtk_table_attach (GTK_TABLE (table), hbox2,
 		    1,2, 2,3, GTK_FILL|GTK_EXPAND, GTK_FILL, 0, 0);
@@ -554,13 +554,13 @@ main (gint argc, gchar **argv)
   checkbox = gtk_check_button_new_with_mnemonic("_Set Toolbar Style:");
   g_signal_connect (checkbox, "toggled", G_CALLBACK (set_toolbar_style_toggled), toolbar);
   gtk_box_pack_start (GTK_BOX (hbox1), checkbox, FALSE, FALSE, 0);
-  
-  option_menu = gtk_combo_box_new_text ();
+
+  option_menu = gtk_combo_box_text_new ();
   gtk_widget_set_sensitive (option_menu, FALSE);  
   g_object_set_data (G_OBJECT (checkbox), "option-menu", option_menu);
   
   for (i = 0; i < G_N_ELEMENTS (toolbar_styles); i++)
-    gtk_combo_box_append_text (GTK_COMBO_BOX (option_menu), toolbar_styles[i]);
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (option_menu), toolbar_styles[i]);
   gtk_combo_box_set_active (GTK_COMBO_BOX (option_menu),
                             gtk_toolbar_get_style (GTK_TOOLBAR (toolbar)));
   gtk_box_pack_start (GTK_BOX (hbox2), option_menu, FALSE, FALSE, 0);
@@ -571,11 +571,11 @@ main (gint argc, gchar **argv)
   g_signal_connect (checkbox, "toggled", G_CALLBACK (set_icon_size_toggled), toolbar);
   gtk_box_pack_start (GTK_BOX (hbox2), checkbox, FALSE, FALSE, 0);
 
-  option_menu = gtk_combo_box_new_text ();
+  option_menu = gtk_combo_box_text_new ();
   g_object_set_data (G_OBJECT (checkbox), "option-menu", option_menu);
   gtk_widget_set_sensitive (option_menu, FALSE);
-  gtk_combo_box_append_text (GTK_COMBO_BOX (option_menu), "small toolbar");
-  gtk_combo_box_append_text (GTK_COMBO_BOX (option_menu), "large toolbar");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (option_menu), "small toolbar");
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (option_menu), "large toolbar");
 
   gtk_box_pack_start (GTK_BOX (hbox2), option_menu, FALSE, FALSE, 0);
   g_signal_connect (option_menu, "changed",
@@ -701,12 +701,12 @@ main (gint argc, gchar **argv)
   add_item_to_list (store, item, "Video");
   gtk_toolbar_insert (GTK_TOOLBAR (toolbar), item, -1);
 
-  image = gtk_image_new_from_icon_name ("utility-terminal", GTK_ICON_SIZE_LARGE_TOOLBAR);
+  image = gtk_image_new_from_icon_name ("utilities-terminal", GTK_ICON_SIZE_LARGE_TOOLBAR);
   item = gtk_tool_button_new (image, "Terminal");
   add_item_to_list (store, item, "Terminal");
   gtk_toolbar_insert (GTK_TOOLBAR (toolbar), item, -1);
 
-  hbox = gtk_hbox_new (FALSE, 5);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_container_set_border_width (GTK_CONTAINER (hbox), 5);
   gtk_table_attach (GTK_TABLE (table), hbox,
 		    1,2, 4,5, GTK_FILL|GTK_EXPAND, GTK_FILL, 0, 0);
