@@ -26,6 +26,14 @@
 #include "gdkinternals.h"
 
 
+typedef struct _GdkDeviceKey GdkDeviceKey;
+
+struct _GdkDeviceKey
+{
+  guint keyval;
+  GdkModifierType modifiers;
+};
+
 typedef struct _GdkAxisInfo GdkAxisInfo;
 
 struct _GdkAxisInfo
@@ -595,7 +603,7 @@ gdk_device_set_mode (GdkDevice    *device,
  *
  * Returns: the number of keys.
  *
- * Since: 3.0
+ * Since: 2.24
  **/
 gint
 gdk_device_get_n_keys (GdkDevice *device)
@@ -737,8 +745,8 @@ gdk_device_set_axis_use (GdkDevice   *device,
  *
  * Returns the #GdkDisplay to which @device pertains.
  *
- * Returns: a #GdkDisplay. This memory is owned by GTK+,
- *          and must not be freed or unreffed.
+ * Returns: (transfer none): a #GdkDisplay. This memory is owned
+ *          by GTK+, and must not be freed or unreffed.
  *
  * Since: 3.0
  **/
@@ -768,7 +776,7 @@ gdk_device_get_display (GdkDevice *device)
  * If @device is of type %GDK_DEVICE_TYPE_FLOATING, %NULL will be
  * returned, as there is no associated device.
  *
- * Returns: The associated device, or %NULL
+ * Returns: (transfer none): The associated device, or %NULL
  *
  * Since: 3.0
  **/

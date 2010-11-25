@@ -100,7 +100,7 @@ endif
 # This places the generated .def file in srcdir, since it is expected to be there.
 # (The one from a tarball is)
 gtk.def: gtk.symbols
-	(echo -e EXPORTS; $(CPP) -P -DINCLUDE_VARIABLES -DG_OS_WIN32 -DALL_FILES - <$(srcdir)/gtk.symbols | $(SED) -e '/^$$/d' -e 's/^/	/' -e 's/G_GNUC_[^ ]*//g') > $(srcdir)/gtk.def
+	(echo -e EXPORTS; $(CPP) -P -DG_OS_WIN32 - <$(srcdir)/gtk.symbols | $(SED) -e '/^$$/d' -e 's/^/	/' -e 's/G_GNUC_[^ ]*//g') > $(srcdir)/gtk.def
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" gtk_all_c_sources="$(gtk_all_c_sources)"
 if OS_LINUX
@@ -213,7 +213,6 @@ gtk_public_h_sources =          \
 	gtkhbbox.h		\
 	gtkhbox.h		\
 	gtkhpaned.h		\
-	gtkhruler.h		\
 	gtkhscale.h		\
 	gtkhscrollbar.h		\
 	gtkhseparator.h		\
@@ -268,7 +267,6 @@ gtk_public_h_sources =          \
 	gtkrecentchooserwidget.h \
 	gtkrecentfilter.h 	\
 	gtkrecentmanager.h 	\
-	gtkruler.h		\
 	gtkscale.h		\
 	gtkscalebutton.h	\
 	gtkscrollable.h         \
@@ -327,7 +325,6 @@ gtk_public_h_sources =          \
 	gtkviewport.h		\
 	gtkvolumebutton.h	\
 	gtkvpaned.h		\
-	gtkvruler.h		\
 	gtkvscale.h		\
 	gtkvscrollbar.h		\
 	gtkvseparator.h		\
@@ -478,7 +475,6 @@ gtk_base_c_sources =            \
 	gtkhbbox.c		\
 	gtkhbox.c		\
 	gtkhpaned.c		\
-	gtkhruler.c		\
 	gtkhscale.c		\
 	gtkhscrollbar.c		\
 	gtkhseparator.c		\
@@ -544,7 +540,6 @@ gtk_base_c_sources =            \
 	gtkrecentchooser.c 	\
 	gtkrecentfilter.c 	\
 	gtkrecentmanager.c 	\
-	gtkruler.c		\
 	gtkscale.c		\
 	gtkscalebutton.c	\
 	gtkscrollable.c         \
@@ -612,7 +607,6 @@ gtk_base_c_sources =            \
 	gtkvolumebutton.c	\
 	gtkviewport.c		\
 	gtkvpaned.c		\
-	gtkvruler.c		\
 	gtkvscale.c		\
 	gtkvscrollbar.c		\
 	gtkvseparator.c		\
