@@ -299,90 +299,90 @@ maybe_update_keymap (void)
 {
   KBLayout new_layout = get_keyboard_layout();
 
-  if (new_layout.ref != current_layout && new_layout.data != NULL)
+  if (new_layout.ref == current_layout || new_layout.data == NULL)
+    return;
+
+  guint *p;
+  int i;
+
+  g_free (keyval_array);
+  keyval_array = g_new0 (guint, NUM_KEYCODES * KEYVALS_PER_KEYCODE);
+
+  for (i = 0; i < NUM_KEYCODES; i++)
     {
-      guint *p;
-      int i;
+      int j;
+      UInt32 modifiers[] = {0, shiftKey, optionKey, shiftKey | optionKey};
 
-      g_free (keyval_array);
-      keyval_array = g_new0 (guint, NUM_KEYCODES * KEYVALS_PER_KEYCODE);
-
-      for (i = 0; i < NUM_KEYCODES; i++)
-	{
-	  int j;
-	  UInt32 modifiers[] = {0, shiftKey, optionKey, shiftKey | optionKey};
-
-	  p = keyval_array + i * KEYVALS_PER_KEYCODE;
+      p = keyval_array + i * KEYVALS_PER_KEYCODE;
 	      
-	  for (j = 0; j < KEYVALS_PER_KEYCODE; j++)
+      for (j = 0; j < KEYVALS_PER_KEYCODE; j++)
+	{
+	  UniChar uc;
+	  gboolean found = FALSE;
+	  int k;
+
+	  uc = new_layout.get_keyvalue(&new_layout, i, modifiers[j]);
+
+
+	  for (k = 0; k < G_N_ELEMENTS (special_ucs_table); k++)
 	    {
-	      UniChar uc;
-	      gboolean found = FALSE;
-	      int k;
-
-	      uc = new_layout.get_keyvalue(&new_layout, i, modifiers[j]);
-
-
-	      for (k = 0; k < G_N_ELEMENTS (special_ucs_table); k++)
+	      if (special_ucs_table[k].ucs_value == uc)
 		{
-		  if (special_ucs_table[k].ucs_value == uc)
-		    {
-		      p[j] = special_ucs_table[k].keyval;
-		      found = TRUE;
-		      break;
-		    }
-		}
-		      
-	      /* Special-case shift-tab since GTK+ expects
-	       * GDK_KEY_ISO_Left_Tab for that.
-	       */
-	      if (found && p[j] == GDK_KEY_Tab && modifiers[j] == shiftKey)
-		p[j] = GDK_KEY_ISO_Left_Tab;
-
-	      if (!found)
-		{
-		  guint tmp;
-                          
-		  tmp = gdk_unicode_to_keyval (uc);
-		  if (tmp != (uc | 0x01000000))
-		    p[j] = tmp;
-		  else
-		    p[j] = 0;
+		  p[j] = special_ucs_table[k].keyval;
+		  found = TRUE;
+		  break;
 		}
 	    }
+		      
+	  /* Special-case shift-tab since GTK+ expects
+	   * GDK_KEY_ISO_Left_Tab for that.
+	   */
+	  if (found && p[j] == GDK_KEY_Tab && modifiers[j] == shiftKey)
+	    p[j] = GDK_KEY_ISO_Left_Tab;
 
-	  if (p[3] == p[2])
-	    p[3] = 0;
-	  if (p[2] == p[1])
-	    p[2] = 0;
-	  if (p[1] == p[0])
-	    p[1] = 0;
-	  if (p[0] == p[2] &&
-	      p[1] == p[3])
-	    p[2] = p[3] = 0;
+	  if (!found)
+	    {
+	      guint tmp;
+                          
+	      tmp = gdk_unicode_to_keyval (uc);
+	      if (tmp != (uc | 0x01000000))
+		p[j] = tmp;
+	      else
+		p[j] = 0;
+	    }
 	}
-      for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
-	{
-	  p = keyval_array + known_keys[i].keycode * KEYVALS_PER_KEYCODE;
 
-	  if (p[0] == 0 && p[1] == 0 && 
-	      p[2] == 0 && p[3] == 0)
-	    p[0] = known_keys[i].keyval;
-	}
-
-      for (i = 0; i < G_N_ELEMENTS (known_numeric_keys); i++)
-	{
-	  p = keyval_array + known_numeric_keys[i].keycode * KEYVALS_PER_KEYCODE;
-
-	  if (p[0] == known_numeric_keys[i].normal_keyval)
-            p[0] = known_numeric_keys[i].keypad_keyval;
-	}
-      
-      if (current_layout)
-	g_signal_emit_by_name (default_keymap, "keys_changed");
-
-      current_layout = new_layout.ref;
+      if (p[3] == p[2])
+	p[3] = 0;
+      if (p[2] == p[1])
+	p[2] = 0;
+      if (p[1] == p[0])
+	p[1] = 0;
+      if (p[0] == p[2] &&
+	  p[1] == p[3])
+	p[2] = p[3] = 0;
     }
+  for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
+    {
+      p = keyval_array + known_keys[i].keycode * KEYVALS_PER_KEYCODE;
+
+      if (p[0] == 0 && p[1] == 0 && 
+	  p[2] == 0 && p[3] == 0)
+	p[0] = known_keys[i].keyval;
+    }
+
+  for (i = 0; i < G_N_ELEMENTS (known_numeric_keys); i++)
+    {
+      p = keyval_array + known_numeric_keys[i].keycode * KEYVALS_PER_KEYCODE;
+
+      if (p[0] == known_numeric_keys[i].normal_keyval)
+	p[0] = known_numeric_keys[i].keypad_keyval;
+    }
+      
+  if (current_layout)
+    g_signal_emit_by_name (default_keymap, "keys_changed");
+
+  current_layout = new_layout.ref;
 }
 
 GdkKeymap *
