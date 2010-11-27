@@ -184,24 +184,63 @@ const static struct {
   { 0x001f, GDK_KEY_Down },
   { 0x007f, GDK_KEY_Delete }
 };
+typedef struct
+{
+    gpointer ref;
+    SInt32 kind;
+    gpointer data;
+} KBLayout;
+
+#ifdef __LP64__
+
+static KBLayout
+get_keyboard_layout (void)
+{
+  KBLayout layout;
+  CFDataRef layout_data_ref;
+
+  layout.kind = kKLuchrKind;
+  layout.ref = (gpointer)TISCopyCurrentKeyboardLayoutInputSource ();
+
+  layout_data_ref = (CFDataRef) TISGetInputSourceProperty
+    ((TISInputSourceRef)layout.ref, kTISPropertyUnicodeKeyLayoutData);
+
+  if (layout_data_ref)
+    layout.data = CFDataGetBytePtr (layout_data_ref);
+
+  if (layout.data == NULL)
+    {
+      g_error ("cannot get keyboard layout data");
+    }
+  return layout;
+}
+
+#else
+
+static KBLayout
+get_keyboard_layout (void)
+{
+  KBLayout layout;
+  UInt32 data_type;
+
+  KLGetCurrentKeyboardLayout ((KeyboardLayoutRef*)&layout.ref);
+  /* Get the layout kind */
+  KLGetKeyboardLayoutProperty (layout.ref, kKLKind, (const void **)&layout.kind);
+  if (layout.kind == kKLKCHRuchrKind)
+    layout.kind == kKLuchrKind;
+  data_type = layout.kind == kKLKCHRKind ? kKLKCHRData : kKLuchrData;
+  /* Get chr data */
+  KLGetKeyboardLayoutProperty (layout.ref, data_type, (const void **)&layout.data);
+  return layout;
+}
+#endif
 
 static void
 maybe_update_keymap (void)
 {
-  const void *chr_data = NULL;
+  KBLayout new_layout = get_keyboard_layout();
 
-#ifdef __LP64__
-  TISInputSourceRef new_layout = TISCopyCurrentKeyboardLayoutInputSource ();
-  CFDataRef layout_data_ref;
-
-#else
-  KeyboardLayoutRef new_layout;
-  KeyboardLayoutKind layout_kind;
-
-  KLGetCurrentKeyboardLayout (&new_layout);
-#endif
-
-  if (new_layout != current_layout)
+  if (new_layout.ref != current_layout && new_layout.data != NULL)
     {
       guint *p;
       int i;
@@ -209,28 +248,10 @@ maybe_update_keymap (void)
       g_free (keyval_array);
       keyval_array = g_new0 (guint, NUM_KEYCODES * KEYVALS_PER_KEYCODE);
 
-#ifdef __LP64__
-      layout_data_ref = (CFDataRef) TISGetInputSourceProperty
-	(new_layout, kTISPropertyUnicodeKeyLayoutData);
-
-      if (layout_data_ref)
-	chr_data = CFDataGetBytePtr (layout_data_ref);
-
-      if (chr_data == NULL)
-	{
-	  g_error ("cannot get keyboard layout data");
-	  return;
-	}
-#else
-      /* Get the layout kind */
-      KLGetKeyboardLayoutProperty (new_layout, kKLKind, (const void **)&layout_kind);
-
       /* 8-bit-only keyabord layout */
-      if (layout_kind == kKLKCHRKind)
+      if (new_layout.kind == kKLKCHRKind)
 	{ 
-	  /* Get chr data */
-	  KLGetKeyboardLayoutProperty (new_layout, kKLKCHRData, (const void **)&chr_data);
-	  
+#ifndef __LP64__
 	  for (i = 0; i < NUM_KEYCODES; i++) 
 	    {
 	      int j;
@@ -245,12 +266,12 @@ maybe_update_keymap (void)
 		  UniChar uc;
 		  
 		  key_code = modifiers[j] | i;
-		  c = KeyTranslate (chr_data, key_code, &state);
+		  c = KeyTranslate (new_layout.data, key_code, &state);
 
 		  if (state != 0)
 		    {
 		      UInt32 state2 = 0;
-		      c = KeyTranslate (chr_data, key_code | 128, &state2);
+		      c = KeyTranslate (new_layout.data, key_code | 128, &state2);
 		    }
 
 		  if (c != 0 && c != 0x10)
@@ -305,14 +326,11 @@ maybe_update_keymap (void)
 		  p[1] == p[3])
 		p[2] = p[3] = 0;
 	    }
+#endif
 	}
       /* unicode keyboard layout */
-      else if (layout_kind == kKLKCHRuchrKind || layout_kind == kKLuchrKind)
+      else if (new_layout.kind == kKLuchrKind)
 	{ 
-	  /* Get chr data */
-	  KLGetKeyboardLayoutProperty (new_layout, kKLuchrData, (const void **)&chr_data);
-#endif
-	  
 	  for (i = 0; i < NUM_KEYCODES; i++) 
 	    {
 	      int j;
@@ -330,7 +348,7 @@ maybe_update_keymap (void)
 		  UniChar uc;
 		  
 		  key_code = modifiers[j] | i;
-		  err = UCKeyTranslate (chr_data, i, kUCKeyActionDown,
+		  err = UCKeyTranslate (new_layout.data, i, kUCKeyActionDown,
 		                        (modifiers[j] >> 8) & 0xFF,
 		                        LMGetKbdType(),
 		                        kUCKeyTranslateNoDeadKeysMask,
@@ -387,14 +405,12 @@ maybe_update_keymap (void)
 		  p[1] == p[3])
 		p[2] = p[3] = 0;
 	    }
-#ifndef __LP64__
 	}
       else
 	{
 	  g_error ("unknown type of keyboard layout (neither KCHR nor uchr)"
 	           " - not supported right now");
 	}
-#endif
 
       for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
 	{
@@ -416,7 +432,7 @@ maybe_update_keymap (void)
       if (current_layout)
 	g_signal_emit_by_name (default_keymap, "keys_changed");
 
-      current_layout = new_layout;
+      current_layout = new_layout.ref;
     }
 }
 
