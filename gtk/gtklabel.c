@@ -221,8 +221,7 @@ static void gtk_label_size_allocate     (GtkWidget        *widget,
                                          GtkAllocation    *allocation);
 static void gtk_label_state_changed     (GtkWidget        *widget,
                                          GtkStateType      state);
-static void gtk_label_style_set         (GtkWidget        *widget,
-					 GtkStyle         *previous_style);
+static void gtk_label_style_updated     (GtkWidget        *widget);
 static void gtk_label_direction_changed (GtkWidget        *widget,
 					 GtkTextDirection  previous_dir);
 static gint gtk_label_draw              (GtkWidget        *widget,
@@ -407,7 +406,7 @@ gtk_label_class_init (GtkLabelClass *class)
   widget_class->destroy = gtk_label_destroy;
   widget_class->size_allocate = gtk_label_size_allocate;
   widget_class->state_changed = gtk_label_state_changed;
-  widget_class->style_set = gtk_label_style_set;
+  widget_class->style_updated = gtk_label_style_updated;
   widget_class->query_tooltip = gtk_label_query_tooltip;
   widget_class->direction_changed = gtk_label_direction_changed;
   widget_class->draw = gtk_label_draw;
@@ -2274,11 +2273,13 @@ gtk_label_get_link_colors (GtkWidget  *widget,
                            GdkColor  **link_color,
                            GdkColor  **visited_link_color)
 {
-  gtk_widget_ensure_style (widget);
-  gtk_widget_style_get (widget,
-                        "link-color", link_color,
-                        "visited-link-color", visited_link_color,
-                        NULL);
+  GtkStyleContext *context;
+
+  context = gtk_widget_get_style_context (widget);
+  gtk_style_context_get_style (context,
+                               "link-color", link_color,
+                               "visited-link-color", visited_link_color,
+                                NULL);
   if (!*link_color)
     *link_color = gdk_color_copy (&default_link_color);
   if (!*visited_link_color)
@@ -3008,13 +3009,25 @@ gtk_label_clear_layout (GtkLabel *label)
     }
 }
 
+static PangoFontMetrics *
+get_font_metrics (PangoContext *context, GtkWidget *widget)
+{
+  GtkStyleContext *style_context;
+  PangoFontDescription *font;
+
+  style_context = gtk_widget_get_style_context (widget);
+  gtk_style_context_get (style_context, 0, "font", &font, NULL);
+
+  return pango_context_get_metrics (context,
+                                     font,
+                                     pango_context_get_language (context));
+}
 
 static void
 get_label_width (GtkLabel *label,
 		 gint     *minimum,
 		 gint     *natural)
 {
-  GtkWidgetAuxInfo *aux_info;
   GtkLabelPrivate     *priv;
   PangoLayout      *layout;
   PangoContext     *context;
@@ -3023,14 +3036,10 @@ get_label_width (GtkLabel *label,
   gint              char_width, digit_width, char_pixels, text_width, ellipsize_chars, guess_width;
 
   priv     = label->priv;
-  aux_info = _gtk_widget_get_aux_info (GTK_WIDGET (label), FALSE);
 
   layout  = pango_layout_copy (priv->layout);
   context = pango_layout_get_context (layout);
-  metrics = pango_context_get_metrics (context,
-                                       gtk_widget_get_style (GTK_WIDGET (label))->font_desc,
-				       pango_context_get_language (context));
-  
+  metrics = get_font_metrics (context, GTK_WIDGET (label));
   char_width = pango_font_metrics_get_approximate_char_width (metrics);
   digit_width = pango_font_metrics_get_approximate_digit_width (metrics);
   char_pixels = MAX (char_width, digit_width);
@@ -3109,11 +3118,16 @@ get_label_width (GtkLabel *label,
     }
 
   /* if a width-request is set, use that as the requested label width */
-  if ((priv->wrap || priv->ellipsize || priv->width_chars > 0 || priv->max_width_chars > 0) &&
-      aux_info && aux_info->width > 0)
+  if (priv->wrap || priv->ellipsize || priv->width_chars > 0 || priv->max_width_chars > 0)
     {
-      *minimum = aux_info->width * PANGO_SCALE;
-      *natural = MAX (*natural, *minimum);
+      GtkWidgetAuxInfo *aux_info;
+
+      aux_info = _gtk_widget_get_aux_info (GTK_WIDGET (label), FALSE);
+      if (aux_info && aux_info->width > 0)
+        {
+          *minimum = aux_info->width * PANGO_SCALE;
+          *natural = MAX (*natural, *minimum);
+        }
     }
 
   g_object_unref (layout);
@@ -3144,10 +3158,7 @@ get_label_wrap_width (GtkLabel *label)
 
 	  layout  = pango_layout_copy (priv->layout);
 	  context = pango_layout_get_context (layout);
-          metrics = pango_context_get_metrics (context,
-                                               gtk_widget_get_style (GTK_WIDGET (label))->font_desc,
-					       pango_context_get_language (context));
-	  
+	  metrics = get_font_metrics (context, GTK_WIDGET (label));
 	  char_width = pango_font_metrics_get_approximate_char_width (metrics);
 	  digit_width = pango_font_metrics_get_approximate_digit_width (metrics);
 	  char_pixels = MAX (char_width, digit_width);
@@ -3354,9 +3365,7 @@ get_single_line_height (GtkWidget   *widget,
   gint ascent, descent;
 
   context = pango_layout_get_context (layout);
-  metrics = pango_context_get_metrics (context, gtk_widget_get_style (widget)->font_desc,
-                                       pango_context_get_language (context));
-
+  metrics = get_font_metrics (context, widget);
   ascent = pango_font_metrics_get_ascent (metrics);
   descent = pango_font_metrics_get_descent (metrics);
   pango_font_metrics_unref (metrics);
@@ -3806,8 +3815,7 @@ gtk_label_state_changed (GtkWidget   *widget,
 }
 
 static void
-gtk_label_style_set (GtkWidget *widget,
-		     GtkStyle  *previous_style)
+gtk_label_style_updated (GtkWidget *widget)
 {
   GtkLabel *label = GTK_LABEL (widget);
 
@@ -4065,7 +4073,8 @@ gtk_label_draw (GtkWidget *widget,
   GtkLabelPrivate *priv = label->priv;
   GtkLabelSelectionInfo *info = priv->select_info;
   GtkAllocation allocation;
-  GtkStyle *style;
+  GtkStyleContext *context;
+  GtkStateFlags state;
   GdkWindow *window;
   gint x, y;
 
@@ -4073,22 +4082,22 @@ gtk_label_draw (GtkWidget *widget,
 
   if (priv->text && (*priv->text != '\0'))
     {
+      GdkRGBA *bg_color, *fg_color;
+
       get_layout_location (label, &x, &y);
 
-      style = gtk_widget_get_style (widget);
+      context = gtk_widget_get_style_context (widget);
       window = gtk_widget_get_window (widget);
       gtk_widget_get_allocation (widget, &allocation);
 
       cairo_translate (cr, -allocation.x, -allocation.y);
 
-      gtk_paint_layout (style,
-                        cr,
-                        gtk_widget_get_state (widget),
-			FALSE,
-                        widget,
-                        "label",
-                        x, y,
-                        priv->layout);
+      state = gtk_widget_get_state_flags (widget);
+      gtk_style_context_set_state (context, state);
+
+      gtk_render_layout (context, cr,
+                         x, y,
+                         priv->layout);
 
       if (info &&
           (info->selection_anchor != info->selection_end))
@@ -4121,19 +4130,28 @@ gtk_label_draw (GtkWidget *widget,
           gdk_cairo_region (cr, clip);
           cairo_clip (cr);
 
-	  state = GTK_STATE_SELECTED;
-	  if (!gtk_widget_has_focus (widget))
-	    state = GTK_STATE_ACTIVE;
+          state = GTK_STATE_FLAG_SELECTED;
 
-          gdk_cairo_set_source_color (cr, &style->base[state]);
+	  if (gtk_widget_has_focus (widget))
+	    state |= GTK_STATE_FLAG_FOCUSED;
+
+          gtk_style_context_get (context, state,
+                                 "background-color", &bg_color,
+                                 "color", &fg_color,
+                                 NULL);
+
+          gdk_cairo_set_source_rgba (cr, bg_color);
           cairo_paint (cr);
 
-          gdk_cairo_set_source_color (cr, &style->text[state]);
+          gdk_cairo_set_source_rgba (cr, fg_color);
           cairo_move_to (cr, x, y);
           _gtk_pango_fill_layout (cr, priv->layout);
 
           cairo_restore (cr);
           cairo_region_destroy (clip);
+
+          gdk_rgba_free (bg_color);
+          gdk_rgba_free (fg_color);
         }
       else if (info)
         {
@@ -4143,7 +4161,6 @@ gtk_label_draw (GtkWidget *widget,
           cairo_region_t *clip;
           GdkRectangle rect;
           GdkColor *text_color;
-          GdkColor *base_color;
           GdkColor *link_color;
           GdkColor *visited_link_color;
 
@@ -4156,6 +4173,8 @@ gtk_label_draw (GtkWidget *widget,
 
           if (active_link)
             {
+              GdkRGBA *bg_color;
+
               range[0] = active_link->start;
               range[1] = active_link->end;
 
@@ -4174,12 +4193,17 @@ gtk_label_draw (GtkWidget *widget,
                 text_color = visited_link_color;
               else
                 text_color = link_color;
-              if (info->link_clicked)
-                base_color = &style->base[GTK_STATE_ACTIVE];
-              else
-                base_color = &style->base[GTK_STATE_PRELIGHT];
 
-              gdk_cairo_set_source_color (cr, base_color);
+              if (info->link_clicked)
+                state = GTK_STATE_FLAG_ACTIVE;
+              else
+                state = GTK_STATE_FLAG_PRELIGHT;
+
+              gtk_style_context_get (context, state,
+                                     "background-color", &bg_color,
+                                     NULL);
+
+              gdk_cairo_set_source_rgba (cr, bg_color);
               cairo_paint (cr);
 
               gdk_cairo_set_source_color (cr, text_color);
@@ -4188,6 +4212,7 @@ gtk_label_draw (GtkWidget *widget,
 
               gdk_color_free (link_color);
               gdk_color_free (visited_link_color);
+              gdk_rgba_free (bg_color);
 
               cairo_restore (cr);
             }
@@ -4203,9 +4228,12 @@ gtk_label_draw (GtkWidget *widget,
                                                        1);
               cairo_region_get_extents (clip, &rect);
 
-              gtk_paint_focus (style, cr, gtk_widget_get_state (widget),
-                               widget, "label",
-                               rect.x, rect.y, rect.width, rect.height);
+              state = gtk_widget_get_state_flags (widget);
+              gtk_style_context_set_state (context, state);
+
+              gtk_render_focus (context, cr,
+                                rect.x, rect.y,
+                                rect.width, rect.height);
 
               cairo_region_destroy (clip);
             }
@@ -5509,8 +5537,9 @@ gtk_label_get_selection_bounds (GtkLabel  *label,
  * Gets the #PangoLayout used to display the label.
  * The layout is useful to e.g. convert text positions to
  * pixel positions, in combination with gtk_label_get_layout_offsets().
- * The returned layout is owned by the label so need not be
- * freed by the caller.
+ * The returned layout is owned by the @label so need not be
+ * freed by the caller. The @label is free to recreate its layout at
+ * any time, so it should be considered read-only.
  *
  * Return value: (transfer none): the #PangoLayout for this label
  **/
