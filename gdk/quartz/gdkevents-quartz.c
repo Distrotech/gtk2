@@ -376,7 +376,6 @@ generate_motion_event (GdkWindow *window)
   NSPoint screen_point;
   NSWindow *nswindow;
   GdkQuartzView *view;
-  GdkWindowObject *private;
   GdkEvent *event;
   gint x, y, x_root, y_root;
   GdkDisplay *display;
@@ -385,8 +384,7 @@ generate_motion_event (GdkWindow *window)
   event->any.window = NULL;
   event->any.send_event = TRUE;
 
-  private = (GdkWindowObject *)window;
-  nswindow = ((GdkWindowImplQuartz *)private->impl)->toplevel;
+  nswindow = ((GdkWindowImplQuartz *)window->impl)->toplevel;
   view = (GdkQuartzView *)[nswindow contentView];
 
   display = gdk_window_get_display (window);
@@ -398,7 +396,7 @@ generate_motion_event (GdkWindow *window)
   point = [nswindow convertScreenToBase:screen_point];
 
   x = point.x;
-  y = private->height - point.y;
+  y = window->height - point.y;
 
   event->any.type = GDK_MOTION_NOTIFY;
   event->motion.window = window;
@@ -466,7 +464,6 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
   NSPoint point;
   NSPoint screen_point;
   NSWindow *nswindow;
-  GdkWindowObject *private;
   GdkEvent *event;
   gint x, y, x_root, y_root;
 
@@ -474,8 +471,7 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
   event->any.window = NULL;
   event->any.send_event = FALSE;
 
-  private = (GdkWindowObject *)window;
-  nswindow = ((GdkWindowImplQuartz *)private->impl)->toplevel;
+  nswindow = ((GdkWindowImplQuartz *)window->impl)->toplevel;
 
   screen_point = [NSEvent mouseLocation];
 
@@ -484,7 +480,7 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
   point = [nswindow convertScreenToBase:screen_point];
 
   x = point.x;
-  y = private->height - point.y;
+  y = window->height - point.y;
 
   event->crossing.window = window;
   event->crossing.subwindow = NULL;
@@ -505,13 +501,12 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
 void
 _gdk_quartz_events_send_map_event (GdkWindow *window)
 {
-  GdkWindowObject *private = (GdkWindowObject *)window;
-  GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (private->impl);
+  GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (window->impl);
 
   if (!impl->toplevel)
     return;
 
-  if (private->event_mask & GDK_STRUCTURE_MASK)
+  if (window->event_mask & GDK_STRUCTURE_MASK)
     {
       GdkEvent event;
 
@@ -535,17 +530,15 @@ find_toplevel_under_pointer (GdkDisplay *display,
   toplevel = info->toplevel_under_pointer;
   if (toplevel && WINDOW_IS_TOPLEVEL (toplevel))
     {
-      GdkWindowObject *private;
       NSWindow *nswindow;
       NSPoint point;
 
-      private = (GdkWindowObject *)toplevel;
-      nswindow = ((GdkWindowImplQuartz *)private->impl)->toplevel;
+      nswindow = ((GdkWindowImplQuartz *)toplevel->impl)->toplevel;
 
       point = [nswindow convertScreenToBase:screen_point];
 
       *x = point.x;
-      *y = private->height - point.y;
+      *y = toplevel->height - point.y;
     }
 
   return toplevel;
@@ -601,13 +594,11 @@ find_toplevel_for_mouse_event (NSEvent    *nsevent,
   GdkQuartzView *view;
   GdkDisplay *display;
   GdkDeviceGrabInfo *grab;
-  GdkWindowObject *private;
 
   view = (GdkQuartzView *)[[nsevent window] contentView];
   toplevel = [view gdkWindow];
 
   display = gdk_window_get_display (toplevel);
-  private = GDK_WINDOW_OBJECT (toplevel);
 
   event_type = [nsevent type];
   point = [nsevent locationInWindow];
@@ -659,18 +650,16 @@ find_toplevel_for_mouse_event (NSEvent    *nsevent,
         {
           /* Finally check the grab window. */
           GdkWindow *grab_toplevel;
-          GdkWindowObject *grab_private;
           NSWindow *grab_nswindow;
 
           grab_toplevel = gdk_window_get_effective_toplevel (grab->window);
-          grab_private = (GdkWindowObject *)grab_toplevel;
 
-          grab_nswindow = ((GdkWindowImplQuartz *)grab_private->impl)->toplevel;
+          grab_nswindow = ((GdkWindowImplQuartz *)grab_toplevel->impl)->toplevel;
           point = [grab_nswindow convertScreenToBase:screen_point];
 
           /* Note: x_root and y_root are already right. */
           *x = point.x;
-          *y = grab_private->height - point.y;
+          *y = grab_toplevel->height - point.y;
 
           return grab_toplevel;
         }
@@ -701,13 +690,11 @@ find_toplevel_for_mouse_event (NSEvent    *nsevent,
       if (toplevel_under_pointer
           && WINDOW_IS_TOPLEVEL (toplevel_under_pointer))
         {
-          GdkWindowObject *toplevel_private;
           GdkWindowImplQuartz *toplevel_impl;
 
           toplevel = toplevel_under_pointer;
 
-          toplevel_private = (GdkWindowObject *)toplevel;
-          toplevel_impl = (GdkWindowImplQuartz *)toplevel_private->impl;
+          toplevel_impl = (GdkWindowImplQuartz *)toplevel->impl;
 
           if ([toplevel_impl->toplevel showsResizeIndicator])
             {
@@ -758,17 +745,15 @@ find_window_for_ns_event (NSEvent *nsevent,
   NSPoint screen_point;
   NSEventType event_type;
   GdkWindow *toplevel;
-  GdkWindowObject *private;
 
   view = (GdkQuartzView *)[[nsevent window] contentView];
   toplevel = [view gdkWindow];
-  private = GDK_WINDOW_OBJECT (toplevel);
 
   point = [nsevent locationInWindow];
   screen_point = [[nsevent window] convertBaseToScreen:point];
 
   *x = point.x;
-  *y = private->height - point.y;
+  *y = toplevel->height - point.y;
 
   _gdk_quartz_window_nspoint_to_gdk_xy (screen_point, x_root, y_root);
 
@@ -936,10 +921,7 @@ fill_scroll_event (GdkWindow          *window,
                    gint                y_root,
                    GdkScrollDirection  direction)
 {
-  GdkWindowObject *private;
   NSPoint point;
-
-  private = GDK_WINDOW_OBJECT (window);
 
   point = [nsevent locationInWindow];
 
@@ -1085,17 +1067,13 @@ synthesize_crossing_event (GdkWindow *window,
                            gint       x_root,
                            gint       y_root)
 {
-  GdkWindowObject *private;
-
-  private = GDK_WINDOW_OBJECT (window);
-
   switch ([nsevent type])
     {
     case NSMouseEntered:
       /* Enter events are considered always to be from the root window as we
        * can't know for sure from what window we enter.
        */
-      if (!(private->event_mask & GDK_ENTER_NOTIFY_MASK))
+      if (!(window->event_mask & GDK_ENTER_NOTIFY_MASK))
         return FALSE;
 
       fill_crossing_event (window, event, nsevent,
@@ -1111,7 +1089,7 @@ synthesize_crossing_event (GdkWindow *window,
        * since there is no way to reliably get information about what new
        * window is entered when exiting one.
        */
-      if (!(private->event_mask & GDK_LEAVE_NOTIFY_MASK))
+      if (!(window->event_mask & GDK_LEAVE_NOTIFY_MASK))
         return FALSE;
 
       fill_crossing_event (window, event, nsevent,
@@ -1222,14 +1200,13 @@ gdk_event_translate (GdkEvent *event,
   /* Apply any window filters. */
   if (GDK_IS_WINDOW (window))
     {
-      GdkWindowObject *filter_private = (GdkWindowObject *) window;
       GdkFilterReturn result;
 
-      if (filter_private->filters)
+      if (window->filters)
 	{
 	  g_object_ref (window);
 
-	  result = gdk_event_apply_filters (nsevent, event, &filter_private->filters);
+	  result = gdk_event_apply_filters (nsevent, event, &window->filters);
 
 	  g_object_unref (window);
 
@@ -1250,8 +1227,7 @@ gdk_event_translate (GdkEvent *event,
        event_type == NSOtherMouseDown ||
        event_type == NSLeftMouseDown))
     {
-      GdkWindowObject *private = (GdkWindowObject *)window;
-      GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (private->impl);
+      GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (window->impl);
 
       if (![NSApp isActive])
         {

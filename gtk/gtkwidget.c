@@ -641,6 +641,7 @@ static void             gtk_widget_real_adjust_size_request     (GtkWidget      
                                                                  gint              *natural_size);
 static void             gtk_widget_real_adjust_size_allocation  (GtkWidget         *widget,
                                                                  GtkOrientation     orientation,
+                                                                 gint              *minimum_size,
                                                                  gint              *natural_size,
                                                                  gint              *allocated_pos,
                                                                  gint              *allocated_size);
@@ -1519,6 +1520,12 @@ gtk_widget_class_init (GtkWidgetClass *klass)
    * The ::style-set signal is emitted when a new style has been set
    * on a widget. Note that style-modifying functions like
    * gtk_widget_modify_base() also cause this signal to be emitted.
+   *
+   * Note that this signal is emitted for changes to the deprecated
+   * #GtkStyle. To track changes to the #GtkStyleContext associated
+   * with a widget, use the #GtkWidget::style-updated signal.
+   *
+   * Deprecated:3.0: Use the #GtkWidget::style-updated signal
    */
   widget_signals[STYLE_SET] =
     g_signal_new (I_("style-set"),
@@ -1530,6 +1537,16 @@ gtk_widget_class_init (GtkWidgetClass *klass)
 		  G_TYPE_NONE, 1,
 		  GTK_TYPE_STYLE);
 
+  /**
+   * GtkWidget::style-updated:
+   * @widget: the object on which the signal is emitted
+   *
+   * The ::style-updated signal is emitted when the #GtkStyleContext
+   * of a widget is changed. Note that style-modifying functions like
+   * gtk_widget_override_color() also cause this signal to be emitted.
+   *
+   * Since: 3.0
+   */
   widget_signals[STYLE_UPDATED] =
     g_signal_new (I_("style-updated"),
                   G_TYPE_FROM_CLASS (gobject_class),
@@ -4636,7 +4653,7 @@ gtk_widget_size_allocate (GtkWidget	*widget,
   gboolean alloc_needed;
   gboolean size_changed;
   gboolean position_changed;
-  gint natural_width, natural_height;
+  gint natural_width, natural_height, dummy;
   gint min_width, min_height;
 
   priv = widget->priv;
@@ -4681,7 +4698,7 @@ gtk_widget_size_allocate (GtkWidget	*widget,
        * when aligning implicitly.
        */
       gtk_widget_get_preferred_width (widget, &min_width, &natural_width);
-      gtk_widget_get_preferred_height_for_width (widget, real_allocation.width, NULL, &natural_height);
+      gtk_widget_get_preferred_height_for_width (widget, real_allocation.width, &dummy, &natural_height);
     }
   else
     {
@@ -4690,18 +4707,20 @@ gtk_widget_size_allocate (GtkWidget	*widget,
        * when aligning implicitly.
        */
       gtk_widget_get_preferred_height (widget, &min_height, &natural_height);
-      gtk_widget_get_preferred_width_for_height (widget, real_allocation.height, NULL, &natural_width);
+      gtk_widget_get_preferred_width_for_height (widget, real_allocation.height, &dummy, &natural_width);
     }
 
   /* Now that we have the right natural height and width, go ahead and remove any margins from the
    * allocated sizes and possibly limit them to the natural sizes */
   GTK_WIDGET_GET_CLASS (widget)->adjust_size_allocation (widget,
 							 GTK_ORIENTATION_HORIZONTAL,
+							 &dummy,
 							 &natural_width,
 							 &adjusted_allocation.x,
 							 &adjusted_allocation.width);
   GTK_WIDGET_GET_CLASS (widget)->adjust_size_allocation (widget,
 							 GTK_ORIENTATION_VERTICAL,
+							 &dummy,
 							 &natural_height,
 							 &adjusted_allocation.y,
 							 &adjusted_allocation.height);
@@ -5026,10 +5045,12 @@ adjust_for_align(GtkAlign           align,
 static void
 adjust_for_margin(gint               start_margin,
                   gint               end_margin,
+                  gint              *minimum_size,
                   gint              *natural_size,
                   gint              *allocated_pos,
                   gint              *allocated_size)
 {
+  *minimum_size -= (start_margin + end_margin);
   *natural_size -= (start_margin + end_margin);
   *allocated_pos += start_margin;
   *allocated_size -= (start_margin + end_margin);
@@ -5038,6 +5059,7 @@ adjust_for_margin(gint               start_margin,
 static void
 gtk_widget_real_adjust_size_allocation (GtkWidget         *widget,
                                         GtkOrientation     orientation,
+                                        gint              *minimum_size,
                                         gint              *natural_size,
                                         gint              *allocated_pos,
                                         gint              *allocated_size)
@@ -5050,7 +5072,8 @@ gtk_widget_real_adjust_size_allocation (GtkWidget         *widget,
     {
       adjust_for_margin (aux_info->margin.left,
                          aux_info->margin.right,
-                         natural_size, allocated_pos, allocated_size);
+                         minimum_size, natural_size, 
+			 allocated_pos, allocated_size);
       adjust_for_align (aux_info->halign,
                         natural_size, allocated_pos, allocated_size);
     }
@@ -5058,7 +5081,8 @@ gtk_widget_real_adjust_size_allocation (GtkWidget         *widget,
     {
       adjust_for_margin (aux_info->margin.top,
                          aux_info->margin.bottom,
-                         natural_size, allocated_pos, allocated_size);
+                         minimum_size, natural_size, 
+			 allocated_pos, allocated_size);
       adjust_for_align (aux_info->valign,
                         natural_size, allocated_pos, allocated_size);
     }
@@ -8662,6 +8686,15 @@ reset_style_recurse (GtkWidget *widget, gpointer data)
 			  NULL);
 }
 
+/**
+ * gtk_widget_reset_style:
+ * @widget: a #GtkWidget
+ *
+ * Updates the style context of @widget and all descendents
+ * by updating its widget path.
+ *
+ * Since: 3.0
+ */
 void
 gtk_widget_reset_style (GtkWidget *widget)
 {
@@ -8731,7 +8764,7 @@ gtk_widget_peek_pango_context (GtkWidget *widget)
  *
  * If you create and keep a #PangoLayout using this context, you must
  * deal with changes to the context by calling pango_layout_context_changed()
- * on the layout in response to the #GtkWidget::style-set and
+ * on the layout in response to the #GtkWidget::style-updated and
  * #GtkWidget::direction-changed signals for the widget.
  *
  * Return value: (transfer none): the #PangoContext for the widget.
@@ -8847,7 +8880,7 @@ gtk_widget_create_pango_context (GtkWidget *widget)
  * If you keep a #PangoLayout created in this way around, in order to
  * notify the layout of changes to the base direction or font of this
  * widget, you must call pango_layout_context_changed() in response to
- * the #GtkWidget::style-set and #GtkWidget::direction-changed signals
+ * the #GtkWidget::style-updated and #GtkWidget::direction-changed signals
  * for the widget.
  *
  * Return value: (transfer full): the new #PangoLayout

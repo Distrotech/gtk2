@@ -6634,15 +6634,13 @@ gtk_entry_ensure_pixbuf (GtkEntry             *entry,
     case GTK_IMAGE_STOCK:
       state = gtk_widget_get_state_flags (widget);
       gtk_widget_set_state_flags (widget, 0, TRUE);
-      icon_info->pixbuf = gtk_widget_render_icon (widget,
-                                                  icon_info->stock_id,
-                                                  GTK_ICON_SIZE_MENU,
-                                                  NULL);
+      icon_info->pixbuf = gtk_widget_render_icon_pixbuf (widget,
+                                                         icon_info->stock_id,
+                                                         GTK_ICON_SIZE_MENU);
       if (!icon_info->pixbuf)
-        icon_info->pixbuf = gtk_widget_render_icon (widget,
-                                                    GTK_STOCK_MISSING_IMAGE,
-                                                    GTK_ICON_SIZE_MENU,
-                                                    NULL);
+        icon_info->pixbuf = gtk_widget_render_icon_pixbuf (widget,
+                                                           GTK_STOCK_MISSING_IMAGE,
+                                                           GTK_ICON_SIZE_MENU);
       gtk_widget_set_state_flags (widget, state, TRUE);
       break;
 
@@ -6666,10 +6664,9 @@ gtk_entry_ensure_pixbuf (GtkEntry             *entry,
             {
               state = gtk_widget_get_state_flags (widget);
               gtk_widget_set_state_flags (widget, 0, TRUE);
-              icon_info->pixbuf = gtk_widget_render_icon (widget,
-                                                          GTK_STOCK_MISSING_IMAGE,
-                                                          GTK_ICON_SIZE_MENU,
-                                                          NULL);
+              icon_info->pixbuf = gtk_widget_render_icon_pixbuf (widget,
+                                                                 GTK_STOCK_MISSING_IMAGE,
+                                                                 GTK_ICON_SIZE_MENU);
               gtk_widget_set_state_flags (widget, state, TRUE);
             }
         }
@@ -6700,10 +6697,9 @@ gtk_entry_ensure_pixbuf (GtkEntry             *entry,
             {
               state = gtk_widget_get_state_flags (widget);
               gtk_widget_set_state_flags (widget, 0, TRUE);
-              icon_info->pixbuf = gtk_widget_render_icon (widget,
-                                                          GTK_STOCK_MISSING_IMAGE,
-                                                          GTK_ICON_SIZE_MENU,
-                                                          NULL);
+              icon_info->pixbuf = gtk_widget_render_icon_pixbuf (widget,
+                                                                 GTK_STOCK_MISSING_IMAGE,
+                                                                 GTK_ICON_SIZE_MENU);
               gtk_widget_set_state_flags (widget, state, TRUE);
             }
         }
@@ -8992,7 +8988,7 @@ gtk_entry_drag_motion (GtkWidget        *widget,
       gtk_drag_dest_find_target (widget, context, NULL) != GDK_NONE)
     {
       source_widget = gtk_drag_get_source_widget (context);
-      suggested_action = context->suggested_action;
+      suggested_action = gdk_drag_context_get_suggested_action (context);
 
       if (!gtk_editable_get_selection_bounds (GTK_EDITABLE (entry), &sel1, &sel2) ||
           new_position < sel1 || new_position > sel2)
@@ -9002,7 +8998,7 @@ gtk_entry_drag_motion (GtkWidget        *widget,
 	      /* Default to MOVE, unless the user has
 	       * pressed ctrl or alt to affect available actions
 	       */
-	      if ((context->actions & GDK_ACTION_MOVE) != 0)
+	      if ((gdk_drag_context_get_actions (context) & GDK_ACTION_MOVE) != 0)
 	        suggested_action = GDK_ACTION_MOVE;
 	    }
 
@@ -9079,7 +9075,7 @@ gtk_entry_drag_data_received (GtkWidget        *widget,
           end_change (entry);
 	}
       
-      gtk_drag_finish (context, TRUE, context->action == GDK_ACTION_MOVE, time);
+      gtk_drag_finish (context, TRUE, gdk_drag_context_get_selected_action (context) == GDK_ACTION_MOVE, time);
     }
   else
     {
