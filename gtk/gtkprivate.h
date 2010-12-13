@@ -95,6 +95,27 @@ const gchar *_gtk_get_data_prefix ();
 
 #endif /* G_OS_WIN32 */
 
+/* Likewise for quartz */
+#ifdef  GDK_WINDOWING_QUARTZ
+
+const gchar *_gtk_quartz_get_datadir ();
+const gchar *_gtk_quartz_get_libdir ();
+const gchar *_gtk_quartz_get_sysconfdir ();
+const gchar *_gtk_quartz_get_localedir ();
+const gchar *_gtk_quartz_get_data_prefix ();
+
+#undef GTK_DATADIR
+#define GTK_DATADIR _gtk_quartz_get_datadir ()
+#undef GTK_LIBDIR
+#define GTK_LIBDIR _gtk_quartz_get_libdir ()
+#undef GTK_LOCALEDIR
+#define GTK_LOCALEDIR _gtk_quartz_get_localedir ()
+#undef GTK_SYSCONFDIR
+#define GTK_SYSCONFDIR _gtk_quartz_get_sysconfdir ()
+#undef GTK_DATA_PREFIX
+#define GTK_DATA_PREFIX _gtk_quartz_get_data_prefix ()
+
+#endif /*  GDK_WINDOWING_QUARTZ */
 gboolean _gtk_fnmatch (const char *pattern,
 		       const char *string,
 		       gboolean    no_leading_period);
