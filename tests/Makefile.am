@@ -87,6 +87,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testtreecolumns			\
 	testtreecolumnsizing		\
 	testtreesort			\
+	testverticalcells			\
 	treestoretest			\
 	testxinerama			\
 	testwindows			\
@@ -98,6 +99,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testexpander			\
 	testvolumebutton		\
 	testscrolledwindow		\
+	testcellarea			\
 	testswitch			\
 	styleexamples
 
@@ -178,6 +180,7 @@ testtreeflow_DEPENDENCIES = $(DEPS)
 testtreecolumns_DEPENDENCIES = $(DEPS)
 testtreecolumnsizing_DEPENDENCIES = $(DEPS)
 testtreesort_DEPENDENCIES = $(DEPS)
+testverticalcells_DEPENDENCIES = $(DEPS)
 treestoretest_DEPENDENCIES = $(TEST_DEPS)
 testxinerama_DEPENDENCIES = $(TEST_DEPS)
 testmerge_DEPENDENCIES = $(TEST_DEPS)
@@ -186,6 +189,7 @@ testgrouping_DEPENDENCIES = $(TEST_DEPS)
 testtooltips_DEPENDENCIES = $(TEST_DEPS)
 testvolumebutton_DEPENDENCIES = $(TEST_DEPS)
 testscrolledwindow_DEPENDENCIES = $(TEST_DEPS)
+testcellarea_DEPENDENCIES = $(TEST_DEPS)
 testwindows_DEPENDENCIES = $(TEST_DEPS)
 testexpand_DEPENDENCIES = $(TEST_DEPS)
 testexpander_DEPENDENCIES = $(TEST_DEPS)
@@ -255,6 +259,7 @@ testtreeflow_LDADD = $(LDADDS)
 testtreecolumns_LDADD = $(LDADDS)
 testtreecolumnsizing_LDADD = $(LDADDS)
 testtreesort_LDADD = $(LDADDS)
+testverticalcells_LDADD = $(LDADDS)
 treestoretest_LDADD = $(LDADDS)
 testxinerama_LDADD = $(LDADDS)
 testmerge_LDADD = $(LDADDS)
@@ -263,6 +268,7 @@ testgrouping_LDADD = $(LDADDS)
 testtooltips_LDADD = $(LDADDS)
 testvolumebutton_LDADD = $(LDADDS)
 testscrolledwindow_LDADD = $(LDADDS)
+testcellarea_LDADD = $(LDADDS)
 testwindows_LDADD = $(LDADDS)
 testexpand_LDADD = $(LDADDS)
 testexpander_LDADD = $(LDADDS)
@@ -372,6 +378,11 @@ testvolumebutton_SOURCES =	\
 
 testscrolledwindow_SOURCES =	\
 	testscrolledwindow.c
+
+testcellarea_SOURCES =		\
+	testcellarea.c		\
+	cellareascaffold.c	\
+	cellareascaffold.h
 
 testoffscreen_SOURCES = 	\
 	gtkoffscreenbox.c	\
