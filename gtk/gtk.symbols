@@ -3408,7 +3408,6 @@ gtk_widget_get_direction
 gtk_widget_get_display
 gtk_widget_get_double_buffered
 gtk_widget_get_events
-gtk_widget_get_extension_events
 gtk_widget_get_halign
 gtk_widget_get_has_tooltip
 gtk_widget_get_has_window
@@ -3499,7 +3498,7 @@ gtk_widget_path_append_type
 gtk_widget_path_copy
 gtk_widget_path_free
 gtk_widget_path_get_type G_GNUC_CONST
-gtk_widget_path_get_widget_type
+gtk_widget_path_get_object_type
 gtk_widget_path_has_parent
 gtk_widget_path_is_type
 gtk_widget_path_iter_add_class
@@ -3507,7 +3506,7 @@ gtk_widget_path_iter_add_region
 gtk_widget_path_iter_clear_classes
 gtk_widget_path_iter_clear_regions
 gtk_widget_path_iter_get_name
-gtk_widget_path_iter_get_widget_type
+gtk_widget_path_iter_get_object_type
 gtk_widget_path_iter_has_class
 gtk_widget_path_iter_has_name
 gtk_widget_path_iter_has_qclass
@@ -3519,7 +3518,7 @@ gtk_widget_path_iter_list_regions
 gtk_widget_path_iter_remove_class
 gtk_widget_path_iter_remove_region
 gtk_widget_path_iter_set_name
-gtk_widget_path_iter_set_widget_type
+gtk_widget_path_iter_set_object_type
 gtk_widget_path_length
 gtk_widget_path_new
 gtk_widget_path_prepend_type
@@ -3554,7 +3553,6 @@ gtk_widget_set_device_events
 gtk_widget_set_direction
 gtk_widget_set_double_buffered
 gtk_widget_set_events
-gtk_widget_set_extension_events
 gtk_widget_set_halign
 gtk_widget_set_has_tooltip
 gtk_widget_set_has_window

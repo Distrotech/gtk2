@@ -1699,67 +1699,6 @@ gdk_window_reparent (GdkWindow *window,
     _gdk_synthesize_crossing_events_for_geometry_change (window);
 }
 
-static gboolean
-temporary_disable_extension_events (GdkWindow*window)
-{
-  GdkWindow*child;
-  GList *l;
-  gboolean res;
-
-  if (window->extension_events != 0)
-    {
-      g_object_set_data (G_OBJECT (window),
-			 "gdk-window-extension-events",
-			 GINT_TO_POINTER (window->extension_events));
-      gdk_input_set_extension_events ((GdkWindow *)window, 0,
-				      GDK_EXTENSION_EVENTS_NONE);
-    }
-  else
-    res = FALSE;
-
-  for (l = window->children; l != NULL; l = l->next)
-    {
-      child = l->data;
-
-      if (window->impl_window == child->impl_window)
-	res |= temporary_disable_extension_events (child);
-    }
-
-  return res;
-}
-
-static void
-reenable_extension_events (GdkWindow *window)
-{
-  GdkWindow *child;
-  GList *l;
-  int mask;
-
-  mask = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (window),
-					      "gdk-window-extension-events"));
-
-  if (mask != 0)
-    {
-      /* We don't have the mode here, so we pass in cursor.
-	 This works with the current code since mode is not
-	 stored except as part of the mask, and cursor doesn't
-	 change the mask. */
-      gdk_input_set_extension_events ((GdkWindow *)window, mask,
-				      GDK_EXTENSION_EVENTS_CURSOR);
-      g_object_set_data (G_OBJECT (window),
-			 "gdk-window-extension-events",
-			 NULL);
-    }
-
-  for (l = window->children; l != NULL; l = l->next)
-    {
-      child = l->data;
-
-      if (window->impl_window == child->impl_window)
-	reenable_extension_events (window);
-    }
-}
-
 /**
  * gdk_window_ensure_native:
  * @window: a #GdkWindow
@@ -1784,7 +1723,6 @@ gdk_window_ensure_native (GdkWindow *window)
   GdkWindow *above;
   GList listhead;
   GdkWindowImplClass *impl_class;
-  gboolean disabled_extension_events;
 
   g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
 
@@ -1802,12 +1740,6 @@ gdk_window_ensure_native (GdkWindow *window)
     return TRUE;
 
   /* Need to create a native window */
-
-  /* First we disable any extension events on the window or its
-     descendants to handle the native input window moving */
-  disabled_extension_events = FALSE;
-  if (impl_window->input_window)
-    disabled_extension_events = temporary_disable_extension_events (window);
 
   gdk_window_drop_cairo_surface (window);
 
@@ -1859,25 +1791,59 @@ gdk_window_ensure_native (GdkWindow *window)
   if (gdk_window_is_viewable (window))
     impl_class->show (window, FALSE);
 
-  if (disabled_extension_events)
-    reenable_extension_events (window);
-
   return TRUE;
+}
+
+/**
+ * _gdk_event_filter_unref:
+ * @window: A #GdkWindow, or %NULL to be the global window
+ * @filter: A window filter
+ *
+ * Release a reference to @filter.  Note this function may
+ * mutate the list storage, so you need to handle this
+ * if iterating over a list of filters.
+ */
+void
+_gdk_event_filter_unref (GdkWindow       *window,
+			 GdkEventFilter  *filter)
+{
+  GList **filters;
+  GList *tmp_list;
+
+  if (window == NULL)
+    filters = &_gdk_default_filters;
+  else
+    filters = &window->filters;
+
+  tmp_list = *filters;
+  while (tmp_list)
+    {
+      GdkEventFilter *iter_filter = tmp_list->data;
+      GList *node;
+
+      node = tmp_list;
+      tmp_list = tmp_list->next;
+
+      if (iter_filter != filter)
+	continue;
+
+      g_assert (iter_filter->ref_count > 0);
+
+      filter->ref_count--;
+      if (filter->ref_count != 0)
+	continue;
+
+      *filters = g_list_remove_link (*filters, node);
+      g_free (filter);
+      g_list_free_1 (node);
+    }
 }
 
 static void
 window_remove_filters (GdkWindow *window)
 {
-  if (window->filters)
-    {
-      GList *tmp_list;
-
-      for (tmp_list = window->filters; tmp_list; tmp_list = tmp_list->next)
-	g_free (tmp_list->data);
-
-      g_list_free (window->filters);
-      window->filters = NULL;
-    }
+  while (window->filters)
+    _gdk_event_filter_unref (window, window->filters->data);
 }
 
 static void
@@ -2557,16 +2523,8 @@ gdk_window_remove_filter (GdkWindow     *window,
       if ((filter->function == function) && (filter->data == data))
 	{
           filter->flags |= GDK_EVENT_FILTER_REMOVED;
-          filter->ref_count--;
-          if (filter->ref_count != 0)
-            return;
 
-	  if (window)
-	    window->filters = g_list_remove_link (window->filters, node);
-	  else
-	    _gdk_default_filters = g_list_remove_link (_gdk_default_filters, node);
-	  g_list_free_1 (node);
-	  g_free (filter);
+	  _gdk_event_filter_unref (window, filter);
 
 	  return;
 	}
@@ -9812,88 +9770,6 @@ _gdk_windowing_got_event (GdkDisplay *display,
       g_list_free_1 (event_link);
       gdk_event_free (event);
     }
-}
-
-
-static GdkWindow *
-get_extension_event_window (GdkDisplay                 *display,
-			    GdkWindow                  *pointer_window,
-			    GdkEventType                type,
-			    gulong                      serial)
-{
-  guint evmask;
-  GdkWindow *w, *grab_window;
-  GdkDeviceGrabInfo *grab;
-
-  /* FIXME: which device? */
-  grab = _gdk_display_has_device_grab (display, display->core_pointer, serial);
-
-  if (grab != NULL && !grab->owner_events)
-    {
-      evmask = grab->event_mask;
-
-      grab_window = grab->window;
-
-      if (evmask & type_masks[type])
-	return grab_window;
-      else
-	return NULL;
-    }
-
-  w = pointer_window;
-  while (w != NULL)
-    {
-      evmask = w->extension_events;
-
-      if (evmask & type_masks[type])
-	return w;
-
-      w = get_event_parent (w);
-    }
-
-  if (grab != NULL &&
-      grab->owner_events)
-    {
-      evmask = grab->event_mask;
-
-      if (evmask & type_masks[type])
-	return grab->window;
-      else
-	return NULL;
-    }
-
-  return NULL;
-}
-
-
-GdkWindow *
-_gdk_window_get_input_window_for_event (GdkWindow *native_window,
-					GdkEventType event_type,
-					int x, int y,
-					gulong serial)
-{
-  GdkDisplay *display;
-  GdkWindow *toplevel_window;
-  GdkWindow *pointer_window;
-  GdkWindow *event_win;
-  gdouble toplevel_x, toplevel_y;
-
-  toplevel_x = x;
-  toplevel_y = y;
-
-  display = gdk_window_get_display (native_window);
-  toplevel_window = convert_native_coords_to_toplevel (native_window,
-						       toplevel_x, toplevel_y,
-						       &toplevel_x, &toplevel_y);
-  /* FIXME: which device? */
-  pointer_window = get_pointer_window (display, toplevel_window, NULL,
-				       toplevel_x, toplevel_y, serial);
-  event_win = get_extension_event_window (display,
-					  pointer_window,
-					  event_type,
-					  serial);
-
-  return event_win;
 }
 
 /**

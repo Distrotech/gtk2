@@ -24,8 +24,6 @@
  * GTK+ at ftp://ftp.gtk.org/pub/gtk/.
  */
 
-#undef GDK_DISABLE_DEPRECATED /* gdk_input_set_extension_events() */
-
 #include "config.h"
 #include <stdarg.h>
 #include <string.h>
@@ -43,11 +41,10 @@
 #include "gtksizegroup-private.h"
 #include "gtkwidget.h"
 #include "gtkwidgetprivate.h"
-#include "gtkwindow.h"
+#include "gtkwindowprivate.h"
 #include "gtkbindings.h"
 #include "gtkprivate.h"
 #include "gdk/gdk.h"
-#include "gdk/gdkprivate.h" /* Used in gtk_reset_shapes_recurse to avoid copy */
 #include <gobject/gvaluecollector.h>
 #include <gobject/gobjectnotifyqueue.c>
 #include <cairo-gobject.h>
@@ -467,7 +464,6 @@ enum {
   PROP_COMPOSITE_CHILD,
   PROP_STYLE,
   PROP_EVENTS,
-  PROP_EXTENSION_EVENTS,
   PROP_NO_SHOW_ALL,
   PROP_HAS_TOOLTIP,
   PROP_TOOLTIP_MARKUP,
@@ -563,10 +559,7 @@ static PangoContext*	gtk_widget_peek_pango_context		(GtkWidget	  *widget);
 static void     	gtk_widget_update_pango_context		(GtkWidget	  *widget);
 static void		gtk_widget_propagate_state		(GtkWidget	  *widget,
 								 GtkStateData 	  *data);
-static void             gtk_widget_reset_rc_style               (GtkWidget        *widget);
-static void		gtk_widget_set_style_internal		(GtkWidget	  *widget,
-								 GtkStyle	  *style,
-								 gboolean	   initial_emission);
+;
 static gint		gtk_widget_event_internal		(GtkWidget	  *widget,
 								 GdkEvent	  *event);
 static gboolean		gtk_widget_real_mnemonic_activate	(GtkWidget	  *widget,
@@ -669,7 +662,6 @@ static GQuark		quark_accel_path = 0;
 static GQuark		quark_accel_closures = 0;
 static GQuark		quark_event_mask = 0;
 static GQuark           quark_device_event_mask = 0;
-static GQuark		quark_extension_event_mode = 0;
 static GQuark		quark_parent_window = 0;
 static GQuark		quark_pointer_window = 0;
 static GQuark		quark_shape_info = 0;
@@ -783,7 +775,6 @@ gtk_widget_class_init (GtkWidgetClass *klass)
   quark_accel_closures = g_quark_from_static_string ("gtk-accel-closures");
   quark_event_mask = g_quark_from_static_string ("gtk-event-mask");
   quark_device_event_mask = g_quark_from_static_string ("gtk-device-event-mask");
-  quark_extension_event_mode = g_quark_from_static_string ("gtk-extension-event-mode");
   quark_parent_window = g_quark_from_static_string ("gtk-parent-window");
   quark_pointer_window = g_quark_from_static_string ("gtk-pointer-window");
   quark_shape_info = g_quark_from_static_string ("gtk-shape-info");
@@ -1000,14 +991,6 @@ gtk_widget_class_init (GtkWidgetClass *klass)
  						       GDK_TYPE_EVENT_MASK,
  						       GDK_STRUCTURE_MASK,
  						       GTK_PARAM_READWRITE));
-  g_object_class_install_property (gobject_class,
-				   PROP_EXTENSION_EVENTS,
-				   g_param_spec_enum ("extension-events",
- 						      P_("Extension events"),
- 						      P_("The mask that decides what kind of extension events this widget gets"),
- 						      GDK_TYPE_EXTENSION_MODE,
- 						      GDK_EXTENSION_EVENTS_NONE,
- 						      GTK_PARAM_READWRITE));
   g_object_class_install_property (gobject_class,
 				   PROP_NO_SHOW_ALL,
 				   g_param_spec_boolean ("no-show-all",
@@ -3231,9 +3214,6 @@ gtk_widget_set_property (GObject         *object,
       if (!gtk_widget_get_realized (widget) && gtk_widget_get_has_window (widget))
 	gtk_widget_set_events (widget, g_value_get_flags (value));
       break;
-    case PROP_EXTENSION_EVENTS:
-      gtk_widget_set_extension_events (widget, g_value_get_enum (value));
-      break;
     case PROP_NO_SHOW_ALL:
       gtk_widget_set_no_show_all (widget, g_value_get_boolean (value));
       break;
@@ -3348,7 +3328,6 @@ gtk_widget_get_property (GObject         *object,
   switch (prop_id)
     {
       gpointer *eventp;
-      gpointer *modep;
 
     case PROP_NAME:
       if (priv->name)
@@ -3409,10 +3388,6 @@ gtk_widget_get_property (GObject         *object,
     case PROP_EVENTS:
       eventp = g_object_get_qdata (G_OBJECT (widget), quark_event_mask);
       g_value_set_flags (value, GPOINTER_TO_INT (eventp));
-      break;
-    case PROP_EXTENSION_EVENTS:
-      modep = g_object_get_qdata (G_OBJECT (widget), quark_extension_event_mode);
-      g_value_set_enum (value, GPOINTER_TO_INT (modep));
       break;
     case PROP_NO_SHOW_ALL:
       g_value_set_boolean (value, gtk_widget_get_no_show_all (widget));
@@ -4182,52 +4157,6 @@ gtk_widget_unmap (GtkWidget *widget)
 }
 
 static void
-gtk_widget_set_extension_events_internal (GtkWidget        *widget,
-                                          GdkExtensionMode  mode,
-                                          GList            *window_list)
-{
-  GtkWidgetPrivate *priv = widget->priv;
-  GList *free_list = NULL;
-  GList *l;
-
-  if (window_list == NULL)
-    {
-      if (gtk_widget_get_has_window (widget))
-        window_list = g_list_prepend (NULL, priv->window);
-      else
-        window_list = gdk_window_get_children (priv->window);
-
-      free_list = window_list;
-    }
-
-  for (l = window_list; l != NULL; l = l->next)
-    {
-      GdkWindow *window = l->data;
-      gpointer user_data;
-
-      gdk_window_get_user_data (window, &user_data);
-      if (user_data == widget)
-        {
-          GList *children;
-
-          gdk_input_set_extension_events (window,
-                                          gdk_window_get_events (window),
-                                          mode);
-
-          children = gdk_window_get_children (window);
-          if (children)
-            {
-              gtk_widget_set_extension_events_internal (widget, mode, children);
-              g_list_free (children);
-            }
-        }
-    }
-
-  if (free_list)
-    g_list_free (free_list);
-}
-
-static void
 _gtk_widget_enable_device_events (GtkWidget *widget)
 {
   GHashTable *device_events;
@@ -4279,7 +4208,6 @@ void
 gtk_widget_realize (GtkWidget *widget)
 {
   GtkWidgetPrivate *priv;
-  GdkExtensionMode mode;
   cairo_region_t *region;
 
   g_return_if_fail (GTK_IS_WIDGET (widget));
@@ -4321,10 +4249,6 @@ gtk_widget_realize (GtkWidget *widget)
       region = g_object_get_qdata (G_OBJECT (widget), quark_input_shape_info);
       if (region)
 	gdk_window_input_shape_combine_region (priv->window, region, 0, 0);
-
-      mode = gtk_widget_get_extension_events (widget);
-      if (mode != GDK_EXTENSION_EVENTS_NONE)
-        gtk_widget_set_extension_events_internal (widget, mode, NULL);
 
       if (priv->multidevice)
         gdk_window_set_support_multidevice (priv->window, TRUE);
@@ -6362,9 +6286,29 @@ gtk_widget_real_query_tooltip (GtkWidget  *widget,
 static void
 gtk_widget_real_style_updated (GtkWidget *widget)
 {
+  if (gtk_widget_get_realized (widget))
+    {
+      /* Trigger ::style-set for old
+       * widgets not listening to this
+       */
+      g_signal_emit (widget,
+                     widget_signals[STYLE_SET],
+                     0,
+                     widget->priv->style);
+    }
+
   if (widget->priv->context)
-    gtk_style_context_invalidate (widget->priv->context);
-  gtk_widget_queue_resize (widget);
+    {
+      gtk_style_context_invalidate (widget->priv->context);
+
+      if (gtk_widget_get_realized (widget) &&
+          gtk_widget_get_has_window (widget))
+        gtk_style_context_set_background (widget->priv->context,
+                                          widget->priv->window);
+    }
+
+  if (widget->priv->anchored)
+    gtk_widget_queue_resize (widget);
 }
 
 static gboolean
@@ -6769,12 +6713,15 @@ gtk_widget_device_is_shadowed (GtkWidget *widget,
  * @name: name for the widget
  *
  * Widgets can be named, which allows you to refer to them from a
- * gtkrc file. You can apply a style to widgets with a particular name
- * in the gtkrc file. See the documentation for gtkrc files (on the
- * same page as the docs for #GtkRcStyle).
+ * CSS file. You can apply a style to widgets with a particular name
+ * in the CSS file. See the documentation for the CSS syntax (on the
+ * same page as the docs for #GtkStyleContext).
  *
- * Note that widget names are separated by periods in paths (see
- * gtk_widget_path()), so names with embedded periods may cause confusion.
+ * Note that the CSS syntax has certain special characters to delimit
+ * and represent elements in a selector (period, &num;, &gt;, &ast;...),
+ * so using these will make your widget impossible to match by name.
+ * Any combination of alphanumeric symbols, dashes and underscores will
+ * suffice.
  **/
 void
 gtk_widget_set_name (GtkWidget	 *widget,
@@ -6802,9 +6749,6 @@ gtk_widget_set_name (GtkWidget	 *widget,
 
   if (priv->context)
     gtk_style_context_set_path (priv->context, priv->path);
-
-  if (priv->rc_style)
-    gtk_widget_reset_rc_style (widget);
 
   g_object_notify (G_OBJECT (widget), "name");
 }
@@ -7727,23 +7671,6 @@ gtk_widget_set_style (GtkWidget *widget,
 		      GtkStyle	*style)
 {
   g_return_if_fail (GTK_IS_WIDGET (widget));
-
-  if (style)
-    {
-      gboolean initial_emission;
-
-      initial_emission = !widget->priv->rc_style && !widget->priv->user_style;
-
-      widget->priv->rc_style = FALSE;
-      widget->priv->user_style = TRUE;
-
-      gtk_widget_set_style_internal (widget, style, initial_emission);
-    }
-  else
-    {
-      if (widget->priv->user_style)
-	gtk_widget_reset_rc_style (widget);
-    }
 }
 
 /**
@@ -7767,42 +7694,21 @@ gtk_widget_ensure_style (GtkWidget *widget)
     {
       GtkStyle *style;
 
+      if (widget->priv->style)
+        g_object_unref (widget->priv->style);
+
       style = g_object_new (GTK_TYPE_STYLE,
                             "context", gtk_widget_get_style_context (widget),
                             NULL);
 
-      gtk_widget_set_style_internal (widget, style, TRUE);
+      widget->priv->style = g_object_ref (style);
+
+      g_signal_emit (widget,
+                     widget_signals[STYLE_SET],
+                     0, NULL);
+
       g_object_unref (style);
     }
-
-#if 0
-  if (!widget->priv->rc_style && !widget->priv->user_style)
-    gtk_widget_reset_rc_style (widget);
-#endif
-}
-
-/* Look up the RC style for this widget, unsetting any user style that
- * may be in effect currently
- **/
-static void
-gtk_widget_reset_rc_style (GtkWidget *widget)
-{
-  GtkWidgetPrivate *priv = widget->priv;
-  GtkStyle *new_style = NULL;
-  gboolean initial_emission;
-
-  initial_emission = !priv->rc_style && !priv->user_style;
-
-  priv->user_style = FALSE;
-  priv->rc_style = TRUE;
-
-  if (gtk_widget_has_screen (widget))
-    new_style = gtk_rc_get_style (widget);
-  if (!new_style)
-    new_style = gtk_widget_get_default_style ();
-
-  if (initial_emission || new_style != priv->style)
-    gtk_widget_set_style_internal (widget, new_style, initial_emission);
 }
 
 /**
@@ -7859,13 +7765,6 @@ gtk_widget_modify_style (GtkWidget      *widget,
 			   quark_rc_style,
 			   gtk_rc_style_copy (style),
 			   (GDestroyNotify) g_object_unref);
-
-  /* note that "style" may be invalid here if it was the old
-   * modifier style and the only reference was our own.
-   */
-
-  if (widget->priv->rc_style)
-    gtk_widget_reset_rc_style (widget);
 }
 
 /**
@@ -7957,11 +7856,6 @@ modifier_style_changed (GtkModifierStyle *style,
 
   context = gtk_widget_get_style_context (widget);
   gtk_style_context_invalidate (context);
-
-  g_signal_emit (widget,
-                 widget_signals[STYLE_SET],
-                 0,
-                 widget->priv->style);
 }
 
 static GtkModifierStyle *
@@ -8124,12 +8018,12 @@ gtk_widget_override_symbolic_color (GtkWidget     *widget,
 /**
  * gtk_widget_override_cursor:
  * @widget: a #GtkWidget
- * @primary: the color to use for primary cursor (does not need to be
- *           allocated), or %NULL to undo the effect of previous calls to
- *           of gtk_widget_override_cursor().
- * @secondary: the color to use for secondary cursor (does not need to be
- *             allocated), or %NULL to undo the effect of previous calls to
- *             of gtk_widget_override_cursor().
+ * @cursor: the color to use for primary cursor (does not need to be
+ *     allocated), or %NULL to undo the effect of previous calls to
+ *     of gtk_widget_override_cursor().
+ * @secondary_cursor: the color to use for secondary cursor (does not
+ *     need to be allocated), or %NULL to undo the effect of previous
+ *     calls to of gtk_widget_override_cursor().
  *
  * Sets the cursor color to use in a widget, overriding the
  * #GtkWidget:cursor-color and #GtkWidget:secondary-cursor-color
@@ -8140,7 +8034,7 @@ gtk_widget_override_symbolic_color (GtkWidget     *widget,
  * so the alpha value in @primary and @secondary will be ignored.
  *
  * Since: 3.0
- **/
+ */
 void
 gtk_widget_override_cursor (GtkWidget     *widget,
                             const GdkRGBA *cursor,
@@ -8416,59 +8310,6 @@ static void
 gtk_widget_real_style_set (GtkWidget *widget,
                            GtkStyle  *previous_style)
 {
-  GtkWidgetPrivate *priv = widget->priv;
-
-  if (gtk_widget_get_realized (widget) &&
-      gtk_widget_get_has_window (widget))
-    gtk_style_set_background (priv->style, priv->window,
-                              gtk_widget_get_state (widget));
-}
-
-static void
-gtk_widget_set_style_internal (GtkWidget *widget,
-			       GtkStyle	 *style,
-			       gboolean   initial_emission)
-{
-  GtkWidgetPrivate *priv = widget->priv;
-
-  g_object_ref (widget);
-  g_object_freeze_notify (G_OBJECT (widget));
-
-  if (priv->style != style)
-    {
-      GtkStyle *previous_style;
-
-      if (gtk_widget_get_realized (widget))
-        gtk_style_detach (priv->style);
-
-      previous_style = priv->style;
-      priv->style = style;
-      g_object_ref (priv->style);
-
-      if (gtk_widget_get_realized (widget))
-	priv->style = gtk_style_attach (priv->style, priv->window);
-
-      gtk_widget_update_pango_context (widget);
-      g_signal_emit (widget,
-		     widget_signals[STYLE_SET],
-		     0,
-		     initial_emission ? NULL : previous_style);
-      g_object_unref (previous_style);
-
-      if (priv->anchored && !initial_emission)
-	gtk_widget_queue_resize (widget);
-    }
-  else if (initial_emission)
-    {
-      gtk_widget_update_pango_context (widget);
-      g_signal_emit (widget,
-		     widget_signals[STYLE_SET],
-		     0,
-		     NULL);
-    }
-  g_object_notify (G_OBJECT (widget), "style");
-  g_object_thaw_notify (G_OBJECT (widget));
-  g_object_unref (widget);
 }
 
 typedef struct {
@@ -8663,11 +8504,6 @@ _gtk_widget_propagate_screen_changed (GtkWidget    *widget,
 static void
 reset_style_recurse (GtkWidget *widget, gpointer data)
 {
-#if 0
-  if (widget->priv->rc_style)
-    gtk_widget_reset_rc_style (widget);
-#endif
-
   if (widget->priv->context)
     {
       _gtk_widget_update_path (widget);
@@ -9760,28 +9596,6 @@ gtk_widget_add_device_events (GtkWidget    *widget,
 }
 
 /**
- * gtk_widget_set_extension_events:
- * @widget: a #GtkWidget
- * @mode: bitfield of extension events to receive
- *
- * Sets the extension events mask to @mode. See #GdkExtensionMode
- * and gdk_input_set_extension_events().
- **/
-void
-gtk_widget_set_extension_events (GtkWidget *widget,
-				 GdkExtensionMode mode)
-{
-  g_return_if_fail (GTK_IS_WIDGET (widget));
-
-  if (gtk_widget_get_realized (widget))
-    gtk_widget_set_extension_events_internal (widget, mode, NULL);
-
-  g_object_set_qdata (G_OBJECT (widget), quark_extension_event_mode,
-                      GINT_TO_POINTER (mode));
-  g_object_notify (G_OBJECT (widget), "extension-events");
-}
-
-/**
  * gtk_widget_get_toplevel:
  * @widget: a #GtkWidget
  *
@@ -9991,23 +9805,6 @@ gtk_widget_get_device_events (GtkWidget *widget,
     return 0;
 
   return GPOINTER_TO_UINT (g_hash_table_lookup (device_events, device));
-}
-
-/**
- * gtk_widget_get_extension_events:
- * @widget: a #GtkWidget
- *
- * Retrieves the extension events the widget will receive; see
- * gdk_input_set_extension_events().
- *
- * Return value: extension events for @widget
- **/
-GdkExtensionMode
-gtk_widget_get_extension_events (GtkWidget *widget)
-{
-  g_return_val_if_fail (GTK_IS_WIDGET (widget), 0);
-
-  return GPOINTER_TO_INT (g_object_get_qdata (G_OBJECT (widget), quark_extension_event_mode));
 }
 
 /**
@@ -12086,8 +11883,6 @@ gtk_widget_get_hexpand_set (GtkWidget      *widget)
  *
  * There are few reasons to use this function, but it's here
  * for completeness and consistency.
- *
- * Return value: whether hexpand has been explicitly set
  */
 void
 gtk_widget_set_hexpand_set (GtkWidget      *widget,
@@ -12165,8 +11960,6 @@ gtk_widget_get_vexpand_set (GtkWidget      *widget)
  * be used.
  *
  * See gtk_widget_set_hexpand_set() for more detail.
- *
- * Return value: whether vexpand has been explicitly set
  */
 void
 gtk_widget_set_vexpand_set (GtkWidget      *widget,
@@ -13637,7 +13430,7 @@ gtk_widget_get_window (GtkWidget *widget)
  * Returns %TRUE if @widget is multiple pointer aware. See
  * gtk_widget_set_support_multidevice() for more information.
  *
- * Returns: %TRUE is @widget is multidevice aware.
+ * Returns: %TRUE if @widget is multidevice aware.
  **/
 gboolean
 gtk_widget_get_support_multidevice (GtkWidget *widget)
@@ -13668,17 +13461,7 @@ gtk_widget_set_support_multidevice (GtkWidget *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
 
   priv = widget->priv;
-
-  if (support_multidevice)
-    {
-      priv->multidevice = TRUE;
-      gtk_widget_set_extension_events (widget, GDK_EXTENSION_EVENTS_ALL);
-    }
-  else
-    {
-      priv->multidevice = FALSE;
-      gtk_widget_set_extension_events (widget, GDK_EXTENSION_EVENTS_NONE);
-    }
+  priv->multidevice = (support_multidevice == TRUE);
 
   if (gtk_widget_get_realized (widget))
     gdk_window_set_support_multidevice (priv->window, support_multidevice);
@@ -13875,7 +13658,7 @@ gtk_widget_get_path (GtkWidget *widget)
    * implementation with a wrong widget type in the widget path
    */
   if (widget->priv->path &&
-      G_OBJECT_TYPE (widget) != gtk_widget_path_get_widget_type (widget->priv->path))
+      G_OBJECT_TYPE (widget) != gtk_widget_path_get_object_type (widget->priv->path))
     {
       gtk_widget_path_free (widget->priv->path);
       widget->priv->path = NULL;
@@ -13919,7 +13702,11 @@ style_context_changed (GtkStyleContext *context,
 {
   GtkWidget *widget = user_data;
 
+  gtk_widget_update_pango_context (widget);
   g_signal_emit (widget, widget_signals[STYLE_UPDATED], 0);
+
+  if (widget->priv->anchored)
+    gtk_widget_queue_resize (widget);
 }
 
 /**
