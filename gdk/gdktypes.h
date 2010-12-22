@@ -43,7 +43,7 @@
  * itself, but also occasionally when compiling programs that use GDK
  * (or GTK). One such setting is what windowing API backend is in use.
  */
-#include <gdkconfig.h>
+#include <gdk/gdkconfig.h>
 
 /* some common magic values */
 
@@ -134,19 +134,17 @@ typedef guint32 GdkNativeWindow;
  
 /* Forward declarations of commonly used types
  */
-typedef struct _GdkColor	      GdkColor;
+typedef struct _GdkColor              GdkColor;
 typedef struct _GdkRGBA               GdkRGBA;
-typedef struct _GdkCursor	      GdkCursor;
+typedef struct _GdkCursor             GdkCursor;
 typedef struct _GdkVisual             GdkVisual;
 
-/**
- * GdkWindow:
- *
- * An opaque structure representing an onscreen drawable.
- */
+typedef struct _GdkDisplayManager     GdkDisplayManager;
+typedef struct _GdkDisplay            GdkDisplay;
+typedef struct _GdkScreen             GdkScreen;
 typedef struct _GdkWindow             GdkWindow;
-typedef struct _GdkDisplay	      GdkDisplay;
-typedef struct _GdkScreen	      GdkScreen;
+typedef struct _GdkKeymap             GdkKeymap;
+typedef struct _GdkAppLaunchContext   GdkAppLaunchContext;
 
 /**
  * GdkByteOrder:

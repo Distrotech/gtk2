@@ -32,8 +32,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "gdkconfig.h"
-#include "gdk/gdkkeysyms.h"
+#include "gdk/gdk.h"
 #include "gtkhsv.h"
 #include "gtkwindow.h"
 #include "gtkselection.h"
@@ -1867,7 +1866,7 @@ key_press (GtkWidget   *invisible,
       return FALSE;
     }
 
-  gdk_display_warp_device (display, pointer_device, screen, x + dx, y + dy);
+  gdk_device_warp (pointer_device, screen, x + dx, y + dy);
 
   return TRUE;
 
@@ -1969,7 +1968,7 @@ get_screen_color (GtkWidget *button)
                                  GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK,
                                  picker_cursor,
                                  time);
-  gdk_cursor_unref (picker_cursor);
+  g_object_unref (picker_cursor);
 
   if (grab_status != GDK_GRAB_SUCCESS)
     {

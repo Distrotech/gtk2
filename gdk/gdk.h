@@ -29,6 +29,7 @@
 
 #define __GDK_H_INSIDE__
 
+#include <gdk/gdkconfig.h>
 #include <gdk/gdkapplaunchcontext.h>
 #include <gdk/gdkcairo.h>
 #include <gdk/gdkcolor.h>
@@ -50,7 +51,6 @@
 #include <gdk/gdkrgba.h>
 #include <gdk/gdkscreen.h>
 #include <gdk/gdkselection.h>
-#include <gdk/gdkspawn.h>
 #include <gdk/gdktestutils.h>
 #include <gdk/gdkthreads.h>
 #include <gdk/gdktypes.h>

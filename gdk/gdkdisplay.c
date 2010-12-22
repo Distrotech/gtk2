@@ -24,7 +24,9 @@
 #include "config.h"
 
 #include "gdkdisplay.h"
+#include "gdkdisplayprivate.h"
 
+#include "gdkdeviceprivate.h"
 #include "gdkevents.h"
 #include "gdkwindowimpl.h"
 #include "gdkinternals.h"
@@ -121,8 +123,7 @@ static GdkWindow* singlehead_default_window_get_pointer (GdkWindow       *window
 							 GdkModifierType *mask);
 static GdkWindow* singlehead_default_window_at_pointer  (GdkScreen       *screen,
 							 gint            *win_x,
-							 gint            *win_y);
-static GdkWindow *gdk_window_real_window_get_device_position     (GdkDisplay       *display,
+							 gint            *win_y);static GdkWindow *gdk_window_real_window_get_device_position     (GdkDisplay       *display,
                                                                   GdkDevice        *device,
                                                                   GdkWindow        *window,
                                                                   gint             *x,
@@ -132,13 +133,18 @@ static GdkWindow *gdk_display_real_get_window_at_device_position (GdkDisplay    
                                                                   GdkDevice        *device,
                                                                   gint             *win_x,
                                                                   gint             *win_y);
+static void       gdk_display_real_get_device_state              (GdkDisplay       *display,
+                                                                  GdkDevice        *device,
+                                                                  GdkScreen       **screen,
+                                                                  gint             *x,
+                                                                  gint             *y,
+                                                                  GdkModifierType  *mask);
+static GdkAppLaunchContext *gdk_display_real_get_app_launch_context (GdkDisplay *display);
 
 static guint signals[LAST_SIGNAL] = { 0 };
 
-static char *gdk_sm_client_id;
-
 static const GdkDisplayDeviceHooks default_device_hooks = {
-  _gdk_windowing_get_device_state,
+  gdk_display_real_get_device_state,
   gdk_window_real_window_get_device_position,
   gdk_display_real_get_window_at_device_position
 };
@@ -178,6 +184,9 @@ gdk_display_class_init (GdkDisplayClass *class)
 
   object_class->finalize = gdk_display_finalize;
   object_class->dispose = gdk_display_dispose;
+
+  class->get_app_launch_context = gdk_display_real_get_app_launch_context;
+  class->window_type = GDK_TYPE_WINDOW;
 
   /**
    * GdkDisplay::opened:
@@ -270,8 +279,6 @@ gdk_display_opened (GdkDisplay *display)
 static void
 gdk_display_init (GdkDisplay *display)
 {
-  _gdk_displays = g_slist_prepend (_gdk_displays, display);
-
   display->double_click_time = 250;
   display->double_click_distance = 5;
 
@@ -294,27 +301,15 @@ gdk_display_init (GdkDisplay *display)
 static void
 gdk_display_dispose (GObject *object)
 {
-  GdkDisplay *display = GDK_DISPLAY_OBJECT (object);
+  GdkDisplay *display = GDK_DISPLAY (object);
   GdkDeviceManager *device_manager;
 
-  device_manager = gdk_display_get_device_manager (GDK_DISPLAY_OBJECT (object));
+  device_manager = gdk_display_get_device_manager (GDK_DISPLAY (object));
 
   g_list_foreach (display->queued_events, (GFunc)gdk_event_free, NULL);
   g_list_free (display->queued_events);
   display->queued_events = NULL;
   display->queued_tail = NULL;
-
-  _gdk_displays = g_slist_remove (_gdk_displays, object);
-
-  if (gdk_display_get_default () == display)
-    {
-      if (_gdk_displays)
-        gdk_display_manager_set_default_display (gdk_display_manager_get(),
-                                                 _gdk_displays->data);
-      else
-        gdk_display_manager_set_default_display (gdk_display_manager_get(),
-                                                 NULL);
-    }
 
   if (device_manager)
     {
@@ -331,7 +326,7 @@ gdk_display_dispose (GObject *object)
 static void
 gdk_display_finalize (GObject *object)
 {
-  GdkDisplay *display = GDK_DISPLAY_OBJECT (object);
+  GdkDisplay *display = GDK_DISPLAY (object);
 
   g_hash_table_foreach_remove (display->device_grabs,
                                free_device_grabs_foreach,
@@ -406,8 +401,8 @@ GdkEvent*
 gdk_display_get_event (GdkDisplay *display)
 {
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
-  
-  _gdk_events_queue (display);
+
+  GDK_DISPLAY_GET_CLASS (display)->queue_events (display);
   return _gdk_event_unqueue (display);
 }
 
@@ -608,6 +603,29 @@ gdk_beep (void)
 }
 
 /**
+ * gdk_flush:
+ *
+ * Flushes the output buffers of all display connections and waits
+ * until all requests have been processed.
+ * This is rarely needed by applications.
+ */
+void
+gdk_flush (void)
+{
+  GSList *list, *l;
+
+  list = gdk_display_manager_list_displays (gdk_display_manager_get ());
+  for (l = list; l; l = l->next)
+    {
+      GdkDisplay *display = l->data;
+
+      GDK_DISPLAY_GET_CLASS (display)->sync (display);
+    }
+
+  g_slist_free (list);
+}
+
+/**
  * gdk_event_send_client_message:
  * @event: the #GdkEvent to send, which should be a #GdkEventClient.
  * @winid:  the window to send the X ClientMessage event to.
@@ -649,49 +667,6 @@ gdk_event_send_clientmessage_toall (GdkEvent *event)
   gdk_screen_broadcast_client_message (gdk_screen_get_default (), event);
 }
 
-/**
- * gdk_set_sm_client_id:
- * @sm_client_id: the client id assigned by the session manager when the
- *    connection was opened, or %NULL to remove the property.
- * 
- * Sets the <literal>SM_CLIENT_ID</literal> property on the application's leader window so that
- * the window manager can save the application's state using the X11R6 ICCCM
- * session management protocol.
- *
- * See the X Session Management Library documentation for more information on
- * session management and the Inter-Client Communication Conventions Manual
- * (ICCCM) for information on the <literal>WM_CLIENT_LEADER</literal> property. 
- * (Both documents are part of the X Window System distribution.)
- **/
-void
-gdk_set_sm_client_id (const gchar* sm_client_id)
-{
-  GSList *displays, *tmp_list;
-  
-  g_free (gdk_sm_client_id);
-  gdk_sm_client_id = g_strdup (sm_client_id);
-
-  displays = gdk_display_manager_list_displays (gdk_display_manager_get ());
-  for (tmp_list = displays; tmp_list; tmp_list = tmp_list->next)
-    _gdk_windowing_display_set_sm_client_id (tmp_list->data, sm_client_id);
-
-  g_slist_free (displays);
-}
-
-/**
- * _gdk_get_sm_client_id:
- * 
- * Gets the client ID set with gdk_set_sm_client_id(), if any.
- * 
- * Return value: Session ID, or %NULL if gdk_set_sm_client_id()
- *               has never been called.
- **/
-const char *
-_gdk_get_sm_client_id (void)
-{
-  return gdk_sm_client_id;
-}
-
 void
 _gdk_display_enable_motion_hints (GdkDisplay *display,
                                   GdkDevice  *device)
@@ -709,7 +684,7 @@ _gdk_display_enable_motion_hints (GdkDisplay *display,
 
   if (*device_serial != 0)
     {
-      serial = _gdk_windowing_window_get_next_serial (display);
+      serial = _gdk_display_get_next_serial (display);
       /* We might not actually generate the next request, so
 	 make sure this triggers always, this may cause it to
 	 trigger slightly too early, but this is just a hint
@@ -870,7 +845,7 @@ gdk_display_real_get_window_at_device_position (GdkDisplay *display,
   GdkWindow *window;
   gint x, y;
 
-  window = _gdk_windowing_window_at_device_position (display, device, &x, &y, NULL, FALSE);
+  window = _gdk_device_window_at_position (device, &x, &y, NULL, FALSE);
 
   /* This might need corrections, as the native window returned
      may contain client side children */
@@ -984,15 +959,40 @@ multihead_window_at_device_position (GdkDisplay *display,
 }
 
 static void
+gdk_display_real_get_device_state (GdkDisplay       *display,
+                                   GdkDevice        *device,
+                                   GdkScreen       **screen,
+                                   gint             *x,
+                                   gint             *y,
+                                   GdkModifierType  *mask)
+{
+  GdkScreen *default_screen;
+  GdkWindow *root;
+
+  if (gdk_display_is_closed (display))
+    return;
+
+  default_screen = gdk_display_get_default_screen (display);
+
+  _gdk_device_query_state (device,
+                           gdk_screen_get_root_window (default_screen),
+                           &root, NULL,
+                           x, y,
+                           NULL, NULL,
+                           mask);
+
+  *screen = gdk_window_get_screen (root);
+}
+
+static void
 multihead_default_get_pointer (GdkDisplay       *display,
                                GdkScreen       **screen,
                                gint             *x,
                                gint             *y,
                                GdkModifierType  *mask)
 {
-  return _gdk_windowing_get_device_state (display,
-                                          display->core_pointer,
-                                          screen, x, y, mask);
+  gdk_display_real_get_device_state (display, display->core_pointer,
+                                     screen, x, y, mask);
 }
 
 static GdkWindow *
@@ -1361,7 +1361,7 @@ get_current_toplevel (GdkDisplay      *display,
   int x, y;
   GdkModifierType state;
 
-  pointer_window = _gdk_windowing_window_at_device_position (display, device, &x, &y, &state, TRUE);
+  pointer_window = _gdk_device_window_at_position (device, &x, &y, &state, TRUE);
 
   if (pointer_window != NULL &&
       (GDK_WINDOW_DESTROYED (pointer_window) ||
@@ -1372,6 +1372,7 @@ get_current_toplevel (GdkDisplay      *display,
   *x_out = x;
   *y_out = y;
   *state_out = state;
+
   return pointer_window;
 }
 
@@ -1830,4 +1831,835 @@ gdk_display_get_device_manager (GdkDisplay *display)
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
 
   return display->device_manager;
+}
+
+/**
+ * gdk_display_get_name:
+ * @display: a #GdkDisplay
+ *
+ * Gets the name of the display.
+ *
+ * Returns: a string representing the display name. This string is owned
+ * by GDK and should not be modified or freed.
+ *
+ * Since: 2.2
+ */
+G_CONST_RETURN gchar *
+gdk_display_get_name (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_name (display);
+}
+
+gchar *
+gdk_get_display (void)
+{
+  return g_strdup (gdk_display_get_name (gdk_display_get_default ()));
+}
+
+/**
+ * gdk_display_get_n_screens:
+ * @display: a #GdkDisplay
+ *
+ * Gets the number of screen managed by the @display.
+ *
+ * Returns: number of screens.
+ *
+ * Since: 2.2
+ */
+gint
+gdk_display_get_n_screens (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_n_screens (display);
+}
+
+/**
+ * gdk_display_get_screen:
+ * @display: a #GdkDisplay
+ * @screen_num: the screen number
+ *
+ * Returns a screen object for one of the screens of the display.
+ *
+ * Returns: (transfer none): the #GdkScreen object
+ *
+ * Since: 2.2
+ */
+GdkScreen *
+gdk_display_get_screen (GdkDisplay *display,
+			gint        screen_num)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_screen (display, screen_num);
+}
+
+/**
+ * gdk_display_get_default_screen:
+ * @display: a #GdkDisplay
+ *
+ * Get the default #GdkScreen for @display.
+ *
+ * Returns: (transfer none): the default #GdkScreen object for @display
+ *
+ * Since: 2.2
+ */
+GdkScreen *
+gdk_display_get_default_screen (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_default_screen (display);
+}
+
+/**
+ * gdk_display_beep:
+ * @display: a #GdkDisplay
+ *
+ * Emits a short beep on @display
+ *
+ * Since: 2.2
+ */
+void
+gdk_display_beep (GdkDisplay *display)
+{
+  GDK_DISPLAY_GET_CLASS(display)->beep (display);
+}
+
+/**
+ * gdk_display_sync:
+ * @display: a #GdkDisplay
+ *
+ * Flushes any requests queued for the windowing system and waits until all
+ * requests have been handled. This is often used for making sure that the
+ * display is synchronized with the current state of the program. Calling
+ * gdk_display_sync() before gdk_error_trap_pop() makes sure that any errors
+ * generated from earlier requests are handled before the error trap is
+ * removed.
+ *
+ * This is most useful for X11. On windowing systems where requests are
+ * handled synchronously, this function will do nothing.
+ *
+ * Since: 2.2
+ */
+void
+gdk_display_sync (GdkDisplay *display)
+{
+  GDK_DISPLAY_GET_CLASS(display)->sync (display);
+}
+
+/**
+ * gdk_display_flush:
+ * @display: a #GdkDisplay
+ *
+ * Flushes any requests queued for the windowing system; this happens automatically
+ * when the main loop blocks waiting for new events, but if your application
+ * is drawing without returning control to the main loop, you may need
+ * to call this function explicitely. A common case where this function
+ * needs to be called is when an application is executing drawing commands
+ * from a thread other than the thread where the main loop is running.
+ *
+ * This is most useful for X11. On windowing systems where requests are
+ * handled synchronously, this function will do nothing.
+ *
+ * Since: 2.4
+ */
+void
+gdk_display_flush (GdkDisplay *display)
+{
+  GDK_DISPLAY_GET_CLASS(display)->flush (display);
+}
+
+/**
+ * gdk_display_get_default_group:
+ * @display: a #GdkDisplay
+ *
+ * Returns the default group leader window for all toplevel windows
+ * on @display. This window is implicitly created by GDK.
+ * See gdk_window_set_group().
+ *
+ * Return value: (transfer none): The default group leader window
+ * for @display
+ *
+ * Since: 2.4
+ **/
+GdkWindow *
+gdk_display_get_default_group (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_default_group (display);
+}
+
+/**
+ * gdk_display_supports_selection_notification:
+ * @display: a #GdkDisplay
+ *
+ * Returns whether #GdkEventOwnerChange events will be
+ * sent when the owner of a selection changes.
+ *
+ * Return value: whether #GdkEventOwnerChange events will
+ *               be sent.
+ *
+ * Since: 2.6
+ **/
+gboolean
+gdk_display_supports_selection_notification (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->supports_selection_notification (display);
+}
+
+/**
+ * gdk_display_request_selection_notification:
+ * @display: a #GdkDisplay
+ * @selection: the #GdkAtom naming the selection for which
+ *             ownership change notification is requested
+ *
+ * Request #GdkEventOwnerChange events for ownership changes
+ * of the selection named by the given atom.
+ *
+ * Return value: whether #GdkEventOwnerChange events will
+ *               be sent.
+ *
+ * Since: 2.6
+ **/
+gboolean
+gdk_display_request_selection_notification (GdkDisplay *display,
+					    GdkAtom     selection)
+
+{
+  return GDK_DISPLAY_GET_CLASS(display)->request_selection_notification (display, selection);
+}
+
+/**
+ * gdk_display_supports_clipboard_persistence
+ * @display: a #GdkDisplay
+ *
+ * Returns whether the speicifed display supports clipboard
+ * persistance; i.e. if it's possible to store the clipboard data after an
+ * application has quit. On X11 this checks if a clipboard daemon is
+ * running.
+ *
+ * Returns: %TRUE if the display supports clipboard persistance.
+ *
+ * Since: 2.6
+ */
+gboolean
+gdk_display_supports_clipboard_persistence (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->supports_clipboard_persistence (display);
+}
+
+/**
+ * gdk_display_store_clipboard
+ * @display:          a #GdkDisplay
+ * @clipboard_window: a #GdkWindow belonging to the clipboard owner
+ * @time_:            a timestamp
+ * @targets:	      an array of targets that should be saved, or %NULL
+ *                    if all available targets should be saved.
+ * @n_targets:        length of the @targets array
+ *
+ * Issues a request to the clipboard manager to store the
+ * clipboard data. On X11, this is a special program that works
+ * according to the freedesktop clipboard specification, available at
+ * <ulink url="http://www.freedesktop.org/Standards/clipboard-manager-spec">
+ * http://www.freedesktop.org/Standards/clipboard-manager-spec</ulink>.
+ *
+ * Since: 2.6
+ */
+void
+gdk_display_store_clipboard (GdkDisplay    *display,
+			     GdkWindow     *clipboard_window,
+			     guint32        time_,
+			     const GdkAtom *targets,
+			     gint           n_targets)
+{
+  GDK_DISPLAY_GET_CLASS(display)->store_clipboard (display, clipboard_window, time_, targets, n_targets);
+}
+
+/**
+ * gdk_display_supports_shapes:
+ * @display: a #GdkDisplay
+ *
+ * Returns %TRUE if gdk_window_shape_combine_mask() can
+ * be used to create shaped windows on @display.
+ *
+ * Returns: %TRUE if shaped windows are supported
+ *
+ * Since: 2.10
+ */
+gboolean
+gdk_display_supports_shapes (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->supports_shapes (display);
+}
+
+/**
+ * gdk_display_supports_input_shapes:
+ * @display: a #GdkDisplay
+ *
+ * Returns %TRUE if gdk_window_input_shape_combine_mask() can
+ * be used to modify the input shape of windows on @display.
+ *
+ * Returns: %TRUE if windows with modified input shape are supported
+ *
+ * Since: 2.10
+ */
+gboolean
+gdk_display_supports_input_shapes (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->supports_input_shapes (display);
+}
+
+/**
+ * gdk_display_supports_composite:
+ * @display: a #GdkDisplay
+ *
+ * Returns %TRUE if gdk_window_set_composited() can be used
+ * to redirect drawing on the window using compositing.
+ *
+ * Currently this only works on X11 with XComposite and
+ * XDamage extensions available.
+ *
+ * Returns: %TRUE if windows may be composited.
+ *
+ * Since: 2.12
+ */
+gboolean
+gdk_display_supports_composite (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->supports_composite (display);
+}
+
+/**
+ * gdk_display_list_devices:
+ * @display: a #GdkDisplay
+ *
+ * Returns the list of available input devices attached to @display.
+ * The list is statically allocated and should not be freed.
+ *
+ * Return value: (transfer none) (element-type GdkDevice):
+ *     a list of #GdkDevice
+ *
+ * Since: 2.2
+ *
+ * Deprecated: 3.0: Use gdk_device_manager_list_devices() instead.
+ **/
+GList *
+gdk_display_list_devices (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->list_devices (display);
+}
+
+/**
+ * gdk_event_send_client_message_for_display:
+ * @display: the #GdkDisplay for the window where the message is to be sent.
+ * @event: the #GdkEvent to send, which should be a #GdkEventClient.
+ * @winid: the window to send the client message to.
+ *
+ * On X11, sends an X ClientMessage event to a given window. On
+ * Windows, sends a message registered with the name
+ * GDK_WIN32_CLIENT_MESSAGE.
+ *
+ * This could be used for communicating between different
+ * applications, though the amount of data is limited to 20 bytes on
+ * X11, and to just four bytes on Windows.
+ *
+ * Returns: non-zero on success.
+ *
+ * Since: 2.2
+ */
+gboolean
+gdk_event_send_client_message_for_display (GdkDisplay     *display,
+					   GdkEvent       *event,
+					   GdkNativeWindow winid)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->send_client_message (display, event, winid);
+}
+
+/**
+ * gdk_display_add_client_message_filter:
+ * @display: a #GdkDisplay for which this message filter applies
+ * @message_type: the type of ClientMessage events to receive.
+ *   This will be checked against the @message_type field
+ *   of the XClientMessage event struct.
+ * @func: the function to call to process the event.
+ * @data: user data to pass to @func.
+ *
+ * Adds a filter to be called when X ClientMessage events are received.
+ * See gdk_window_add_filter() if you are interested in filtering other
+ * types of events.
+ *
+ * Since: 2.2
+ **/
+void
+gdk_display_add_client_message_filter (GdkDisplay   *display,
+				       GdkAtom       message_type,
+				       GdkFilterFunc func,
+				       gpointer      data)
+{
+  GDK_DISPLAY_GET_CLASS(display)->add_client_message_filter (display, message_type, func, data);
+}
+
+/**
+ * gdk_add_client_message_filter:
+ * @message_type: the type of ClientMessage events to receive. This will be
+ *     checked against the <structfield>message_type</structfield> field of the
+ *     XClientMessage event struct.
+ * @func: the function to call to process the event.
+ * @data: user data to pass to @func.
+ *
+ * Adds a filter to the default display to be called when X ClientMessage events
+ * are received. See gdk_display_add_client_message_filter().
+ **/
+void
+gdk_add_client_message_filter (GdkAtom       message_type,
+			       GdkFilterFunc func,
+			       gpointer      data)
+{
+  gdk_display_add_client_message_filter (gdk_display_get_default (),
+					 message_type, func, data);
+}
+
+static GdkAppLaunchContext *
+gdk_display_real_get_app_launch_context (GdkDisplay *display)
+{
+  GdkAppLaunchContext *ctx;
+
+  ctx = gdk_app_launch_context_new ();
+  gdk_app_launch_context_set_display (ctx, display);
+
+  return ctx;
+}
+
+/**
+ * gdk_display_get_app_launch_context:
+ * @display: a #GdkDisplay
+ *
+ * Returns a #GdkAppLaunchContext suitable for launching
+ * applications on the given display.
+ *
+ * Returns: a new #GdkAppLaunchContext for @display.
+ *     Free with g_object_unref() when done
+ *
+ * Since: 3.0
+ */
+GdkAppLaunchContext *
+gdk_display_get_app_launch_context (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS(display)->get_app_launch_context (display);
+}
+
+/**
+ * gdk_drag_get_protocol_for_display:
+ * @display: the #GdkDisplay where the destination window resides
+ * @xid: the windowing system id of the destination window.
+ * @protocol: location where the supported DND protocol is returned.
+ *
+ * Finds out the DND protocol supported by a window.
+ *
+ * Return value: the windowing system id of the window where the drop
+ *    should happen. This may be @xid or the id of a proxy window,
+ *    or zero if @xid does not support Drag and Drop.
+ *
+ * Since: 2.2
+ */
+GdkNativeWindow
+gdk_drag_get_protocol_for_display (GdkDisplay      *display,
+                                   GdkNativeWindow  xid,
+                                   GdkDragProtocol *protocol)
+{
+  return GDK_DISPLAY_GET_CLASS (display)->get_drag_protocol (display, xid, protocol, NULL);
+}
+
+/**
+ * gdk_display_open:
+ * @display_name: the name of the display to open
+ *
+ * Opens a display.
+ *
+ * Return value: (transfer none): a #GdkDisplay, or %NULL if the display
+ *               could not be opened.
+ *
+ * Since: 2.2
+ */
+GdkDisplay *
+gdk_display_open (const gchar *display_name)
+{
+  return gdk_display_manager_open_display (gdk_display_manager_get (), display_name);
+}
+
+gboolean
+gdk_display_has_pending (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS (display)->has_pending (display);
+}
+
+/**
+ * gdk_display_supports_cursor_alpha:
+ * @display: a #GdkDisplay
+ *
+ * Returns %TRUE if cursors can use an 8bit alpha channel
+ * on @display. Otherwise, cursors are restricted to bilevel
+ * alpha (i.e. a mask).
+ *
+ * Returns: whether cursors can have alpha channels.
+ *
+ * Since: 2.4
+ */
+gboolean
+gdk_display_supports_cursor_alpha (GdkDisplay *display)
+{
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
+  return GDK_DISPLAY_GET_CLASS (display)->supports_cursor_alpha (display);
+}
+
+/**
+ * gdk_display_supports_cursor_color:
+ * @display: a #GdkDisplay
+ *
+ * Returns %TRUE if multicolored cursors are supported
+ * on @display. Otherwise, cursors have only a forground
+ * and a background color.
+ *
+ * Returns: whether cursors can have multiple colors.
+ *
+ * Since: 2.4
+ */
+gboolean
+gdk_display_supports_cursor_color (GdkDisplay *display)
+{
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
+  return GDK_DISPLAY_GET_CLASS (display)->supports_cursor_color (display);
+}
+
+/**
+ * gdk_display_get_default_cursor_size:
+ * @display: a #GdkDisplay
+ *
+ * Returns the default size to use for cursors on @display.
+ *
+ * Returns: the default cursor size.
+ *
+ * Since: 2.4
+ */
+guint
+gdk_display_get_default_cursor_size (GdkDisplay *display)
+{
+  guint width, height;
+
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
+  GDK_DISPLAY_GET_CLASS (display)->get_default_cursor_size (display,
+                                                            &width,
+                                                            &height);
+
+  return MIN (width, height);
+}
+
+/**
+ * gdk_display_get_maximal_cursor_size:
+ * @display: a #GdkDisplay
+ * @width: (out): the return location for the maximal cursor width
+ * @height: (out): the return location for the maximal cursor height
+ *
+ * Gets the maximal size to use for cursors on @display.
+ *
+ * Since: 2.4
+ */
+void
+gdk_display_get_maximal_cursor_size (GdkDisplay *display,
+                                     guint       *width,
+                                     guint       *height)
+{
+  g_return_if_fail (GDK_IS_DISPLAY (display));
+
+  GDK_DISPLAY_GET_CLASS (display)->get_maximal_cursor_size (display,
+                                                            width,
+                                                            height);
+}
+
+/**
+ * gdk_display_warp_pointer:
+ * @display: a #GdkDisplay
+ * @screen: the screen of @display to warp the pointer to
+ * @x: the x coordinate of the destination
+ * @y: the y coordinate of the destination
+ *
+ * Warps the pointer of @display to the point @x,@y on
+ * the screen @screen, unless the pointer is confined
+ * to a window by a grab, in which case it will be moved
+ * as far as allowed by the grab. Warping the pointer
+ * creates events as if the user had moved the mouse
+ * instantaneously to the destination.
+ *
+ * Note that the pointer should normally be under the
+ * control of the user. This function was added to cover
+ * some rare use cases like keyboard navigation support
+ * for the color picker in the #GtkColorSelectionDialog.
+ *
+ * Since: 2.8
+ *
+ * Deprecated: 3.0: Use gdk_device_warp() instead.
+ */
+void
+gdk_display_warp_pointer (GdkDisplay *display,
+                          GdkScreen  *screen,
+                          gint        x,
+                          gint        y)
+{
+  gdk_device_warp (display->core_pointer,
+                   screen,
+                   x, y);
+}
+
+gulong
+_gdk_display_get_next_serial (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS (display)->get_next_serial (display);
+}
+
+
+/**
+ * gdk_notify_startup_complete:
+ *
+ * Indicates to the GUI environment that the application has finished
+ * loading. If the applications opens windows, this function is
+ * normally called after opening the application's initial set of
+ * windows.
+ *
+ * GTK+ will call this function automatically after opening the first
+ * #GtkWindow unless gtk_window_set_auto_startup_notification() is called
+ * to disable that feature.
+ *
+ * Since: 2.2
+ **/
+void
+gdk_notify_startup_complete (void)
+{
+  gdk_notify_startup_complete_with_id (NULL);
+}
+
+/**
+ * gdk_notify_startup_complete_with_id:
+ * @startup_id: a startup-notification identifier, for which notification
+ *              process should be completed
+ *
+ * Indicates to the GUI environment that the application has finished
+ * loading, using a given identifier.
+ *
+ * GTK+ will call this function automatically for #GtkWindow with custom
+ * startup-notification identifier unless
+ * gtk_window_set_auto_startup_notification() is called to disable
+ * that feature.
+ *
+ * Since: 2.12
+ */
+void
+gdk_notify_startup_complete_with_id (const gchar* startup_id)
+{
+  GdkDisplay *display;
+
+  display = gdk_display_get_default ();
+  if (display)
+    gdk_display_notify_startup_complete (display, startup_id);
+}
+
+void
+gdk_display_notify_startup_complete (GdkDisplay  *display,
+                                     const gchar *startup_id)
+{
+  GDK_DISPLAY_GET_CLASS (display)->notify_startup_complete (display, startup_id);
+}
+
+void
+_gdk_display_event_data_copy (GdkDisplay     *display,
+                              const GdkEvent *event,
+                              GdkEvent       *new_event)
+{
+  GDK_DISPLAY_GET_CLASS (display)->event_data_copy (display, event, new_event);
+}
+
+void
+_gdk_display_event_data_free (GdkDisplay *display,
+                              GdkEvent   *event)
+{
+  GDK_DISPLAY_GET_CLASS (display)->event_data_free (display, event);
+}
+
+void
+_gdk_display_create_window_impl (GdkDisplay       *display,
+                                 GdkWindow        *window,
+                                 GdkWindow        *real_parent,
+                                 GdkScreen        *screen,
+                                 GdkEventMask      event_mask,
+                                 GdkWindowAttr    *attributes,
+                                 gint              attributes_mask)
+{
+  GDK_DISPLAY_GET_CLASS (display)->create_window_impl (display,
+                                                       window,
+                                                       real_parent,
+                                                       screen,
+                                                       event_mask,
+                                                       attributes,
+                                                       attributes_mask);
+}
+
+GdkWindow *
+_gdk_display_create_window (GdkDisplay *display)
+{
+  return g_object_new (GDK_DISPLAY_GET_CLASS (display)->window_type, NULL);
+}
+
+/**
+ * gdk_keymap_get_for_display:
+ * @display: the #GdkDisplay.
+ *
+ * Returns the #GdkKeymap attached to @display.
+ *
+ * Return value: (transfer none): the #GdkKeymap attached to @display.
+ *
+ * Since: 2.2
+ */
+GdkKeymap*
+gdk_keymap_get_for_display (GdkDisplay *display)
+{
+  return GDK_DISPLAY_GET_CLASS (display)->get_keymap (display);
+}
+
+typedef struct _GdkGlobalErrorTrap  GdkGlobalErrorTrap;
+
+struct _GdkGlobalErrorTrap
+{
+  GSList *displays;
+};
+
+static GQueue gdk_error_traps = G_QUEUE_INIT;
+
+/**
+ * gdk_error_trap_push:
+ *
+ * This function allows X errors to be trapped instead of the normal
+ * behavior of exiting the application. It should only be used if it
+ * is not possible to avoid the X error in any other way. Errors are
+ * ignored on all #GdkDisplay currently known to the
+ * #GdkDisplayManager. If you don't care which error happens and just
+ * want to ignore everything, pop with gdk_error_trap_pop_ignored().
+ * If you need the error code, use gdk_error_trap_pop() which may have
+ * to block and wait for the error to arrive from the X server.
+ *
+ * This API exists on all platforms but only does anything on X.
+ *
+ * You can use gdk_x11_display_error_trap_push() to ignore errors
+ * on only a single display.
+ *
+* <example>
+ * <title>Trapping an X error</title>
+ * <programlisting>
+ * gdk_error_trap_push (<!-- -->);
+ *
+ *  // ... Call the X function which may cause an error here ...
+ *
+ *
+ * if (gdk_error_trap_pop (<!-- -->))
+ *  {
+ *    // ... Handle the error here ...
+ *  }
+ * </programlisting>
+ * </example>
+ */
+void
+gdk_error_trap_push (void)
+{
+  GdkDisplayManager *manager;
+  GdkDisplayClass *class;
+  GdkGlobalErrorTrap *trap;
+  GSList *l;
+
+  manager = gdk_display_manager_get ();
+  class = GDK_DISPLAY_GET_CLASS (gdk_display_manager_get_default_display (manager));
+
+  if (class->push_error_trap == NULL)
+    return;
+
+  trap = g_slice_new (GdkGlobalErrorTrap);
+  trap->displays = gdk_display_manager_list_displays (manager);
+
+  g_slist_foreach (trap->displays, (GFunc) g_object_ref, NULL);
+  for (l = trap->displays; l != NULL; l = l->next)
+    {
+      class->push_error_trap (l->data);
+    }
+
+  g_queue_push_head (&gdk_error_traps, trap);
+}
+
+static gint
+gdk_error_trap_pop_internal (gboolean need_code)
+{
+  GdkDisplayManager *manager;
+  GdkDisplayClass *class;
+  GdkGlobalErrorTrap *trap;
+  gint result;
+  GSList *l;
+
+  manager = gdk_display_manager_get ();
+  class = GDK_DISPLAY_GET_CLASS (gdk_display_manager_get_default_display (manager));
+
+  if (class->pop_error_trap == NULL)
+    return 0;
+
+  trap = g_queue_pop_head (&gdk_error_traps);
+
+  g_return_val_if_fail (trap != NULL, 0);
+
+  result = 0;
+  for (l = trap->displays; l != NULL; l = l->next)
+    {
+      gint code = 0;
+
+      code = class->pop_error_trap (l->data, !need_code);
+
+      /* we use the error on the last display listed, why not. */
+      if (code != 0)
+        result = code;
+    }
+
+  g_slist_free_full (trap->displays, g_object_unref);
+  g_slice_free (GdkGlobalErrorTrap, trap);
+
+  return result;
+}
+
+/**
+ * gdk_error_trap_pop_ignored:
+ *
+ * Removes an error trap pushed with gdk_error_trap_push(), but
+ * without bothering to wait and see whether an error occurred.  If an
+ * error arrives later asynchronously that was triggered while the
+ * trap was pushed, that error will be ignored.
+ *
+ * Since: 3.0
+ */
+void
+gdk_error_trap_pop_ignored (void)
+{
+  gdk_error_trap_pop_internal (FALSE);
+}
+
+/**
+ * gdk_error_trap_pop:
+ *
+ * Removes an error trap pushed with gdk_error_trap_push().
+ * May block until an error has been definitively received
+ * or not received from the X server. gdk_error_trap_pop_ignored()
+ * is preferred if you don't need to know whether an error
+ * occurred, because it never has to block. If you don't
+ * need the return value of gdk_error_trap_pop(), use
+ * gdk_error_trap_pop_ignored().
+ *
+ * Prior to GDK 3.0, this function would not automatically
+ * sync for you, so you had to gdk_flush() if your last
+ * call to Xlib was not a blocking round trip.
+ *
+ * Return value: X error code or 0 on success
+ */
+gint
+gdk_error_trap_pop (void)
+{
+  return gdk_error_trap_pop_internal (TRUE);
 }

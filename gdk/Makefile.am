@@ -13,13 +13,13 @@ DIST_SUBDIRS = win32 x11 quartz tests
 
 CLEANFILES =
 
-EXTRA_DIST +=			\
+EXTRA_DIST += 			\
 	keynames.txt		\
 	keyname-table.h		\
 	gen-keyname-table.pl	\
-	gdkconfig.h.win32 	\
+	gdkconfig.h.win32	\
 	gdkkeysyms-update.pl	\
-	gdk.def 		\
+	gdk.def			\
 	gdkmarshalers.list	\
 	gdkwindowimpl.h		\
 	makeenums.pl		\
@@ -29,12 +29,12 @@ EXTRA_DIST +=			\
 	gdkenumtypes.h.template	\
 	abicheck.sh
 
-INCLUDES =                              \
+INCLUDES = 				\
 	-DG_LOG_DOMAIN=\"Gdk\"		\
 	-DGDK_COMPILATION		\
 	-I$(top_srcdir)			\
 	-I$(top_builddir)/gdk		\
-	$(GTK_DEBUG_FLAGS) 		\
+	$(GTK_DEBUG_FLAGS)		\
 	$(GDK_DEP_CFLAGS)
 
 gtarget=$(gdktarget)
@@ -46,12 +46,12 @@ endif
 # libtool stuff: set version and export symbols for resolving
 # since automake doesn't support conditionalized libsomething_la_LDFLAGS
 # we use the general approach here
-LDADD = \
-	$(GTK_LINK_FLAGS)						\
-	-version-info $(LT_VERSION_INFO)		 		\
-	-export-dynamic 						\
-	-rpath $(libdir) 						\
-	$(no_undefined)							\
+LDADD = 					\
+	$(GTK_LINK_FLAGS)			\
+	-version-info $(LT_VERSION_INFO)	\
+	-export-dynamic 			\
+	-rpath $(libdir) 			\
+	$(no_undefined)				\
 	$(LIBTOOL_EXPORT_OPTIONS)
 
 #
@@ -60,7 +60,7 @@ LDADD = \
 #
 # GDK header files for public installation (non-generated)
 #
-gdk_public_h_sources =				\
+gdk_public_h_sources = 				\
 	gdk.h					\
 	gdkapplaunchcontext.h			\
 	gdkcairo.h				\
@@ -84,48 +84,57 @@ gdk_public_h_sources =				\
 	gdkrgba.h				\
 	gdkscreen.h				\
 	gdkselection.h				\
-	gdkspawn.h				\
 	gdktestutils.h				\
 	gdkthreads.h				\
 	gdktypes.h				\
 	gdkvisual.h				\
 	gdkwindow.h
 
-gdk_built_public_sources =			\
+gdk_built_public_sources = 			\
+	gdkconfig.h				\
 	gdkenumtypes.h
 
-gdk_private_headers =				\
-	gdkinternals.h				\
+gdk_private_headers = 				\
+	gdkapplaunchcontextprivate.h		\
+	gdkcursorprivate.h			\
+	gdkdevicemanagerprivate.h		\
 	gdkdeviceprivate.h			\
-	gdkintl.h
+	gdkdisplaymanagerprivate.h		\
+	gdkdisplayprivate.h			\
+	gdkdndprivate.h				\
+	gdkscreenprivate.h			\
+	gdkinternals.h				\
+	gdkintl.h				\
+	gdkkeysprivate.h			\
+	gdkvisualprivate.h
 
-gdk_c_sources =                 \
-	gdk.c			\
-	gdkapplaunchcontext.c	\
-	gdkcairo.c		\
-	gdkcolor.c		\
-	gdkcursor.c		\
-	gdkdevice.c		\
-	gdkdevicemanager.c	\
-	gdkdisplay.c		\
-	gdkdisplaymanager.c	\
-	gdkdnd.c		\
-	gdkevents.c     	\
-	gdkglobals.c		\
-	gdkkeys.c		\
-	gdkkeyuni.c		\
-	gdkoffscreenwindow.c	\
-	gdkpango.c		\
-	gdkpixbuf-drawable.c	\
-	gdkrectangle.c		\
-	gdkrgba.c		\
-	gdkscreen.c		\
-	gdkselection.c		\
-	gdkvisual.c		\
-	gdkwindow.c		\
+gdk_c_sources = 				\
+	gdk.c					\
+	gdkapplaunchcontext.c			\
+	gdkcairo.c				\
+	gdkcolor.c				\
+	gdkcursor.c				\
+	gdkdevice.c				\
+	gdkdevicemanager.c			\
+	gdkdisplay.c				\
+	gdkdisplaymanager.c			\
+	gdkdnd.c				\
+	gdkevents.c     			\
+	gdkglobals.c				\
+	gdkkeys.c				\
+	gdkkeyuni.c				\
+	gdkoffscreenwindow.c			\
+	gdkpango.c				\
+	gdkpixbuf-drawable.c			\
+	gdkrectangle.c				\
+	gdkrgba.c				\
+	gdkscreen.c				\
+	gdkselection.c				\
+	gdkvisual.c				\
+	gdkwindow.c				\
 	gdkwindowimpl.c
 
-gdk_built_sources =				\
+gdk_built_sources = 				\
 	gdkenumtypes.c				\
 	gdkmarshalers.h 			\
 	gdkmarshalers.c				\
@@ -145,9 +154,9 @@ common_sources = 		\
 	gdkmarshalers.c		\
 	gdkmarshalers.h
 
-libgdk_x11_3_0_la_SOURCES = $(common_sources)
-libgdk_x11_3_0_la_LIBADD = x11/libgdk-x11.la $(GDK_DEP_LIBS)
-libgdk_x11_3_0_la_LDFLAGS = $(LDADD)
+libgdk_3_0_la_SOURCES = $(common_sources)
+libgdk_3_0_la_LIBADD = x11/libgdk-x11.la $(GDK_DEP_LIBS)
+libgdk_3_0_la_LDFLAGS = $(LDADD)
 
 libgdk_quartz_3_0_la_SOURCES = $(common_sources) gdkkeynames.c
 libgdk_quartz_3_0_la_LIBADD = quartz/libgdk-quartz.la $(GDK_DEP_LIBS)
@@ -166,10 +175,10 @@ introspection_files = 		\
         gdkenumtypes.c		\
         gdkenumtypes.h
 
-Gdk-3.0.gir: $(gdktargetlib) Makefile
+Gdk-3.0.gir: libgdk-3.0.la Makefile
 Gdk_3_0_gir_SCANNERFLAGS = --warn-all
 Gdk_3_0_gir_INCLUDES = Gio-2.0 GdkPixbuf-2.0 Pango-1.0 cairo-1.0
-Gdk_3_0_gir_LIBS = $(gdktargetlib)
+Gdk_3_0_gir_LIBS = libgdk-3.0.la
 Gdk_3_0_gir_FILES = $(introspection_files)
 Gdk_3_0_gir_CFLAGS = $(INCLUDES)
 INTROSPECTION_GIRS += Gdk-3.0.gir
@@ -180,11 +189,11 @@ x11_introspection_files = 		\
 	x11/gdkapplaunchcontext-x11.c	\
 	x11/gdkasync.c			\
 	x11/gdkcursor-x11.c		\
-	x11/gdkdevice-core.c		\
-	x11/gdkdevicemanager-core.c	\
+	x11/gdkdevice-core-x11.c	\
+	x11/gdkdevicemanager-core-x11.c	\
 	x11/gdkdevicemanager-x11.c	\
-	x11/gdkdevicemanager-xi2.c	\
 	x11/gdkdevicemanager-xi.c	\
+	x11/gdkdevicemanager-xi2.c	\
 	x11/gdkdevice-xi2.c		\
 	x11/gdkdevice-xi.c		\
 	x11/gdkdisplay-x11.c		\
@@ -192,15 +201,12 @@ x11_introspection_files = 		\
 	x11/gdkeventsource.c		\
 	x11/gdkeventtranslator.c	\
 	x11/gdkgeometry-x11.c		\
-	x11/gdkglobals-x11.c		\
-	x11/gdkim-x11.c			\
 	x11/gdkkeys-x11.c		\
 	x11/gdkmain-x11.c		\
 	x11/gdkproperty-x11.c		\
 	x11/gdkscreen-x11.c		\
 	x11/gdkselection-x11.c		\
 	x11/gdksettings.c		\
-	x11/gdkspawn-x11.c		\
 	x11/gdktestutils-x11.c		\
 	x11/gdkvisual-x11.c		\
 	x11/gdkwindow-x11.c		\
@@ -208,12 +214,20 @@ x11_introspection_files = 		\
 	x11/gdkxid.c			\
 	x11/xsettings-client.c		\
 	x11/xsettings-common.c		\
-        x11/gdkx.h
+        x11/gdkx.h			\
+	x11/gdkx11cursor.h		\
+	x11/gdkx11display.h		\
+	x11/gdkx11property.h		\
+	x11/gdkx11screen.h		\
+	x11/gdkx11selection.h		\
+	x11/gdkx11utils.h		\
+	x11/gdkx11visual.h		\
+	x11/gdkx11window.h
 
-GdkX11-3.0.gir: $(gdktargetlib) Gdk-3.0.gir Makefile
+GdkX11-3.0.gir: libgdk-3.0.la Gdk-3.0.gir Makefile
 GdkX11_3_0_gir_SCANNERFLAGS = --warn-all --strip-prefix=Gdk
 GdkX11_3_0_gir_INCLUDES = Gio-2.0 Gdk-3.0 GdkPixbuf-2.0 Pango-1.0 xlib-2.0
-GdkX11_3_0_gir_LIBS = $(gdktargetlib)
+GdkX11_3_0_gir_LIBS = libgdk-3.0.la
 GdkX11_3_0_gir_FILES = $(x11_introspection_files)
 GdkX11_3_0_gir_CFLAGS = $(INCLUDES) -L$(top_builddir)/gdk
 INTROSPECTION_GIRS += GdkX11-3.0.gir
@@ -270,30 +284,15 @@ if OS_LINUX
 TESTS = abicheck.sh
 endif
 
-
-lib_LTLIBRARIES = $(gdktargetlib)
-
-EXTRA_LTLIBRARIES = libgdk-x11-3.0.la libgdk-win32-3.0.la libgdk-quartz-3.0.la
+lib_LTLIBRARIES = libgdk-3.0.la
 
 MAINTAINERCLEANFILES = $(gdk_built_sources) stamp-gdkenumtypes.h
 EXTRA_DIST += $(gdk_built_sources)
 EXTRA_HEADERS =
 
-#
-# Rule to install gdkconfig.h header file
-#
-configexecincludedir = $(libdir)/gtk-3.0/include
-#configexecinclude_DATA = gdkconfig.h
-
-install-exec-local: gdkconfig.h
-	$(mkinstalldirs) $(DESTDIR)$(configexecincludedir)
-	file=$(DESTDIR)$(configexecincludedir)/gdkconfig.h; \
-	if test -r $$file && cmp -s gdkconfig.h $$file; then :; \
-	else $(INSTALL_DATA) gdkconfig.h $$file; fi
-
 install-exec-hook:
 if DISABLE_EXPLICIT_DEPS
-	$(SHELL) $(top_srcdir)/sanitize-la.sh $(DESTDIR)$(libdir)/$(gdktargetlib)
+	$(SHELL) $(top_srcdir)/sanitize-la.sh $(DESTDIR)$(libdir)/libgdk-3.0.la
 endif
 
 #note: not gdkconfig.h

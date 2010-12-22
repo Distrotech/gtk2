@@ -28,6 +28,7 @@
 #define __GDK_APP_LAUNCH_CONTEXT_H__
 
 #include <gio/gio.h>
+#include <gdk/gdktypes.h>
 #include <gdk/gdkscreen.h>
 
 G_BEGIN_DECLS
@@ -39,21 +40,7 @@ G_BEGIN_DECLS
 #define GDK_IS_APP_LAUNCH_CONTEXT_CLASS(k)  (G_TYPE_CHECK_CLASS_TYPE ((k), GDK_TYPE_APP_LAUNCH_CONTEXT))
 #define GDK_APP_LAUNCH_CONTEXT_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_APP_LAUNCH_CONTEXT, GdkAppLaunchContextClass))
 
-typedef struct GdkAppLaunchContext	      GdkAppLaunchContext;
-typedef struct GdkAppLaunchContextClass       GdkAppLaunchContextClass;
-typedef struct GdkAppLaunchContextPrivate     GdkAppLaunchContextPrivate;
-
-struct GdkAppLaunchContext
-{
-  GAppLaunchContext parent_instance;
-
-  GdkAppLaunchContextPrivate *priv;
-};
-
-struct GdkAppLaunchContextClass
-{
-  GAppLaunchContextClass parent_class;
-};
+typedef GAppLaunchContextClass GdkAppLaunchContextClass;
 
 GType                gdk_app_launch_context_get_type      (void);
 

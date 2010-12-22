@@ -8,8 +8,6 @@ gdk_init
 gdk_init_check
 gdk_parse_args
 gdk_get_display_arg_name
-gdk_set_locale
-gdk_set_sm_client_id
 gdk_notify_startup_complete
 gdk_notify_startup_complete_with_id
 
@@ -137,7 +135,6 @@ gdk_display_set_pointer_hooks
 GdkDisplayDeviceHooks
 gdk_display_set_device_hooks
 gdk_display_warp_pointer
-gdk_display_warp_device
 gdk_display_supports_cursor_color
 gdk_display_supports_cursor_alpha
 gdk_display_get_default_cursor_size
@@ -151,6 +148,7 @@ gdk_display_supports_shapes
 gdk_display_supports_input_shapes
 gdk_display_supports_composite
 <SUBSECTION Standard>
+GDK_DISPLAY
 GDK_DISPLAY_OBJECT
 GDK_IS_DISPLAY
 GDK_TYPE_DISPLAY
@@ -217,10 +215,6 @@ gdk_screen_get_resolution
 gdk_screen_set_resolution
 gdk_screen_get_active_window
 gdk_screen_get_window_stack
-<SUBSECTION Spawning>
-gdk_spawn_on_screen
-gdk_spawn_on_screen_with_pipes
-gdk_spawn_command_line_on_screen
 
 <SUBSECTION Standard>
 GDK_SCREEN
@@ -722,6 +716,7 @@ gdk_device_get_display
 gdk_device_get_has_cursor
 gdk_device_get_n_axes
 gdk_device_get_n_keys
+gdk_device_warp
 
 <SUBSECTION>
 gdk_device_grab
@@ -953,25 +948,9 @@ GDK_SCREEN_XNUMBER
 GDK_SCREEN_XSCREEN
 GDK_CURSOR_XCURSOR
 GDK_CURSOR_XDISPLAY
-gdkx_visual_get
-gdk_window_foreign_new
-gdk_window_foreign_new_for_display
-gdk_xid_table_lookup
-gdk_xid_table_lookup_for_display
-gdk_window_lookup
-gdk_window_lookup_for_display
 gdk_x11_lookup_xdisplay
 gdk_x11_get_server_time
-gdk_net_wm_supports
-gdk_x11_screen_supports_net_wm_hint
-gdk_x11_screen_get_window_manager_name
-gdk_x11_screen_get_monitor_output
-gdk_x11_screen_lookup_visual
-gdk_x11_window_set_user_time
-gdk_x11_window_move_to_current_desktop
 gdk_x11_display_get_user_time
-gdk_x11_cursor_get_xcursor
-gdk_x11_cursor_get_xdisplay
 gdk_x11_display_broadcast_startup_message
 gdk_x11_display_get_startup_notification_id
 gdk_x11_display_set_startup_notification_id
@@ -983,14 +962,24 @@ gdk_x11_display_error_trap_pop
 gdk_x11_display_error_trap_pop_ignored
 gdk_x11_display_set_cursor_theme
 gdk_x11_register_standard_event_type
+gdk_x11_screen_get_screen_number
+gdk_x11_screen_get_xscreen
+gdk_x11_screen_get_window_manager_name
+gdk_x11_screen_get_monitor_output
+gdk_x11_screen_lookup_visual
+gdk_x11_screen_supports_net_wm_hint
+gdk_x11_window_foreign_new_for_display
+gdk_x11_window_lookup_for_display
 gdk_x11_window_get_xid
+gdk_x11_window_set_user_time
+gdk_x11_window_move_to_current_desktop
 gdk_x11_get_default_root_xwindow
 gdk_x11_get_default_screen
 gdk_x11_get_default_xdisplay
 gdk_x11_grab_server
-gdk_x11_screen_get_screen_number
-gdk_x11_screen_get_xscreen
 gdk_x11_ungrab_server
+gdk_x11_cursor_get_xcursor
+gdk_x11_cursor_get_xdisplay
 gdk_x11_visual_get_xvisual
 gdk_x11_atom_to_xatom
 gdk_x11_atom_to_xatom_for_display
@@ -1000,10 +989,12 @@ gdk_x11_get_xatom_by_name
 gdk_x11_get_xatom_by_name_for_display
 gdk_x11_get_xatom_name
 gdk_x11_get_xatom_name_for_display
-
-<SUBSECTION Private>
-GDK_HAVE_WCHAR_H
-GDK_HAVE_WCTYPE_H
+gdk_x11_set_sm_client_id
+gdk_x11_display_text_property_to_text_list
+gdk_x11_free_text_list
+gdk_x11_display_string_to_compound_text
+gdk_x11_display_utf8_to_compound_text
+gdk_x11_free_compound_text
 </SECTION>
 
 <SECTION>

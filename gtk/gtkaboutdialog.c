@@ -796,8 +796,8 @@ gtk_about_dialog_finalize (GObject *object)
   g_slist_foreach (priv->visited_links, (GFunc)g_free, NULL);
   g_slist_free (priv->visited_links);
 
-  gdk_cursor_unref (priv->hand_cursor);
-  gdk_cursor_unref (priv->regular_cursor);
+  g_object_unref (priv->hand_cursor);
+  g_object_unref (priv->regular_cursor);
 
   G_OBJECT_CLASS (gtk_about_dialog_parent_class)->finalize (object);
 }
@@ -2277,6 +2277,7 @@ add_credits_section (GtkAboutDialog *about,
             {
               gchar *link;
               gchar *text;
+              gchar *name;
 
               if (*q1 == '<')
                 {
@@ -2284,6 +2285,7 @@ add_credits_section (GtkAboutDialog *about,
                   gchar *escaped;
 
                   text = g_strstrip (g_strndup (q0, q1 - q0));
+                  name = g_markup_escape_text (text, -1);
                   q1++;
                   link = g_strndup (q1, q2 - q1);
                   q2++;
@@ -2291,22 +2293,25 @@ add_credits_section (GtkAboutDialog *about,
                   g_string_append_printf (str,
                                           "<a href=\"mailto:%s\">%s</a>",
                                           escaped,
-                                          text);
+                                          name[0] ? name : link);
                   g_free (escaped);
                   g_free (link);
                   g_free (text);
+                  g_free (name);
                 }
               else
                 {
                   /* uri */
                   text = g_strstrip (g_strndup (q0, q1 - q0));
+                  name = g_markup_escape_text (text, -1);
                   link = g_strndup (q1, q2 - q1);
                   g_string_append_printf (str,
                                           "<a href=\"%s\">%s</a>",
                                           link,
-                                          text);
+                                          name[0] ? name : link);
                   g_free (link);
                   g_free (text);
+                  g_free (name);
                 }
 
               q0 = q2;
@@ -2373,12 +2378,11 @@ create_credits_page (GtkAboutDialog *about)
       strcmp (priv->translator_credits, "translator_credits") != 0 &&
       strcmp (priv->translator_credits, "translator-credits") != 0)
     {
-      gchar *translators[2];
+      gchar **translators;
 
-      translators[0] = priv->translator_credits;
-      translators[1] = NULL;
-
+      translators = g_strsplit (priv->translator_credits, "\n", 0);
       add_credits_section (about, GTK_GRID (grid), &row, _("Translated by"), translators);
+      g_strfreev (translators);
     }
 
   if (priv->artists != NULL)

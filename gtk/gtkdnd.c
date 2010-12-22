@@ -30,9 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "gdkconfig.h"
-
-#include "gdk/gdkkeysyms.h"
+#include "gdk/gdk.h"
 
 #ifdef GDK_WINDOWING_X11
 #include <X11/Xlib.h>
@@ -736,7 +734,7 @@ gtk_drag_get_cursor (GdkDisplay        *display,
       for (i = 0 ; i < n_drag_cursors - 1; i++)
 	if (drag_cursors[i].cursor != NULL)
 	  {
-	    gdk_cursor_unref (drag_cursors[i].cursor);
+	    g_object_unref (drag_cursors[i].cursor);
 	    drag_cursors[i].cursor = NULL;
 	  }
     }
@@ -753,7 +751,7 @@ gtk_drag_get_cursor (GdkDisplay        *display,
     {
       if (display != gdk_cursor_get_display (drag_cursors[i].cursor))
 	{
-	  gdk_cursor_unref (drag_cursors[i].cursor);
+	  g_object_unref (drag_cursors[i].cursor);
 	  drag_cursors[i].cursor = NULL;
 	}
     }
@@ -778,7 +776,7 @@ gtk_drag_get_cursor (GdkDisplay        *display,
           if (display == gdk_cursor_get_display (info->drag_cursors[i]))
 	    return info->drag_cursors[i];
 	  
-	  gdk_cursor_unref (info->drag_cursors[i]);
+	  g_object_unref (info->drag_cursors[i]);
 	  info->drag_cursors[i] = NULL;
         }
 
@@ -3893,7 +3891,7 @@ gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
     {
       if (info->drag_cursors[i] != NULL)
         {
-          gdk_cursor_unref (info->drag_cursors[i]);
+          g_object_unref (info->drag_cursors[i]);
           info->drag_cursors[i] = NULL;
         }
     }
@@ -4257,9 +4255,9 @@ gtk_drag_key_cb (GtkWidget         *widget,
     {
       info->cur_x += dx;
       info->cur_y += dy;
-      gdk_display_warp_device (gtk_widget_get_display (widget), pointer,
-                               gtk_widget_get_screen (widget),
-                               info->cur_x, info->cur_y);
+      gdk_device_warp (pointer,
+                       gtk_widget_get_screen (widget),
+                       info->cur_x, info->cur_y);
     }
 
   gtk_drag_update (info, info->cur_screen, info->cur_x, info->cur_y, (GdkEvent *)event);

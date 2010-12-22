@@ -1041,7 +1041,7 @@ _gdk_windowing_window_init (void)
 
   g_assert (_gdk_root == NULL);
 
-  _gdk_root = g_object_new (GDK_TYPE_WINDOW, NULL);
+  _gdk_root = _gdk_display_create_window (_gdk_display);
 
   _gdk_root->impl = g_object_new (_gdk_root_window_impl_quartz_get_type (), NULL);
   _gdk_root->impl_window = _gdk_root;
@@ -1060,9 +1060,9 @@ _gdk_windowing_window_init (void)
 }
 
 static void
-_gdk_quartz_window_destroy (GdkWindow *window,
-                            gboolean   recursing,
-                            gboolean   foreign_destroy)
+gdk_quartz_window_destroy (GdkWindow *window,
+                           gboolean   recursing,
+                           gboolean   foreign_destroy)
 {
   GdkWindowImplQuartz *impl;
   GdkWindow *parent;
@@ -1115,8 +1115,8 @@ gdk_window_quartz_resize_cairo_surface (GdkWindow       *window,
   return NULL;
 }
 
-void
-_gdk_windowing_window_destroy_foreign (GdkWindow *window)
+static void
+gdk_quartz_window_destroy_foreign (GdkWindow *window)
 {
   /* Foreign windows aren't supported in OSX. */
 }
@@ -2868,13 +2868,6 @@ gdk_window_foreign_new_for_display (GdkDisplay      *display,
   return NULL;
 }
 
-GdkWindow*
-gdk_window_lookup (GdkNativeWindow anid)
-{
-  /* Foreign windows aren't supported in Mac OS X */
-  return NULL;
-}
-
 GdkWindow *
 gdk_window_lookup_for_display (GdkDisplay *display, GdkNativeWindow anid)
 {
@@ -2917,11 +2910,6 @@ gdk_window_set_opacity (GdkWindow *window,
     opacity = 1;
 
   [impl->toplevel setAlphaValue: opacity];
-}
-
-void
-_gdk_windowing_window_set_composited (GdkWindow *window, gboolean composited)
-{
 }
 
 static cairo_region_t *
@@ -2971,7 +2959,8 @@ gdk_window_impl_quartz_class_init (GdkWindowImplQuartzClass *klass)
   impl_class->set_static_gravities = gdk_window_quartz_set_static_gravities;
   impl_class->queue_antiexpose = _gdk_quartz_window_queue_antiexpose;
   impl_class->translate = _gdk_quartz_window_translate;
-  impl_class->destroy = _gdk_quartz_window_destroy;
+  impl_class->destroy = gdk_quartz_window_destroy;
+  impl_class->destroy_foreign = gdk_quartz_window_destroy_foreign;
   impl_class->resize_cairo_surface = gdk_window_quartz_resize_cairo_surface;
   impl_class->get_shape = gdk_quartz_window_get_shape;
   impl_class->get_input_shape = gdk_quartz_window_get_input_shape;

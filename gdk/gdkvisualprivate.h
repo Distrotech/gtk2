@@ -1,5 +1,5 @@
 /* GDK - The GIMP Drawing Kit
- * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
+ * Copyright (C) 2010 Red Hat, Inc
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,21 +17,43 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.  See the ChangeLog
- * files for a list of changes.  These files are distributed with
- * GTK+ at ftp://ftp.gtk.org/pub/gtk/. 
- */
+#ifndef __GDK_VISUAL_PRIVATE_H__
+#define __GDK_VISUAL_PRIVATE_H__
 
-#include "config.h"
+#include "gdkvisual.h"
 
-#include "gdktypes.h"
-#include "gdkprivate-x11.h"
+G_BEGIN_DECLS
 
-#include <stdio.h>
+struct _GdkVisual
+{
+  GObject parent_instance;
 
+  GdkVisualType type;
+  gint depth;
+  GdkByteOrder byte_order;
+  gint colormap_size;
+  gint bits_per_rgb;
 
-gboolean          _gdk_use_xshm = TRUE;  /* used as a cmd line arg */
-GdkAtom           _gdk_selection_property;
-gboolean          _gdk_synchronize = FALSE;
+  guint32 red_mask;
+  gint red_shift;
+  gint red_prec;
+
+  guint32 green_mask;
+  gint green_shift;
+  gint green_prec;
+
+  guint32 blue_mask;
+  gint blue_shift;
+  gint blue_prec;
+
+  GdkScreen *screen;
+};
+
+struct _GdkVisualClass
+{
+  GObjectClass parent_class;
+};
+
+G_END_DECLS
+
+#endif

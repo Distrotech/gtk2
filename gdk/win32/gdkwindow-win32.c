@@ -203,7 +203,8 @@ _gdk_windowing_window_init (GdkScreen *screen)
 
   g_assert (_gdk_root == NULL);
   
-  _gdk_root = g_object_new (GDK_TYPE_WINDOW, NULL);
+  _gdk_root = _gdk_display_create_window (_gdk_display);
+
   private = (GdkWindowObject *)_gdk_root;
   private->impl = g_object_new (GDK_TYPE_WINDOW_IMPL_WIN32, NULL);
   private->impl_window = private;
@@ -618,8 +619,8 @@ _gdk_window_impl_new (GdkWindow     *window,
 }
 
 GdkWindow *
-gdk_window_foreign_new_for_display (GdkDisplay      *display,
-                                    GdkNativeWindow  anid)
+gdk_win32_window_foreign_new_for_display (GdkDisplay      *display,
+                                          GdkNativeWindow  anid)
 {
   GdkWindow *window;
   GdkWindowObject *private;
@@ -632,7 +633,7 @@ gdk_window_foreign_new_for_display (GdkDisplay      *display,
 
   g_return_val_if_fail (display == _gdk_display, NULL);
 
-  window = g_object_new (GDK_TYPE_WINDOW, NULL);
+  window = _gdk_display_create_window (display);
   private = (GdkWindowObject *)window;
   private->visual = gdk_screen_get_system_visual (_gdk_screen);
   private->impl = g_object_new (GDK_TYPE_WINDOW_IMPL_WIN32, NULL);
@@ -677,7 +678,7 @@ gdk_window_foreign_new_for_display (GdkDisplay      *display,
   g_object_ref (window);
   gdk_win32_handle_table_insert (&GDK_WINDOW_HWND (window), window);
 
-  GDK_NOTE (MISC, g_print ("gdk_window_foreign_new_for_display: %p: %s@%+d%+d\n",
+  GDK_NOTE (MISC, g_print ("gdk_win32_window_foreign_new_for_display: %p: %s@%+d%+d\n",
 			   (HWND) anid,
 			   _gdk_win32_drawable_description (window),
 			   private->x, private->y));
@@ -685,16 +686,10 @@ gdk_window_foreign_new_for_display (GdkDisplay      *display,
   return window;
 }
 
-GdkWindow*
-gdk_window_lookup (GdkNativeWindow hwnd)
-{
-  return (GdkWindow*) gdk_win32_handle_table_lookup (hwnd); 
-}
-
-void
-_gdk_win32_window_destroy (GdkWindow *window,
-			   gboolean   recursing,
-			   gboolean   foreign_destroy)
+static void
+gdk_win32_window_destroy (GdkWindow *window,
+			  gboolean   recursing,
+			  gboolean   foreign_destroy)
 {
   GdkWindowObject *private = (GdkWindowObject *)window;
   GdkWindowImplWin32 *window_impl = GDK_WINDOW_IMPL_WIN32 (private->impl);
@@ -702,7 +697,7 @@ _gdk_win32_window_destroy (GdkWindow *window,
 
   g_return_if_fail (GDK_IS_WINDOW (window));
   
-  GDK_NOTE (MISC, g_print ("_gdk_win32_window_destroy: %p\n",
+  GDK_NOTE (MISC, g_print ("gdk_win32_window_destroy: %p\n",
 			   GDK_WINDOW_HWND (window)));
 
   /* Remove ourself from the modal stack */
@@ -750,8 +745,8 @@ gdk_win32_window_resize_cairo_surface (GdkWindow       *window,
   return NULL;
 }
 
-void
-_gdk_windowing_window_destroy_foreign (GdkWindow *window)
+static void
+gdk_win32_window_destroy_foreign (GdkWindow *window)
 {
   /* It's somebody else's window, but in our hierarchy, so reparent it
    * to the desktop, and then try to destroy it.
@@ -3098,12 +3093,12 @@ gdk_win32_window_shape_combine_region (GdkWindow       *window,
 }
 
 GdkWindow *
-gdk_window_lookup_for_display (GdkDisplay      *display,
-                               GdkNativeWindow  anid)
+gdk_win32_window_lookup_for_display (GdkDisplay      *display,
+                                     GdkNativeWindow  anid)
 {
   g_return_val_if_fail (display == _gdk_display, NULL);
 
-  return gdk_window_lookup (anid);
+  return (GdkWindow*) gdk_win32_handle_table_lookup (hwnd);
 }
 
 void
@@ -3154,11 +3149,6 @@ gdk_window_set_opacity (GdkWindow *window,
 					     opacity * 0xff,
 					     LWA_ALPHA));
     }
-}
-
-void
-_gdk_windowing_window_set_composited (GdkWindow *window, gboolean composited)
-{
 }
 
 static cairo_region_t *
@@ -3295,7 +3285,8 @@ gdk_window_impl_iface_init (GdkWindowImplIface *iface)
   iface->set_static_gravities = gdk_win32_window_set_static_gravities;
   iface->queue_antiexpose = _gdk_win32_window_queue_antiexpose;
   iface->translate = _gdk_win32_window_translate;
-  iface->destroy = _gdk_win32_window_destroy;
+  iface->destroy = gdk_win32_window_destroy;
+  iface->destroy_foreign = gdk_win32_window_destroy_foreign;
   iface->resize_cairo_surface = gdk_win32_window_resize_cairo_surface;
   iface->get_shape = gdk_win32_window_get_shape;
   iface->get_input_shape = gdk_win32_window_get_input_shape;

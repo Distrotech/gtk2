@@ -642,18 +642,7 @@ GdkWindowState gdk_window_get_state (GdkWindow *window);
  * window gravity on all children.
  */
 gboolean gdk_window_set_static_gravities (GdkWindow *window,
-					  gboolean   use_static);   
-
-/* Functions to create/lookup windows from their native equivalents */ 
-#ifndef GDK_MULTIHEAD_SAFE
-GdkWindow*    gdk_window_foreign_new (GdkNativeWindow anid);
-GdkWindow*    gdk_window_lookup      (GdkNativeWindow anid);
-#endif
-GdkWindow    *gdk_window_foreign_new_for_display (GdkDisplay      *display,
-						  GdkNativeWindow  anid);
-GdkWindow*    gdk_window_lookup_for_display (GdkDisplay      *display,
-					     GdkNativeWindow  anid);
-
+                                          gboolean   use_static);
 
 /* GdkWindow */
 
@@ -676,7 +665,6 @@ void gdk_window_set_urgency_hint      (GdkWindow *window,
 void          gdk_window_set_geometry_hints (GdkWindow          *window,
 					     const GdkGeometry  *geometry,
 					     GdkWindowHints      geom_mask);
-void          gdk_set_sm_client_id          (const gchar        *sm_client_id);
 
 cairo_region_t *gdk_window_get_clip_region  (GdkWindow          *window);
 cairo_region_t *gdk_window_get_visible_region(GdkWindow         *window);

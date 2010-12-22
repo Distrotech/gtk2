@@ -27,6 +27,7 @@
 
 #include "config.h"
 
+#if 0
 #ifdef XINPUT_2
 
 /* Hack to have keyboard events interpreted
@@ -39,6 +40,7 @@
 #undef GDK_COMPILATION
 
 #endif /* XINPUT_2 */
+#endif
 
 #include "gtkmain.h"
 #include "gtkmarshalers.h"
@@ -316,7 +318,7 @@ _gtk_plug_windowing_filter_func (GdkXEvent *gdk_xevent,
 
 	    GTK_NOTE (PLUGSOCKET, g_message ("GtkPlug: start of embedding"));
 
-            priv->socket_window = gdk_window_lookup_for_display (display, xre->parent);
+            priv->socket_window = gdk_x11_window_lookup_for_display (display, xre->parent);
             if (priv->socket_window)
 	      {
 		gpointer user_data = NULL;
@@ -333,7 +335,7 @@ _gtk_plug_windowing_filter_func (GdkXEvent *gdk_xevent,
 	      }
 	    else
 	      {
-		priv->socket_window = gdk_window_foreign_new_for_display (display, xre->parent);
+		priv->socket_window = gdk_x11_window_foreign_new_for_display (display, xre->parent);
 		if (!priv->socket_window) /* Already gone */
 		  break; /* FIXME: shouldn't this unref the plug? i.e. "goto done;" instead */
 	      }
@@ -352,7 +354,10 @@ _gtk_plug_windowing_filter_func (GdkXEvent *gdk_xevent,
 	break;
       }
 
-#ifdef XINPUT_2
+#if 0
+ /* FIXME: this needs some X11 backend api to do things
+  * in a saner way
+  */
     case KeyPress:
     case KeyRelease:
       {
@@ -394,8 +399,8 @@ _gtk_plug_windowing_filter_func (GdkXEvent *gdk_xevent,
          */
         if (G_UNLIKELY (!core_device_manager))
           core_device_manager = g_object_new (GDK_TYPE_DEVICE_MANAGER_CORE,
-                                         "display", display,
-                                         NULL);
+                                              "display", display,
+                                              NULL);
 
         translated_event = gdk_event_translator_translate (GDK_EVENT_TRANSLATOR (core_device_manager), display, xevent);
         gdk_event_set_device (translated_event, keyboard);

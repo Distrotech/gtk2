@@ -27,6 +27,7 @@
 #include "config.h"
 
 #include "gdkinternals.h"
+#include "gdkdisplayprivate.h"
 
 #include <string.h>
 #include <math.h>
@@ -277,6 +278,45 @@ gdk_event_handler_set (GdkEventFunc   func,
 }
 
 /**
+ * gdk_events_pending:
+ *
+ * Checks if any events are ready to be processed for any display.
+ *
+ * Return value: %TRUE if any events are pending.
+ */
+gboolean
+gdk_events_pending (void)
+{
+  GSList *list, *l;
+  gboolean pending;
+
+  pending = FALSE;
+  list = gdk_display_manager_list_displays (gdk_display_manager_get ());
+  for (l = list; l; l = l->next)
+    {
+      if (_gdk_event_queue_find_first (l->data))
+        {
+          pending = TRUE;
+          goto out;
+        }
+    }
+
+  for (l = list; l; l = l->next)
+    {
+      if (gdk_display_has_pending (l->data))
+        {
+          pending = TRUE;
+          goto out;
+        }
+    }
+
+ out:
+  g_slist_free (list);
+
+  return pending;
+}
+
+/**
  * gdk_event_get:
  * 
  * Checks all open displays for a #GdkEvent to process,to be processed
@@ -289,16 +329,21 @@ gdk_event_handler_set (GdkEventFunc   func,
 GdkEvent*
 gdk_event_get (void)
 {
-  GSList *tmp_list;
+  GSList *list, *l;
+  GdkEvent *event;
 
-  for (tmp_list = _gdk_displays; tmp_list; tmp_list = tmp_list->next)
+  event = NULL;
+  list = gdk_display_manager_list_displays (gdk_display_manager_get ());
+  for (l = list; l; l = l->next)
     {
-      GdkEvent *event = gdk_display_get_event (tmp_list->data);
+      event = gdk_display_get_event (l->data);
       if (event)
-	return event;
+        break;
     }
 
-  return NULL;
+  g_slist_free (list);
+
+  return event;
 }
 
 /**
@@ -314,16 +359,21 @@ gdk_event_get (void)
 GdkEvent*
 gdk_event_peek (void)
 {
-  GSList *tmp_list;
+  GSList *list, *l;
+  GdkEvent *event;
 
-  for (tmp_list = _gdk_displays; tmp_list; tmp_list = tmp_list->next)
+  event = NULL;
+  list = gdk_display_manager_list_displays (gdk_display_manager_get ());
+  for (l = list; l; l = l->next)
     {
-      GdkEvent *event = gdk_display_peek_event (tmp_list->data);
+      event = gdk_display_peek_event (l->data);
       if (event)
-	return event;
+        break;
     }
 
-  return NULL;
+  g_slist_free (list);
+
+  return event;
 }
 
 /**
@@ -521,8 +571,8 @@ gdk_event_copy (const GdkEvent *event)
     }
 
   if (gdk_event_is_allocated (event))
-    _gdk_windowing_event_data_copy (event, new_event);
-  
+    _gdk_display_event_data_copy (gdk_display_get_default (), event, new_event);
+
   return new_event;
 }
 
@@ -589,7 +639,7 @@ gdk_event_free (GdkEvent *event)
       break;
     }
 
-  _gdk_windowing_event_data_free (event);
+  _gdk_display_event_data_free (gdk_display_get_default (), event);
 
   g_hash_table_remove (event_hash, event);
   g_slice_free (GdkEventPrivate, (GdkEventPrivate*) event);
