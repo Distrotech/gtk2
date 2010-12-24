@@ -29,10 +29,13 @@
 #import <Cocoa/Cocoa.h>
 #include <Carbon/Carbon.h>
 
+#include <gdk/gdkdisplayprivate.h>
+
 #include "gdkscreen.h"
 #include "gdkkeysyms.h"
+#include "gdkquartzdisplay.h"
 #include "gdkprivate-quartz.h"
-#include "gdkdevicemanager-core.h"
+#include "gdkquartzdevicemanager-core.h"
 
 #define GRIP_WIDTH 15
 #define GRIP_HEIGHT 15
@@ -52,15 +55,8 @@ static int          current_button_state;
 static void append_event                        (GdkEvent  *event,
                                                  gboolean   windowing);
 
-NSEvent *
-gdk_quartz_event_get_nsevent (GdkEvent *event)
-{
-  /* FIXME: If the event here is unallocated, we crash. */
-  return ((GdkEventPrivate *) event)->windowing_data;
-}
-
 void
-_gdk_events_init (void)
+_gdk_quartz_events_init (void)
 {
   _gdk_quartz_event_loop_init ();
 
@@ -68,53 +64,10 @@ _gdk_events_init (void)
 }
 
 gboolean
-gdk_events_pending (void)
+_gdk_quartz_display_has_pending (GdkDisplay *display)
 {
-  return (_gdk_event_queue_find_first (_gdk_display) ||
-	  (_gdk_quartz_event_loop_check_pending ()));
-}
-
-void
-gdk_device_ungrab (GdkDevice *device,
-                   guint32    time_)
-{
-  GdkDeviceGrabInfo *grab;
-
-  grab = _gdk_display_get_last_device_grab (_gdk_display, device);
-  if (grab)
-    grab->serial_end = 0;
-
-  _gdk_display_device_grab_update (_gdk_display, device, 0);
-}
-
-GdkGrabStatus
-_gdk_windowing_device_grab (GdkDevice    *device,
-                            GdkWindow    *window,
-                            GdkWindow    *native,
-                            gboolean      owner_events,
-                            GdkEventMask  event_mask,
-                            GdkWindow    *confine_to,
-                            GdkCursor    *cursor,
-                            guint32       time)
-{
-  g_return_val_if_fail (GDK_IS_WINDOW (window), 0);
-  g_return_val_if_fail (confine_to == NULL || GDK_IS_WINDOW (confine_to), 0);
-
-  if (!window || GDK_WINDOW_DESTROYED (window))
-    return GDK_GRAB_NOT_VIEWABLE;
-
-  _gdk_display_add_device_grab (_gdk_display,
-                                device,
-                                window,
-                                native,
-                                GDK_OWNERSHIP_NONE,
-                                owner_events,
-                                event_mask,
-                                0,
-                                time,
-                                FALSE);
-
-  return GDK_GRAB_SUCCESS;
+  return (_gdk_event_queue_find_first (display) ||
+         (_gdk_quartz_event_loop_check_pending ()));
 }
 
 static void
@@ -137,7 +90,7 @@ break_all_grabs (guint32 time)
           grab->implicit_ungrab = TRUE;
         }
 
-      _gdk_display_device_grab_update (_gdk_display, l->data, 0);
+      _gdk_display_device_grab_update (_gdk_display, l->data, NULL, 0);
     }
 
   g_list_free (list);
@@ -356,13 +309,13 @@ create_focus_event (GdkWindow *window,
 		    gboolean   in)
 {
   GdkEvent *event;
-  GdkDeviceManagerCore *device_manager;
+  GdkQuartzDeviceManagerCore *device_manager;
 
   event = gdk_event_new (GDK_FOCUS_CHANGE);
   event->focus_change.window = window;
   event->focus_change.in = in;
 
-  device_manager = GDK_DEVICE_MANAGER_CORE (_gdk_display->device_manager);
+  device_manager = GDK_QUARTZ_DEVICE_MANAGER_CORE (_gdk_display->device_manager);
   gdk_event_set_device (event, device_manager->core_keyboard);
 
   return event;
@@ -423,7 +376,7 @@ _gdk_quartz_events_update_focus_window (GdkWindow *window,
   if (got_focus && window == current_keyboard_window)
     return;
 
-  /* FIXME: Don't do this when grabbed? Or make GdkQuartzWindow
+  /* FIXME: Don't do this when grabbed? Or make GdkQuartzNSWindow
    * disallow it in the first place instead?
    */
   
@@ -944,7 +897,7 @@ fill_key_event (GdkWindow    *window,
                 GdkEventType  type)
 {
   GdkEventPrivate *priv;
-  GdkDeviceManagerCore *device_manager;
+  GdkQuartzDeviceManagerCore *device_manager;
   gchar buf[7];
   gunichar c = 0;
 
@@ -959,10 +912,10 @@ fill_key_event (GdkWindow    *window,
   event->key.group = ([nsevent modifierFlags] & NSAlternateKeyMask) ? 1 : 0;
   event->key.keyval = GDK_KEY_VoidSymbol;
 
-  device_manager = GDK_DEVICE_MANAGER_CORE (_gdk_display->device_manager);
+  device_manager = GDK_QUARTZ_DEVICE_MANAGER_CORE (_gdk_display->device_manager);
   gdk_event_set_device (event, device_manager->core_keyboard);
   
-  gdk_keymap_translate_keyboard_state (NULL,
+  gdk_keymap_translate_keyboard_state (gdk_keymap_get_for_display (_gdk_display),
 				       event->key.hardware_keycode,
 				       event->key.state, 
 				       event->key.group,
@@ -1184,7 +1137,7 @@ gdk_event_translate (GdkEvent *event,
    * dragged. This is a workaround for the window getting events for
    * the window title.
    */
-  if ([(GdkQuartzWindow *)nswindow isInMove])
+  if ([(GdkQuartzNSWindow *)nswindow isInMove])
     {
       break_all_grabs (get_time_from_ns_event (nsevent));
       return FALSE;
@@ -1341,7 +1294,7 @@ gdk_event_translate (GdkEvent *event,
 }
 
 void
-_gdk_events_queue (GdkDisplay *display)
+_gdk_quartz_display_queue_events (GdkDisplay *display)
 {  
   NSEvent *nsevent;
 
@@ -1381,52 +1334,35 @@ _gdk_events_queue (GdkDisplay *display)
 }
 
 void
-gdk_flush (void)
+_gdk_quartz_display_add_client_message_filter (GdkDisplay   *display,
+                                               GdkAtom       message_type,
+                                               GdkFilterFunc func,
+                                               gpointer      data)
 {
   /* Not supported. */
 }
 
-void
-gdk_display_add_client_message_filter (GdkDisplay   *display,
-				       GdkAtom       message_type,
-				       GdkFilterFunc func,
-				       gpointer      data)
-{
-  /* Not supported. */
-}
-
-void
-gdk_display_sync (GdkDisplay *display)
-{
-  /* Not supported. */
-}
-
-void
-gdk_display_flush (GdkDisplay *display)
-{
-  /* Not supported. */
-}
 
 gboolean
-gdk_event_send_client_message_for_display (GdkDisplay      *display,
-					   GdkEvent        *event,
-					   GdkNativeWindow  winid)
+_gdk_quartz_display_send_client_message (GdkDisplay      *display,
+                                         GdkEvent        *event,
+                                         GdkNativeWindow  winid)
 {
   /* Not supported. */
   return FALSE;
 }
 
 void
-gdk_screen_broadcast_client_message (GdkScreen *screen,
-				     GdkEvent  *event)
+_gdk_quartz_screen_broadcast_client_message (GdkScreen *screen,
+                                             GdkEvent  *event)
 {
   /* Not supported. */
 }
 
 gboolean
-gdk_screen_get_setting (GdkScreen   *screen,
-			const gchar *name,
-			GValue      *value)
+_gdk_quartz_screen_get_setting (GdkScreen   *screen,
+                                const gchar *name,
+                                GValue      *value)
 {
   if (strcmp (name, "gtk-double-click-time") == 0)
     {
@@ -1483,8 +1419,9 @@ gdk_screen_get_setting (GdkScreen   *screen,
 }
 
 void
-_gdk_windowing_event_data_copy (const GdkEvent *src,
-                                GdkEvent       *dst)
+_gdk_quartz_display_event_data_copy (GdkDisplay     *display,
+                                     const GdkEvent *src,
+                                     GdkEvent       *dst)
 {
   GdkEventPrivate *priv_src = (GdkEventPrivate *) src;
   GdkEventPrivate *priv_dst = (GdkEventPrivate *) dst;
@@ -1497,7 +1434,8 @@ _gdk_windowing_event_data_copy (const GdkEvent *src,
 }
 
 void
-_gdk_windowing_event_data_free (GdkEvent *event)
+_gdk_quartz_display_event_data_free (GdkDisplay *display,
+                                     GdkEvent   *event)
 {
   GdkEventPrivate *priv = (GdkEventPrivate *) event;
 

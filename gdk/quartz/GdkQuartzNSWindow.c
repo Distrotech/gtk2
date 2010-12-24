@@ -18,11 +18,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#import "GdkQuartzWindow.h"
-#include "gdkwindow-quartz.h"
+#import "GdkQuartzNSWindow.h"
+#include "gdkquartzwindow.h"
+#include "gdkdnd-quartz.h"
 #include "gdkprivate-quartz.h"
 
-@implementation GdkQuartzWindow
+@implementation GdkQuartzNSWindow
 
 -(BOOL)windowShouldClose:(id)sender
 {
@@ -441,7 +442,7 @@ update_context_from_dragging_info (id <NSDraggingInfo> sender)
 {
   g_assert (current_context != NULL);
 
-  GDK_DRAG_CONTEXT_PRIVATE (current_context)->dragging_info = sender;
+  GDK_QUARTZ_DRAG_CONTEXT (current_context)->dragging_info = sender;
   current_context->suggested_action = drag_operation_to_drag_action ([sender draggingSourceOperationMask]);
   current_context->actions = current_context->suggested_action;
 }
@@ -455,7 +456,7 @@ update_context_from_dragging_info (id <NSDraggingInfo> sender)
   if (current_context)
     g_object_unref (current_context);
   
-  current_context = gdk_drag_context_new ();
+  current_context = g_object_new (GDK_TYPE_QUARTZ_DRAG_CONTEXT, NULL);
   update_context_from_dragging_info (sender);
 
   window = [[self contentView] gdkWindow];

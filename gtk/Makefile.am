@@ -142,7 +142,7 @@ endif
 
 # GTK+ header files for public installation (non-generated, or generated
 # by configure)
-gtk_public_h_sources =          \
+gtk_public_h_sources = 		\
 	gtk.h			\
 	gtkaboutdialog.h	\
 	gtkaccelgroup.h		\
@@ -151,15 +151,14 @@ gtk_public_h_sources =          \
 	gtkaccessible.h		\
 	gtkaction.h		\
 	gtkactiongroup.h	\
-	gtkaccelgroupprivate.h	\
 	gtkactivatable.h	\
 	gtkadjustment.h		\
 	gtkalignment.h		\
 	gtkappchooser.h		\
+	gtkappchooserbutton.h	\
 	gtkappchooserdialog.h	\
-	gtkappchooserbutton.h   \
 	gtkappchooserwidget.h	\
-	gtkapplication.h    	\
+	gtkapplication.h	\
 	gtkarrow.h		\
 	gtkaspectframe.h	\
 	gtkassistant.h		\
@@ -173,9 +172,9 @@ gtk_public_h_sources =          \
 	gtkbutton.h		\
 	gtkcalendar.h		\
 	gtkcellarea.h		\
+	gtkcellareacontext.h	\
 	gtkcellareabox.h	\
 	gtkcellareaboxcontext.h	\
-	gtkcellareacontext.h	\
 	gtkcelleditable.h	\
 	gtkcelllayout.h		\
 	gtkcellrenderer.h	\
@@ -272,12 +271,12 @@ gtk_public_h_sources =          \
 	gtkrange.h		\
 	gtkrc.h			\
 	gtkrecentaction.h	\
-	gtkrecentchooser.h 	\
+	gtkrecentchooser.h	\
 	gtkrecentchooserdialog.h \
 	gtkrecentchoosermenu.h	\
 	gtkrecentchooserwidget.h \
 	gtkrecentfilter.h	\
-	gtkrecentmanager.h 	\
+	gtkrecentmanager.h	\
 	gtkscale.h		\
 	gtkscalebutton.h	\
 	gtkscrollable.h		\
@@ -287,8 +286,8 @@ gtk_public_h_sources =          \
 	gtkseparator.h		\
 	gtkseparatormenuitem.h	\
 	gtkseparatortoolitem.h	\
-	gtkshow.h		\
 	gtksettings.h		\
+	gtkshow.h		\
 	gtksizegroup.h		\
 	gtksizerequest.h	\
 	gtksocket.h		\
@@ -350,7 +349,7 @@ gtk_public_h_sources =          \
 	gtkwindow.h
 
 if OS_UNIX
-gtk_unix_print_public_h_sources =    \
+gtk_unix_print_public_h_sources = 	\
 	gtkpagesetupunixdialog.h	\
 	gtkprintunixdialog.h		\
 	gtkprinter.h			\
@@ -360,33 +359,32 @@ endif
 
 # Installed header files without compatibility guarantees
 # that are not included in gtk/gtk.h
-gtk_semi_private_h_sources =    \
+gtk_semi_private_h_sources = \
 	gtktextlayout.h
 
 if ENABLE_PACKAGEKIT
 gtk_appchooser_impl_h_sources = \
-	gtkappchooseronlinepk.h \
-	$(NULL)
+	gtkappchooseronlinepk.h
 endif
 
 if ENABLE_PACKAGEKIT
 gtk_appchooser_impl_c_sources = \
-	gtkappchooseronlinepk.c \
-	$(NULL)
+	gtkappchooseronlinepk.c
 endif
 
 # GTK+ header files that don't get installed
 gtk_private_h_sources =		\
-	gtk9slice.h 		\
+	gtk9slice.h		\
+	gtkaccelgroupprivate.h	\
+	gtkanimationdescription.h \
+	gtkappchooserprivate.h	\
+	gtkappchoosermodule.h	\
+	gtkappchooseronline.h	\
+	gtkbuilderprivate.h	\
 	gtkbuttonprivate.h	\
-	gtkquery.h		\
-	gtksearchengine.h	\
-	gtksearchenginesimple.h	\
+	gtkcustompaperunixdialog.h \
 	gtkdndcursors.h		\
 	gtkentryprivate.h	\
-	gtkanimationdescription.h \
-	gtkbuilderprivate.h 	\
-	gtkcustompaperunixdialog.h\
 	gtkfilechooserdefault.h	\
 	gtkfilechooserembed.h	\
 	gtkfilechooserentry.h	\
@@ -399,27 +397,29 @@ gtk_private_h_sources =		\
 	gtkintl.h		\
 	gtkkeyhash.h		\
 	gtkmenuprivate.h	\
+	gtkmenushellprivate.h	\
 	gtkmnemonichash.h	\
 	gtkmodifierstyle.h	\
 	gtkmountoperationprivate.h \
-	gtkappchooserprivate.h	\
-	gtkappchoosermodule.h 	\
-	gtkappchooseronline.h	\
 	gtkpango.h		\
 	gtkpathbar.h		\
 	gtkplugprivate.h	\
-	gtkprintoperation-private.h\
+	gtkprintoperation-private.h \
 	gtkprintutils.h		\
 	gtkprivate.h		\
+	gtkquery.h		\
 	gtkrbtree.h		\
 	gtkrecentchooserdefault.h \
 	gtkrecentchooserprivate.h \
-	gtkrecentchooserutils.h \
+	gtkrecentchooserutils.h	\
+	gtksearchengine.h	\
+	gtksearchenginesimple.h	\
 	gtkselectionprivate.h	\
+	gtksettingsprivate.h	\
 	gtksizegroup-private.h	\
 	gtksocketprivate.h	\
 	gtktextbtree.h		\
-	gtktextbufferserialize.h\
+	gtktextbufferserialize.h \
 	gtktextchildprivate.h	\
 	gtktextiterprivate.h	\
 	gtktextmarkprivate.h	\
@@ -428,7 +428,6 @@ gtk_private_h_sources =		\
 	gtktexttypes.h		\
 	gtktextutil.h		\
 	gtktimeline.h		\
-	gtkthemes.h		\
 	gtktoolpaletteprivate.h	\
 	gtktreedatalist.h	\
 	gtktreeprivate.h	\
@@ -438,7 +437,7 @@ gtk_private_h_sources =		\
 	$(gtk_appchooser_impl_h_sources)
 
 # GTK+ C sources to build the library from
-gtk_base_c_sources =            \
+gtk_base_c_sources = 		\
 	gtk9slice.c		\
 	gtkquery.c		\
 	gtksearchengine.c	\
@@ -456,11 +455,11 @@ gtk_base_c_sources =            \
 	gtkalignment.c		\
 	gtkappchooser.c		\
 	gtkappchooserwidget.c	\
-	gtkappchooserbutton.c   \
+	gtkappchooserbutton.c	\
 	gtkappchooserdialog.c	\
 	gtkappchoosermodule.c	\
 	gtkappchooseronline.c	\
-	gtkapplication.c 	\
+	gtkapplication.c	\
 	gtkanimationdescription.c \
 	gtkarrow.c		\
 	gtkaspectframe.c	\
@@ -486,8 +485,8 @@ gtk_base_c_sources =            \
 	gtkcellrenderercombo.c	\
 	gtkcellrendererpixbuf.c	\
 	gtkcellrendererprogress.c \
-	gtkcellrendererspin.c   \
-	gtkcellrendererspinner.c\
+	gtkcellrendererspin.c	\
+	gtkcellrendererspinner.c \
 	gtkcellrenderertext.c	\
 	gtkcellrenderertoggle.c	\
 	gtkcellview.c		\
@@ -497,7 +496,7 @@ gtk_base_c_sources =            \
 	gtkcolorsel.c		\
 	gtkcolorseldialog.c	\
 	gtkcombobox.c		\
-	gtkcomboboxtext.c 	\
+	gtkcomboboxtext.c	\
 	gtkcontainer.c		\
 	gtkcssprovider.c	\
 	gtkdialog.c		\
@@ -588,13 +587,13 @@ gtk_base_c_sources =            \
 	gtkrc.c			\
 	gtkrecentaction.c	\
 	gtkrecentchooserdefault.c \
-	gtkrecentchooserdialog.c\
+	gtkrecentchooserdialog.c \
 	gtkrecentchoosermenu.c	\
-	gtkrecentchooserwidget.c\
-	gtkrecentchooserutils.c \
-	gtkrecentchooser.c 	\
-	gtkrecentfilter.c 	\
-	gtkrecentmanager.c 	\
+	gtkrecentchooserwidget.c \
+	gtkrecentchooserutils.c	\
+	gtkrecentchooser.c	\
+	gtkrecentfilter.c	\
+	gtkrecentmanager.c	\
 	gtkscale.c		\
 	gtkscalebutton.c	\
 	gtkscrollable.c		\
@@ -626,7 +625,7 @@ gtk_base_c_sources =            \
 	gtktextbtree.c		\
 	gtktextbuffer.c		\
 	gtktextbufferrichtext.c	\
-	gtktextbufferserialize.c\
+	gtktextbufferserialize.c \
 	gtktextchild.c		\
 	gtktextdisplay.c	\
 	gtktextiter.c		\
@@ -638,7 +637,6 @@ gtk_base_c_sources =            \
 	gtktexttypes.c		\
 	gtktextutil.c		\
 	gtktextview.c		\
-	gtkthemes.c		\
 	gtkthemingengine.c	\
 	gtktimeline.c		\
 	gtktoggleaction.c	\
@@ -681,7 +679,7 @@ gtk_base_c_sources =            \
 gtk_c_sources = $(gtk_base_c_sources)
 gtk_all_c_sources = $(gtk_base_c_sources)
 
-gtk_os_unix_c_sources = \
+gtk_os_unix_c_sources = 		\
 	gtkcustompaperunixdialog.c	\
 	gtkpagesetupunixdialog.c	\
 	gtkprinter.c			\
@@ -717,40 +715,47 @@ gtk_private_h_sources += gtkprint-win32.h
 gtk_c_sources += $(gtk_os_win32_c_sources)
 endif
 
-gtk_use_x11_c_sources = \
-	gtkplug-x11.c   \
-	gtksocket-x11.c \
-	gtkxembed.c     \
-	gtktrayicon-x11.c \
+gtk_use_x11_c_sources = 	\
+	gtkplug-x11.c		\
+	gtksocket-x11.c		\
+	gtkxembed.c		\
+	gtktrayicon-x11.c	\
 	gtkmountoperation-x11.c
-gtk_use_win32_c_sources = \
-	gtkplug-win32.c   \
-	gtksocket-win32.c \
-	gtkwin32embed.c   \
-	gtkwin32embedwidget.c \
+gtk_use_win32_c_sources = 	\
+	gtkplug-win32.c		\
+	gtksocket-win32.c	\
+	gtkwin32embed.c		\
+	gtkwin32embedwidget.c	\
 	gtkmountoperation-stub.c
-gtk_use_quartz_c_sources =	\
+gtk_use_quartz_c_sources = 	\
 	gtksearchenginequartz.c	\
+	gtkquartz.c		\
 	gtkplug-stub.c		\
 	gtksocket-stub.c	\
 	gtkmountoperation-stub.c
-gtk_use_stub_c_sources = \
-	gtkplug-stub.c   \
-	gtksocket-stub.c \
+gtk_use_stub_c_sources = 	\
+	gtkplug-stub.c		\
+	gtksocket-stub.c	\
 	gtkmountoperation-stub.c
-gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_quartz_c_sources) $(gtk_use_stub_c_sources)
+gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_stub_c_sources)
 if USE_X11
-gtk_private_h_sources += gtkxembed.h gtktrayicon.h xembed.h
+gtk_private_h_sources += 	\
+	gtkxembed.h		\
+	gtktrayicon.h		\
+	xembed.h
 gtk_c_sources += $(gtk_use_x11_c_sources)
 else
 if USE_WIN32
-gtk_private_h_sources += gtkwin32embed.h gtkwin32embedwidget.h
+gtk_private_h_sources += 	\
+	gtkwin32embed.h		\
+	gtkwin32embedwidget.h
 gtk_c_sources += $(gtk_use_win32_c_sources)
 else
 if USE_QUARTZ
-gtk_private_h_sources += gtksearchenginequartz.h
+gtk_private_h_sources += 	\
+	gtksearchenginequartz.h
 gtk_c_sources += $(gtk_use_quartz_c_sources)
-libgtk_quartz_3_0_la_CFLAGS = "-xobjective-c"
+libgtk_3_0_la_CFLAGS = "-xobjective-c"
 else
 gtk_c_sources += $(gtk_use_stub_c_sources)
 endif
@@ -758,7 +763,9 @@ endif
 endif
 
 if USE_QUARTZ
-gtk_clipboard_dnd_c_sources = gtkclipboard-quartz.c gtkdnd-quartz.c gtkquartz.c
+gtk_clipboard_dnd_c_sources = 	\
+	gtkclipboard-quartz.c	\
+	gtkdnd-quartz.c		
 gtk_clipboard_dnd_h_sources = gtkquartz.h
 else
 gtk_clipboard_dnd_c_sources = gtkclipboard.c gtkdnd.c
@@ -799,7 +806,7 @@ gtk_extra_sources =				\
 	paper_names.c				\
 	paper_names_offsets.c			\
 	gen-paper-names.c			\
-	gtkstatusicon-quartz.c                  \
+	gtkstatusicon-quartz.c			\
 	gtk.symbols				\
 	gtkversion.h.in				\
 	gtkmarshalers.list
@@ -833,7 +840,7 @@ stamp-gtkmarshalers.h: @REBUILD@ gtkmarshalers.list
 	$(GLIB_GENMARSHAL) --prefix=_gtk_marshal $(srcdir)/gtkmarshalers.list --header >> xgen-gmlh \
 	&& (cmp -s xgen-gmlh gtkmarshalers.h || cp xgen-gmlh gtkmarshalers.h) \
 	&& rm -f xgen-gmlh \
-	&& echo timestamp > $(@F)	
+	&& echo timestamp > $(@F)
 gtkmarshalers.c: @REBUILD@ gtkmarshalers.list
 	(echo "#include \"gtkmarshalers.h\""; \
 	 $(GLIB_GENMARSHAL) --prefix=_gtk_marshal $(srcdir)/gtkmarshalers.list --body) >> xgen-gmlc \

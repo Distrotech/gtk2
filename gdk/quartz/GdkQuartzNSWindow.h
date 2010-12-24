@@ -1,4 +1,4 @@
-/* GdkQuartzWindow.h
+/* GdkQuartzNSWindow.h
  *
  * Copyright (C) 2005-2007 Imendio AB
  *
@@ -22,7 +22,7 @@
 #import <Foundation/Foundation.h>
 #include <glib.h>
 
-@interface GdkQuartzWindow : NSWindow {
+@interface GdkQuartzNSWindow : NSWindow {
   BOOL    inMove;
   BOOL    inShowOrHide;
 

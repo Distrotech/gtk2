@@ -36,6 +36,14 @@
 #include "x11/gdkx.h"
 #endif
 
+#ifdef GDK_WINDOWING_QUARTZ
+/* We immediately include gdkquartzdisplaymanager.h here instead of
+ * gdkquartz.h so that we do not have to enable -xobjective-c for the
+ * "generic" GDK source code.
+ */
+#include "quartz/gdkquartzdisplaymanager.h"
+#endif
+
 
 /**
  * SECTION:gdkdisplaymanager
@@ -180,6 +188,11 @@ gdk_display_manager_get (void)
 #ifdef GDK_WINDOWING_X11
       if (backend == NULL || strcmp (backend, "x11") == 0)
         manager = g_object_new (gdk_x11_display_manager_get_type (), NULL);
+      else
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+      if (backend == NULL || strcmp (backend, "quartz") == 0)
+        manager = g_object_new (gdk_quartz_display_manager_get_type (), NULL);
       else
 #endif
       if (backend != NULL)

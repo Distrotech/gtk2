@@ -20,14 +20,17 @@
  */
 
 #include "config.h"
-#include <Carbon/Carbon.h>
 
-#include "gdk.h"
-#include "gdkdeviceprivate.h"
+#include <gdk/gdk.h>
+#include <gdk/gdkdeviceprivate.h>
+#include <gdk/gdkdisplayprivate.h>
+
 #include "gdkwindowimpl.h"
 #include "gdkprivate-quartz.h"
-#include "gdkscreen-quartz.h"
-#include "gdkinputprivate.h"
+#include "gdkquartzscreen.h"
+#include "gdkquartzcursor.h"
+
+#include <Carbon/Carbon.h>
 
 #include <sys/time.h>
 #include <cairo-quartz.h>
@@ -61,6 +64,37 @@ static FullscreenSavedGeometry *get_fullscreen_geometry (GdkWindow *window);
   (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD &&   \
    GDK_WINDOW_TYPE (window) != GDK_WINDOW_FOREIGN && \
    GDK_WINDOW_TYPE (window) != GDK_WINDOW_OFFSCREEN)
+
+/*
+ * GdkQuartzWindow
+ */
+
+struct _GdkQuartzWindow
+{
+  GdkWindow parent;
+};
+
+struct _GdkQuartzWindowClass
+{
+  GdkWindowClass parent_class;
+};
+
+G_DEFINE_TYPE (GdkQuartzWindow, gdk_quartz_window, GDK_TYPE_WINDOW);
+
+static void
+gdk_quartz_window_class_init (GdkQuartzWindowClass *quartz_window_class)
+{
+}
+
+static void
+gdk_quartz_window_init (GdkQuartzWindow *quartz_window)
+{
+}
+
+
+/*
+ * GdkQuartzWindowImpl
+ */
 
 NSView *
 gdk_quartz_window_get_nsview (GdkWindow *window)
@@ -399,9 +433,9 @@ gdk_window_impl_quartz_end_paint (GdkPaintable *paintable)
     }
 }
 
-void
-_gdk_quartz_window_set_needs_display_in_region (GdkWindow    *window,
-                                                cairo_region_t    *region)
+static void
+gdk_quartz_window_set_needs_display_in_region (GdkWindow    *window,
+                                               cairo_region_t    *region)
 {
   GdkWindowImplQuartz *impl;
   int i, n_rects;
@@ -424,8 +458,8 @@ _gdk_quartz_window_set_needs_display_in_region (GdkWindow    *window,
 }
 
 void
-_gdk_windowing_window_process_updates_recurse (GdkWindow *window,
-                                               cairo_region_t *region)
+_gdk_quartz_window_process_updates_recurse (GdkWindow *window,
+                                            cairo_region_t *region)
 {
   /* Make sure to only flush each toplevel at most once if we're called
    * from process_all_updates.
@@ -456,7 +490,7 @@ _gdk_windowing_window_process_updates_recurse (GdkWindow *window,
     }
 
   if (WINDOW_IS_TOPLEVEL (window))
-    _gdk_quartz_window_set_needs_display_in_region (window, region);
+    gdk_quartz_window_set_needs_display_in_region (window, region);
   else
     _gdk_window_process_updates_recurse (window, region);
 
@@ -467,7 +501,7 @@ _gdk_windowing_window_process_updates_recurse (GdkWindow *window,
 }
 
 void
-_gdk_windowing_before_process_all_updates (void)
+_gdk_quartz_display_before_process_all_updates (GdkDisplay *display)
 {
   in_process_all_updates = TRUE;
 
@@ -475,7 +509,7 @@ _gdk_windowing_before_process_all_updates (void)
 }
 
 void
-_gdk_windowing_after_process_all_updates (void)
+_gdk_quartz_display_after_process_all_updates (GdkDisplay *display)
 {
   GSList *old_update_nswindows = update_nswindows;
   GSList *tmp_list = update_nswindows;
@@ -649,7 +683,7 @@ _gdk_quartz_window_gdk_xy_to_xy (gint  gdk_x,
                                  gint *ns_x,
                                  gint *ns_y)
 {
-  GdkScreenQuartz *screen_quartz = GDK_SCREEN_QUARTZ (_gdk_screen);
+  GdkQuartzScreen *screen_quartz = GDK_QUARTZ_SCREEN (_gdk_screen);
 
   if (ns_y)
     *ns_y = screen_quartz->height - gdk_y + screen_quartz->min_y;
@@ -664,7 +698,7 @@ _gdk_quartz_window_xy_to_gdk_xy (gint  ns_x,
                                  gint *gdk_x,
                                  gint *gdk_y)
 {
-  GdkScreenQuartz *screen_quartz = GDK_SCREEN_QUARTZ (_gdk_screen);
+  GdkQuartzScreen *screen_quartz = GDK_QUARTZ_SCREEN (_gdk_screen);
 
   if (gdk_y)
     *gdk_y = screen_quartz->height - ns_y + screen_quartz->min_y;
@@ -843,12 +877,13 @@ get_nsscreen_for_point (gint x, gint y)
 }
 
 void
-_gdk_window_impl_new (GdkWindow     *window,
-		      GdkWindow     *real_parent,
-		      GdkScreen     *screen,
-		      GdkEventMask   event_mask,
-		      GdkWindowAttr *attributes,
-		      gint           attributes_mask)
+_gdk_quartz_display_create_window_impl (GdkDisplay    *display,
+                                        GdkWindow     *window,
+                                        GdkWindow     *real_parent,
+                                        GdkScreen     *screen,
+                                        GdkEventMask   event_mask,
+                                        GdkWindowAttr *attributes,
+                                        gint           attributes_mask)
 {
   GdkWindowImplQuartz *impl;
   GdkWindowImplQuartz *parent_impl;
@@ -925,11 +960,11 @@ _gdk_window_impl_new (GdkWindow     *window,
                           NSResizableWindowMask);
           }
 
-	impl->toplevel = [[GdkQuartzWindow alloc] initWithContentRect:content_rect 
-			                                    styleMask:style_mask
-			                                      backing:NSBackingStoreBuffered
-			                                        defer:NO
-                                                                screen:screen];
+	impl->toplevel = [[GdkQuartzNSWindow alloc] initWithContentRect:content_rect 
+			                                      styleMask:style_mask
+			                                        backing:NSBackingStoreBuffered
+			                                          defer:NO
+                                                                  screen:screen];
 
 	if (attributes_mask & GDK_WA_TITLE)
 	  title = attributes->title;
@@ -1008,48 +1043,22 @@ _gdk_quartz_window_update_position (GdkWindow *window)
 }
 
 void
-_gdk_windowing_update_window_sizes (GdkScreen *screen)
-{
-  GList *windows, *list;
-
-  /* The size of the root window is so that it can contain all
-   * monitors attached to this machine.  The monitors are laid out
-   * within this root window.  We calculate the size of the root window
-   * and the positions of the different monitors in gdkscreen-quartz.c.
-   *
-   * This data is updated when the monitor configuration is changed.
-   */
-  _gdk_root->x = 0;
-  _gdk_root->y = 0;
-  _gdk_root->abs_x = 0;
-  _gdk_root->abs_y = 0;
-  _gdk_root->width = gdk_screen_get_width (screen);
-  _gdk_root->height = gdk_screen_get_height (screen);
-
-  windows = gdk_screen_get_toplevel_windows (screen);
-
-  for (list = windows; list; list = list->next)
-    _gdk_quartz_window_update_position (list->data);
-
-  g_list_free (windows);
-}
-
-void
-_gdk_windowing_window_init (void)
+_gdk_quartz_window_init_windowing (GdkDisplay *display,
+                                   GdkScreen  *screen)
 {
   GdkWindowImplQuartz *impl;
 
   g_assert (_gdk_root == NULL);
 
-  _gdk_root = _gdk_display_create_window (_gdk_display);
+  _gdk_root = _gdk_display_create_window (display);
 
   _gdk_root->impl = g_object_new (_gdk_root_window_impl_quartz_get_type (), NULL);
   _gdk_root->impl_window = _gdk_root;
-  _gdk_root->visual = gdk_screen_get_system_visual (_gdk_screen);
+  _gdk_root->visual = gdk_screen_get_system_visual (screen);
 
   impl = GDK_WINDOW_IMPL_QUARTZ (_gdk_root->impl);
 
-  _gdk_windowing_update_window_sizes (_gdk_screen);
+  _gdk_quartz_screen_update_window_sizes (screen);
 
   _gdk_root->state = 0; /* We don't want GDK_WINDOW_STATE_WITHDRAWN here */
   _gdk_root->window_type = GDK_WINDOW_ROOT;
@@ -1144,7 +1153,7 @@ gdk_window_quartz_show (GdkWindow *window, gboolean already_mapped)
       make_key = (window->accept_focus && focus_on_map &&
                   window->window_type != GDK_WINDOW_TEMP);
 
-      [(GdkQuartzWindow*)impl->toplevel showAndMakeKey:make_key];
+      [(GdkQuartzNSWindow*)impl->toplevel showAndMakeKey:make_key];
       clear_toplevel_order ();
 
       _gdk_quartz_events_send_map_event (window);
@@ -1241,7 +1250,7 @@ gdk_window_quartz_hide (GdkWindow *window)
       if (impl->transient_for)
         _gdk_quartz_window_detach_from_parent (window);
 
-      [(GdkQuartzWindow*)impl->toplevel hide];
+      [(GdkQuartzNSWindow*)impl->toplevel hide];
     }
   else if (impl->view)
     {
@@ -1378,7 +1387,7 @@ move_resize_window_internal (GdkWindow *window,
 
               [impl->view setFrame:nsrect];
 
-              _gdk_quartz_window_set_needs_display_in_region (window, expose_region);
+              gdk_quartz_window_set_needs_display_in_region (window, expose_region);
             }
           else
             {
@@ -1638,18 +1647,12 @@ gdk_window_quartz_set_device_cursor (GdkWindow *window,
                                      GdkDevice *device,
                                      GdkCursor *cursor)
 {
-  GdkCursorPrivate *cursor_private;
   NSCursor *nscursor;
-
-  cursor_private = (GdkCursorPrivate *)cursor;
 
   if (GDK_WINDOW_DESTROYED (window))
     return;
 
-  if (!cursor)
-    nscursor = [NSCursor arrowCursor];
-  else 
-    nscursor = cursor_private->nscursor;
+  nscursor = _gdk_quartz_cursor_get_ns_cursor (cursor);
 
   [nscursor set];
 }
@@ -1789,10 +1792,10 @@ gdk_window_quartz_get_root_coords (GdkWindow *window,
   return TRUE;
 }
 
-void
-gdk_window_get_root_origin (GdkWindow *window,
-			    gint      *x,
-			    gint      *y)
+static void
+gdk_quartz_window_get_root_origin (GdkWindow *window,
+                                   gint      *x,
+                                   gint      *y)
 {
   GdkRectangle rect;
 
@@ -1897,15 +1900,6 @@ _gdk_windowing_get_device_state (GdkDisplay       *display,
   gdk_window_quartz_get_device_state_helper (_gdk_root, device, x, y, mask);
 }
 
-void
-gdk_display_warp_pointer (GdkDisplay *display,
-			  GdkScreen  *screen,
-			  gint        x,
-			  gint        y)
-{
-  CGDisplayMoveCursorToPoint (CGMainDisplayID (), CGPointMake (x, y));
-}
-
 /* Returns coordinates relative to the found window. */
 GdkWindow *
 _gdk_windowing_window_at_pointer (GdkDisplay      *display,
@@ -2000,9 +1994,9 @@ gdk_window_quartz_set_events (GdkWindow       *window,
   /* The mask is set in the common code. */
 }
 
-void
-gdk_window_set_urgency_hint (GdkWindow *window,
-			     gboolean   urgent)
+static void
+gdk_quartz_window_set_urgency_hint (GdkWindow *window,
+                                    gboolean   urgent)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
@@ -2011,10 +2005,10 @@ gdk_window_set_urgency_hint (GdkWindow *window,
   /* FIXME: Implement */
 }
 
-void 
-gdk_window_set_geometry_hints (GdkWindow         *window,
-			       const GdkGeometry *geometry,
-			       GdkWindowHints     geom_mask)
+static void
+gdk_quartz_window_set_geometry_hints (GdkWindow         *window,
+                                      const GdkGeometry *geometry,
+                                      GdkWindowHints     geom_mask)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2089,9 +2083,9 @@ gdk_window_set_geometry_hints (GdkWindow         *window,
     }
 }
 
-void
-gdk_window_set_title (GdkWindow   *window,
-		      const gchar *title)
+static void
+gdk_quartz_window_set_title (GdkWindow   *window,
+                             const gchar *title)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2111,9 +2105,9 @@ gdk_window_set_title (GdkWindow   *window,
     }
 }
 
-void          
-gdk_window_set_role (GdkWindow   *window,
-		     const gchar *role)
+static void
+gdk_quartz_window_set_role (GdkWindow   *window,
+                            const gchar *role)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       WINDOW_IS_TOPLEVEL (window))
@@ -2122,9 +2116,16 @@ gdk_window_set_role (GdkWindow   *window,
   /* FIXME: Implement */
 }
 
-void
-gdk_window_set_transient_for (GdkWindow *window, 
-			      GdkWindow *parent)
+static void
+gdk_quartz_window_set_startup_id (GdkWindow   *window,
+                                  const gchar *startup_id)
+{
+  /* FIXME: Implement? */
+}
+
+static void
+gdk_quartz_window_set_transient_for (GdkWindow *window,
+                                     GdkWindow *parent)
 {
   GdkWindowImplQuartz *window_impl;
   GdkWindowImplQuartz *parent_impl;
@@ -2193,16 +2194,16 @@ gdk_window_quartz_input_shape_combine_region (GdkWindow       *window,
   /* FIXME: Implement */
 }
 
-void
-gdk_window_set_override_redirect (GdkWindow *window,
-				  gboolean override_redirect)
+static void
+gdk_quartz_window_set_override_redirect (GdkWindow *window,
+                                         gboolean override_redirect)
 {
   /* FIXME: Implement */
 }
 
-void
-gdk_window_set_accept_focus (GdkWindow *window,
-			     gboolean accept_focus)
+static void
+gdk_quartz_window_set_accept_focus (GdkWindow *window,
+                                    gboolean accept_focus)
 {
   window->accept_focus = accept_focus != FALSE;
 }
@@ -2219,23 +2220,73 @@ gdk_window_quartz_set_static_gravities (GdkWindow *window,
   return FALSE;
 }
 
-void
-gdk_window_set_focus_on_map (GdkWindow *window,
-			     gboolean focus_on_map)
+static gboolean
+gdk_quartz_window_queue_antiexpose (GdkWindow *window,
+                                    cairo_region_t *area)
+{
+  return FALSE;
+}
+
+static void
+gdk_quartz_window_translate (GdkWindow      *window,
+                             cairo_region_t *area,
+                             gint            dx,
+                             gint            dy)
+{
+  cairo_region_t *invalidate, *scrolled;
+  GdkWindowImplQuartz *impl = (GdkWindowImplQuartz *)window->impl;
+  GdkRectangle extents;
+
+  cairo_region_get_extents (area, &extents);
+
+  [impl->view scrollRect:NSMakeRect (extents.x - dx, extents.y - dy,
+                                     extents.width, extents.height)
+              by:NSMakeSize (dx, dy)];
+
+  if (impl->needs_display_region)
+    {
+      cairo_region_t *intersection;
+
+      /* Invalidate already invalidated area that was moved at new
+       * location.
+       */
+      intersection = cairo_region_copy (impl->needs_display_region);
+      cairo_region_intersect (intersection, area);
+      cairo_region_translate (intersection, dx, dy);
+
+      gdk_quartz_window_set_needs_display_in_region (window, intersection);
+      cairo_region_destroy (intersection);
+    }
+
+  /* Calculate newly exposed area that needs invalidation */
+  scrolled = cairo_region_copy (area);
+  cairo_region_translate (scrolled, dx, dy);
+
+  invalidate = cairo_region_copy (area);
+  cairo_region_subtract (invalidate, scrolled);
+  cairo_region_destroy (scrolled);
+
+  gdk_quartz_window_set_needs_display_in_region (window, invalidate);
+  cairo_region_destroy (invalidate);
+}
+
+static void
+gdk_quartz_window_set_focus_on_map (GdkWindow *window,
+                                    gboolean focus_on_map)
 {
   window->focus_on_map = focus_on_map != FALSE;
 }
 
-void          
-gdk_window_set_icon_name (GdkWindow   *window, 
-			  const gchar *name)
+static void
+gdk_quartz_window_set_icon_name (GdkWindow   *window,
+                                 const gchar *name)
 {
   /* FIXME: Implement */
 }
 
-void
-gdk_window_focus (GdkWindow *window,
-                  guint32    timestamp)
+static void
+gdk_quartz_window_focus (GdkWindow *window,
+                         guint32    timestamp)
 {
   GdkWindowImplQuartz *impl;
 	
@@ -2321,9 +2372,9 @@ window_type_hint_to_shadow (GdkWindowTypeHint hint)
 }
 
 
-void
-gdk_window_set_type_hint (GdkWindow        *window,
-			  GdkWindowTypeHint hint)
+static void
+gdk_quartz_window_set_type_hint (GdkWindow        *window,
+                                 GdkWindowTypeHint hint)
 {
   GdkWindowImplQuartz *impl;
   
@@ -2343,8 +2394,8 @@ gdk_window_set_type_hint (GdkWindow        *window,
   [impl->toplevel setLevel: window_type_hint_to_level (hint)];
 }
 
-GdkWindowTypeHint
-gdk_window_get_type_hint (GdkWindow *window)
+static GdkWindowTypeHint
+gdk_quartz_window_get_type_hint (GdkWindow *window)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
@@ -2353,9 +2404,9 @@ gdk_window_get_type_hint (GdkWindow *window)
   return GDK_WINDOW_IMPL_QUARTZ (window->impl)->type_hint;
 }
 
-void
-gdk_window_set_modal_hint (GdkWindow *window,
-			   gboolean   modal)
+static void
+gdk_quartz_window_set_modal_hint (GdkWindow *window,
+                                  gboolean   modal)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
@@ -2364,9 +2415,9 @@ gdk_window_set_modal_hint (GdkWindow *window,
   /* FIXME: Implement */
 }
 
-void
-gdk_window_set_skip_taskbar_hint (GdkWindow *window,
-				  gboolean   skips_taskbar)
+static void
+gdk_quartz_window_set_skip_taskbar_hint (GdkWindow *window,
+                                         gboolean   skips_taskbar)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
@@ -2375,9 +2426,9 @@ gdk_window_set_skip_taskbar_hint (GdkWindow *window,
   /* FIXME: Implement */
 }
 
-void
-gdk_window_set_skip_pager_hint (GdkWindow *window,
-				gboolean   skips_pager)
+static void
+gdk_quartz_window_set_skip_pager_hint (GdkWindow *window,
+                                       gboolean   skips_pager)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
@@ -2386,13 +2437,13 @@ gdk_window_set_skip_pager_hint (GdkWindow *window,
   /* FIXME: Implement */
 }
 
-void
-gdk_window_begin_resize_drag (GdkWindow     *window,
-                              GdkWindowEdge  edge,
-                              gint           button,
-                              gint           root_x,
-                              gint           root_y,
-                              guint32        timestamp)
+static void
+gdk_quartz_window_begin_resize_drag (GdkWindow     *window,
+                                     GdkWindowEdge  edge,
+                                     gint           button,
+                                     gint           root_x,
+                                     gint           root_y,
+                                     guint32        timestamp)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2415,15 +2466,15 @@ gdk_window_begin_resize_drag (GdkWindow     *window,
       return;
     }
 
-  [(GdkQuartzWindow *)impl->toplevel beginManualResize];
+  [(GdkQuartzNSWindow *)impl->toplevel beginManualResize];
 }
 
-void
-gdk_window_begin_move_drag (GdkWindow *window,
-                            gint       button,
-                            gint       root_x,
-                            gint       root_y,
-                            guint32    timestamp)
+static void
+gdk_quartz_window_begin_move_drag (GdkWindow *window,
+                                   gint       button,
+                                   gint       root_x,
+                                   gint       root_y,
+                                   guint32    timestamp)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2439,19 +2490,19 @@ gdk_window_begin_move_drag (GdkWindow *window,
       return;
     }
 
-  [(GdkQuartzWindow *)impl->toplevel beginManualMove];
+  [(GdkQuartzNSWindow *)impl->toplevel beginManualMove];
 }
 
-void
-gdk_window_set_icon_list (GdkWindow *window,
-			  GList     *pixbufs)
+static void
+gdk_quartz_window_set_icon_list (GdkWindow *window,
+                                 GList     *pixbufs)
 {
   /* FIXME: Implement */
 }
 
-void
-gdk_window_get_frame_extents (GdkWindow    *window,
-                              GdkRectangle *rect)
+static void
+gdk_quartz_window_get_frame_extents (GdkWindow    *window,
+                                     GdkRectangle *rect)
 {
   GdkWindow *toplevel;
   GdkWindowImplQuartz *impl;
@@ -2478,9 +2529,9 @@ gdk_window_get_frame_extents (GdkWindow    *window,
   rect->height = ns_rect.size.height;
 }
 
-void
-gdk_window_set_decorations (GdkWindow       *window,
-			    GdkWMDecoration  decorations)
+static void
+gdk_quartz_window_set_decorations (GdkWindow       *window,
+                                   GdkWMDecoration  decorations)
 {
   GdkWindowImplQuartz *impl;
   NSUInteger old_mask, new_mask;
@@ -2556,9 +2607,9 @@ gdk_window_set_decorations (GdkWindow       *window,
   GDK_QUARTZ_RELEASE_POOL;
 }
 
-gboolean
-gdk_window_get_decorations (GdkWindow       *window,
-			    GdkWMDecoration *decorations)
+static gboolean
+gdk_quartz_window_get_decorations (GdkWindow       *window,
+                                   GdkWMDecoration *decorations)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2585,9 +2636,9 @@ gdk_window_get_decorations (GdkWindow       *window,
   return TRUE;
 }
 
-void
-gdk_window_set_functions (GdkWindow    *window,
-			  GdkWMFunction functions)
+static void
+gdk_quartz_window_set_functions (GdkWindow    *window,
+                                 GdkWMFunction functions)
 {
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -2601,24 +2652,24 @@ _gdk_windowing_window_queue_antiexpose (GdkWindow  *window,
   return FALSE;
 }
 
-void
-gdk_window_stick (GdkWindow *window)
+static void
+gdk_quartz_window_stick (GdkWindow *window)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
     return;
 }
 
-void
-gdk_window_unstick (GdkWindow *window)
+static void
+gdk_quartz_window_unstick (GdkWindow *window)
 {
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
     return;
 }
 
-void
-gdk_window_maximize (GdkWindow *window)
+static void
+gdk_quartz_window_maximize (GdkWindow *window)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2645,8 +2696,8 @@ gdk_window_maximize (GdkWindow *window)
     }
 }
 
-void
-gdk_window_unmaximize (GdkWindow *window)
+static void
+gdk_quartz_window_unmaximize (GdkWindow *window)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2673,8 +2724,8 @@ gdk_window_unmaximize (GdkWindow *window)
     }
 }
 
-void
-gdk_window_iconify (GdkWindow *window)
+static void
+gdk_quartz_window_iconify (GdkWindow *window)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2701,8 +2752,8 @@ gdk_window_iconify (GdkWindow *window)
     }
 }
 
-void
-gdk_window_deiconify (GdkWindow *window)
+static void
+gdk_quartz_window_deiconify (GdkWindow *window)
 {
   GdkWindowImplQuartz *impl;
 
@@ -2735,8 +2786,8 @@ get_fullscreen_geometry (GdkWindow *window)
   return g_object_get_data (G_OBJECT (window), FULLSCREEN_DATA);
 }
 
-void
-gdk_window_fullscreen (GdkWindow *window)
+static void
+gdk_quartz_window_fullscreen (GdkWindow *window)
 {
   FullscreenSavedGeometry *geometry;
   NSRect frame;
@@ -2775,8 +2826,8 @@ gdk_window_fullscreen (GdkWindow *window)
   gdk_synthesize_window_state (window, 0, GDK_WINDOW_STATE_FULLSCREEN);
 }
 
-void
-gdk_window_unfullscreen (GdkWindow *window)
+static void
+gdk_quartz_window_unfullscreen (GdkWindow *window)
 {
   FullscreenSavedGeometry *geometry;
 
@@ -2803,8 +2854,9 @@ gdk_window_unfullscreen (GdkWindow *window)
     }
 }
 
-void
-gdk_window_set_keep_above (GdkWindow *window, gboolean setting)
+static void
+gdk_quartz_window_set_keep_above (GdkWindow *window,
+                                  gboolean   setting)
 {
   GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (window->impl);
   gint level;
@@ -2821,8 +2873,9 @@ gdk_window_set_keep_above (GdkWindow *window, gboolean setting)
   [impl->toplevel setLevel: level + (setting ? 1 : 0)];
 }
 
-void
-gdk_window_set_keep_below (GdkWindow *window, gboolean setting)
+static void
+gdk_quartz_window_set_keep_below (GdkWindow *window,
+                                  gboolean   setting)
 {
   GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (window->impl);
   gint level;
@@ -2839,8 +2892,8 @@ gdk_window_set_keep_below (GdkWindow *window, gboolean setting)
   [impl->toplevel setLevel: level - (setting ? 1 : 0)];
 }
 
-GdkWindow *
-gdk_window_get_group (GdkWindow *window)
+static GdkWindow *
+gdk_quartz_window_get_group (GdkWindow *window)
 {
   g_return_val_if_fail (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD, NULL);
 
@@ -2853,47 +2906,32 @@ gdk_window_get_group (GdkWindow *window)
   return NULL;
 }
 
-void          
-gdk_window_set_group (GdkWindow *window, 
-		      GdkWindow *leader)
+static void
+gdk_quartz_window_set_group (GdkWindow *window,
+                             GdkWindow *leader)
 {
   /* FIXME: Implement */	
 }
 
-GdkWindow*
-gdk_window_foreign_new_for_display (GdkDisplay      *display,
-				    GdkNativeWindow  anid)
-{
-  /* Foreign windows aren't supported in Mac OS X */
-  return NULL;
-}
-
-GdkWindow *
-gdk_window_lookup_for_display (GdkDisplay *display, GdkNativeWindow anid)
-{
-  /* Foreign windows aren't supported in Mac OS X */
-  return NULL;
-}
-
-void
-gdk_window_enable_synchronized_configure (GdkWindow *window)
+static void
+gdk_quartz_window_enable_synchronized_configure (GdkWindow *window)
 {
 }
 
-void
-gdk_window_configure_finished (GdkWindow *window)
+static void
+gdk_quartz_window_configure_finished (GdkWindow *window)
 {
 }
 
-void
-gdk_window_destroy_notify (GdkWindow *window)
+static void
+gdk_quartz_window_destroy_notify (GdkWindow *window)
 {
   check_grab_destroy (window);
 }
 
-void
-gdk_window_set_opacity (GdkWindow *window,
-			gdouble    opacity)
+static void
+gdk_quartz_window_set_opacity (GdkWindow *window,
+                               gdouble    opacity)
 {
   GdkWindowImplQuartz *impl = GDK_WINDOW_IMPL_QUARTZ (window->impl);
 
@@ -2957,13 +2995,65 @@ gdk_window_impl_quartz_class_init (GdkWindowImplQuartzClass *klass)
   impl_class->shape_combine_region = gdk_window_quartz_shape_combine_region;
   impl_class->input_shape_combine_region = gdk_window_quartz_input_shape_combine_region;
   impl_class->set_static_gravities = gdk_window_quartz_set_static_gravities;
-  impl_class->queue_antiexpose = _gdk_quartz_window_queue_antiexpose;
-  impl_class->translate = _gdk_quartz_window_translate;
+  impl_class->queue_antiexpose = gdk_quartz_window_queue_antiexpose;
+  impl_class->translate = gdk_quartz_window_translate;
   impl_class->destroy = gdk_quartz_window_destroy;
   impl_class->destroy_foreign = gdk_quartz_window_destroy_foreign;
   impl_class->resize_cairo_surface = gdk_window_quartz_resize_cairo_surface;
   impl_class->get_shape = gdk_quartz_window_get_shape;
   impl_class->get_input_shape = gdk_quartz_window_get_input_shape;
+
+  impl_class->focus = gdk_quartz_window_focus;
+  impl_class->set_type_hint = gdk_quartz_window_set_type_hint;
+  impl_class->get_type_hint = gdk_quartz_window_get_type_hint;
+  impl_class->set_modal_hint = gdk_quartz_window_set_modal_hint;
+  impl_class->set_skip_taskbar_hint = gdk_quartz_window_set_skip_taskbar_hint;
+  impl_class->set_skip_pager_hint = gdk_quartz_window_set_skip_pager_hint;
+  impl_class->set_urgency_hint = gdk_quartz_window_set_urgency_hint;
+  impl_class->set_geometry_hints = gdk_quartz_window_set_geometry_hints;
+  impl_class->set_title = gdk_quartz_window_set_title;
+  impl_class->set_role = gdk_quartz_window_set_role;
+  impl_class->set_startup_id = gdk_quartz_window_set_startup_id;
+  impl_class->set_transient_for = gdk_quartz_window_set_transient_for;
+  impl_class->get_root_origin = gdk_quartz_window_get_root_origin;
+  impl_class->get_frame_extents = gdk_quartz_window_get_frame_extents;
+  impl_class->set_override_redirect = gdk_quartz_window_set_override_redirect;
+  impl_class->set_accept_focus = gdk_quartz_window_set_accept_focus;
+  impl_class->set_focus_on_map = gdk_quartz_window_set_focus_on_map;
+  impl_class->set_icon_list = gdk_quartz_window_set_icon_list;
+  impl_class->set_icon_name = gdk_quartz_window_set_icon_name;
+  impl_class->iconify = gdk_quartz_window_iconify;
+  impl_class->deiconify = gdk_quartz_window_deiconify;
+  impl_class->stick = gdk_quartz_window_stick;
+  impl_class->unstick = gdk_quartz_window_unstick;
+  impl_class->maximize = gdk_quartz_window_maximize;
+  impl_class->unmaximize = gdk_quartz_window_unmaximize;
+  impl_class->fullscreen = gdk_quartz_window_fullscreen;
+  impl_class->unfullscreen = gdk_quartz_window_unfullscreen;
+  impl_class->set_keep_above = gdk_quartz_window_set_keep_above;
+  impl_class->set_keep_below = gdk_quartz_window_set_keep_below;
+  impl_class->get_group = gdk_quartz_window_get_group;
+  impl_class->set_group = gdk_quartz_window_set_group;
+  impl_class->set_decorations = gdk_quartz_window_set_decorations;
+  impl_class->get_decorations = gdk_quartz_window_get_decorations;
+  impl_class->set_functions = gdk_quartz_window_set_functions;
+  impl_class->set_functions = gdk_quartz_window_set_functions;
+  impl_class->begin_resize_drag = gdk_quartz_window_begin_resize_drag;
+  impl_class->begin_move_drag = gdk_quartz_window_begin_move_drag;
+  impl_class->enable_synchronized_configure = gdk_quartz_window_enable_synchronized_configure;
+  impl_class->configure_finished = gdk_quartz_window_configure_finished;
+  impl_class->set_opacity = gdk_quartz_window_set_opacity;
+  impl_class->destroy_notify = gdk_quartz_window_destroy_notify;
+  impl_class->register_dnd = _gdk_quartz_window_register_dnd;
+  impl_class->drag_begin = _gdk_quartz_window_drag_begin;
+  impl_class->process_updates_recurse = _gdk_quartz_window_process_updates_recurse;
+  impl_class->sync_rendering = _gdk_quartz_window_sync_rendering;
+  impl_class->simulate_key = _gdk_quartz_window_simulate_key;
+  impl_class->simulate_button = _gdk_quartz_window_simulate_button;
+  impl_class->get_property = _gdk_quartz_window_get_property;
+  impl_class->change_property = _gdk_quartz_window_change_property;
+  impl_class->delete_property = _gdk_quartz_window_delete_property;
+
 
   impl_quartz_class->get_context = gdk_window_impl_quartz_get_context;
   impl_quartz_class->release_context = gdk_window_impl_quartz_release_context;

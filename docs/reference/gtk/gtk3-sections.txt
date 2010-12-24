@@ -2116,6 +2116,8 @@ gtk_menu_shell_activate_item
 gtk_menu_shell_cancel
 gtk_menu_shell_set_take_focus
 gtk_menu_shell_get_take_focus
+gtk_menu_shell_get_selected_item
+gtk_menu_shell_get_parent_shell
 GtkMenuDirectionType
 <SUBSECTION Standard>
 GTK_MENU_SHELL
@@ -5177,8 +5179,6 @@ gtk_window_begin_resize_drag
 gtk_window_begin_move_drag
 gtk_window_set_decorated
 gtk_window_set_deletable
-gtk_window_set_frame_dimensions
-gtk_window_set_has_frame
 gtk_window_set_mnemonic_modifier
 gtk_window_set_type_hint
 gtk_window_set_skip_taskbar_hint
@@ -5194,8 +5194,6 @@ gtk_window_get_default_icon_list
 gtk_window_get_default_icon_name
 gtk_window_get_default_size
 gtk_window_get_destroy_with_parent
-gtk_window_get_frame_dimensions
-gtk_window_get_has_frame
 gtk_window_get_icon
 gtk_window_get_icon_list
 gtk_window_get_icon_name

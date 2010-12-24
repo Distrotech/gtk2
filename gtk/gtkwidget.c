@@ -37,7 +37,7 @@
 #include "gtkmarshalers.h"
 #include "gtkrc.h"
 #include "gtkselection.h"
-#include "gtksettings.h"
+#include "gtksettingsprivate.h"
 #include "gtksizegroup-private.h"
 #include "gtkwidget.h"
 #include "gtkwidgetprivate.h"
@@ -2455,7 +2455,8 @@ gtk_widget_class_init (GtkWidgetClass *klass)
     g_signal_new (I_("drag-failed"),
 		  G_TYPE_FROM_CLASS (klass),
 		  G_SIGNAL_RUN_LAST,
-		  0, _gtk_boolean_handled_accumulator, NULL,
+		  G_STRUCT_OFFSET (GtkWidgetClass, drag_failed),
+		  _gtk_boolean_handled_accumulator, NULL,
 		  _gtk_marshal_BOOLEAN__OBJECT_ENUM,
 		  G_TYPE_BOOLEAN, 2,
 		  GDK_TYPE_DRAG_CONTEXT,
@@ -7144,9 +7145,11 @@ gtk_widget_get_has_window (GtkWidget *widget)
  * gtk_widget_is_toplevel:
  * @widget: a #GtkWidget
  *
- * Determines whether @widget is a toplevel widget. Currently only
- * #GtkWindow and #GtkInvisible are toplevel widgets. Toplevel
- * widgets have no parent widget.
+ * Determines whether @widget is a toplevel widget.
+ *
+ * Currently only #GtkWindow and #GtkInvisible (and out-of-process
+ * #GtkPlugs) are toplevel widgets. Toplevel widgets have no parent
+ * widget.
  *
  * Return value: %TRUE if @widget is a toplevel, %FALSE otherwise
  *
@@ -8669,12 +8672,18 @@ gtk_widget_verify_invariants (GtkWidget *widget)
     {
       /* Not mapped implies... */
 
+#if 0
+  /* This check makes sense for normal toplevels, but for
+   * something like a toplevel that is embedded within a clutter
+   * state, mapping may depend on external factors.
+   */
       if (widget->priv->toplevel)
         {
           if (widget->priv->visible)
             g_warning ("%s %p toplevel is visible but not mapped",
                        G_OBJECT_TYPE_NAME (widget), widget);
         }
+#endif
     }
 
   /* Parent related checks aren't possible if parent has

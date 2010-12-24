@@ -36,9 +36,6 @@
 #include <gtk/gtkaccelgroup.h>
 #include <gtk/gtkbin.h>
 
-#include "gtk/gtkaccelgroupprivate.h"
-
-
 G_BEGIN_DECLS
 
 #define GTK_TYPE_WINDOW			(gtk_window_get_type ())
@@ -67,16 +64,13 @@ struct _GtkWindowClass
   GtkBinClass parent_class;
 
   void     (* set_focus)   (GtkWindow *window,
-			    GtkWidget *focus);
-  gboolean (* frame_event) (GtkWindow *window,
-			    GdkEvent  *event);
+                            GtkWidget *focus);
 
   /* G_SIGNAL_ACTION signals for keybindings */
 
-  void     (* activate_focus)          (GtkWindow       *window);
-  void     (* activate_default)        (GtkWindow       *window);
-
-  void	   (* keys_changed)	       (GtkWindow	*window);
+  void     (* activate_focus)   (GtkWindow *window);
+  void     (* activate_default) (GtkWindow *window);
+  void	   (* keys_changed)     (GtkWindow *window);
 
   /* Padding for future expansion */
   void (*_gtk_reserved1) (void);
@@ -190,22 +184,6 @@ GdkScreen* gtk_window_get_screen	       (GtkWindow	    *window);
 gboolean   gtk_window_is_active                (GtkWindow           *window);
 gboolean   gtk_window_has_toplevel_focus       (GtkWindow           *window);
 
-
-
-/* gtk_window_set_has_frame () must be called before realizing the window_*/
-void       gtk_window_set_has_frame            (GtkWindow *window, 
-						gboolean   setting);
-gboolean   gtk_window_get_has_frame            (GtkWindow *window);
-void       gtk_window_set_frame_dimensions     (GtkWindow *window, 
-						gint       left,
-						gint       top,
-						gint       right,
-						gint       bottom);
-void       gtk_window_get_frame_dimensions     (GtkWindow *window, 
-						gint      *left,
-						gint      *top,
-						gint      *right,
-						gint      *bottom);
 void       gtk_window_set_decorated            (GtkWindow *window,
                                                 gboolean   setting);
 gboolean   gtk_window_get_decorated            (GtkWindow *window);

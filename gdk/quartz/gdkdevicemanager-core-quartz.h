@@ -1,5 +1,7 @@
-/* GDK - The GIMP Drawing Kit
- * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
+/* gdkdevicemanager-quartz.h
+ *
+ * Copyright (C) 2009 Carlos Garnacho <carlosg@gnome.org>
+ * Copyright (C) 2010  Kristian Rietveld  <kris@gtk.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -8,7 +10,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -17,25 +19,26 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.  See the ChangeLog
- * files for a list of changes.  These files are distributed with
- * GTK+ at ftp://ftp.gtk.org/pub/gtk/. 
- */
+#ifndef __GDK_QUARTZ_DEVICE_MANAGER_CORE__
+#define __GDK_QUARTZ_DEVICE_MANAGER_CORE__
 
-#include "config.h"
+#include <gdkdevicemanagerprivate.h>
+#include <gdkquartzdevicemanager-core.h>
 
-#include <locale.h>
+G_BEGIN_DECLS
 
-#include "gdkinternals.h"
-#include "gdkprivate-quartz.h"
-
-gchar*
-gdk_set_locale (void)
+struct _GdkQuartzDeviceManagerCore
 {
-  if (!setlocale (LC_ALL,""))
-    g_warning ("locale not supported by C library");
-  
-  return setlocale (LC_ALL, NULL);
-}
+  GdkDeviceManager parent_object;
+  GdkDevice *core_pointer;
+  GdkDevice *core_keyboard;
+};
+
+struct _GdkQuartzDeviceManagerCoreClass
+{
+  GdkDeviceManagerClass parent_class;
+};
+
+G_END_DECLS
+
+#endif /* __GDK_QUARTZ_DEVICE_MANAGER__ */
