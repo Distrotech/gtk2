@@ -57,10 +57,8 @@
  * Use this macro to guard code that is specific to the X11-backend.
  * Since GDK may be configured with multiple backends, an additional
  * runtime check for the used backend is recommended:
- * </para>
- * <example>
- * <title>Backend-specific code</title>
- * <programlisting>
+ *
+ * |[
  * #ifdef GDK_WINDOWING_X11
  *   if (GDK_IS_X11_DISPLAY (display))
  *     {
@@ -76,8 +74,7 @@
  *   else
  * #endif
  *   g_error ("Unsupported GDK backend");
- * </programlisting>
- * </example>
+ * ]|
  */
 
 /**
@@ -989,9 +986,9 @@ gdk_threads_add_timeout (guint       interval,
  * @interval: the time between calls to the function, in seconds
  * @function: function to call
  * @data:     data to pass to @function
- * @notify: (allow-none):   function to call when the timeout is removed, or %NULL
+ * @notify: (allow-none): function to call when the timeout is removed, or %NULL
  *
- * A variant of gdk_threads_add_timout_full() with second-granularity.
+ * A variant of gdk_threads_add_timeout_full() with second-granularity.
  * See g_timeout_add_seconds_full() for a discussion of why it is
  * a good idea to use this function if you don't need finer granularity.
  *
@@ -1091,7 +1088,7 @@ gdk_set_program_class (const char *program_class)
  * any way and doesn't observe the presence of XInput 2.
  *
  * Since: 3.0
- **/
+ */
 void
 gdk_disable_multidevice (void)
 {

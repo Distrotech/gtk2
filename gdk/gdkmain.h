@@ -50,8 +50,6 @@ gboolean              gdk_init_check                      (gint           *argc,
 void                  gdk_add_option_entries_libgtk_only  (GOptionGroup   *group);
 void                  gdk_pre_parse_libgtk_only           (void);
 
-void                  gdk_enable_multidevice              (void);
-
 G_CONST_RETURN gchar *gdk_get_program_class               (void);
 void                  gdk_set_program_class               (const gchar    *program_class);
 
@@ -71,14 +69,16 @@ G_CONST_RETURN gchar *gdk_get_display_arg_name (void);
 /**
  * gdk_get_display:
  *
- * Gets the name of the display, which usually comes from the <envar>DISPLAY</envar>
- * environment variable or the <option>--display</option> command line option.
+ * Gets the name of the display, which usually comes from the
+ * <envar>DISPLAY</envar> environment variable or the
+ * <option>--display</option> command line option.
  *
  * Returns: the name of the display.
  */
-gchar*	              gdk_get_display          (void);
+gchar*        gdk_get_display        (void);
 
 #ifndef GDK_MULTIDEVICE_SAFE
+#ifndef GDK_DISABLE_DEPRECATED
 GdkGrabStatus gdk_pointer_grab       (GdkWindow    *window,
 				      gboolean      owner_events,
 				      GdkEventMask  event_mask,
@@ -88,14 +88,17 @@ GdkGrabStatus gdk_pointer_grab       (GdkWindow    *window,
 GdkGrabStatus gdk_keyboard_grab      (GdkWindow    *window,
 				      gboolean      owner_events,
 				      guint32       time_);
+#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 #ifndef GDK_MULTIHEAD_SAFE
 
 #ifndef GDK_MULTIDEVICE_SAFE
+#ifndef GDK_DISABLE_DEPRECATED
 void          gdk_pointer_ungrab     (guint32       time_);
 void          gdk_keyboard_ungrab    (guint32       time_);
 gboolean      gdk_pointer_is_grabbed (void);
+#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 gint gdk_screen_width  (void) G_GNUC_CONST;

@@ -170,7 +170,7 @@ gdk_display_manager_get_property (GObject      *object,
  * backends).
  *
  * Returns: (transfer none): The global #GdkDisplayManager singleton;
- *     gdk_parse_pargs(), gdk_init(), or gdk_init_check() must have
+ *     gdk_parse_args(), gdk_init(), or gdk_init_check() must have
  *     been called first.
  *
  * Since: 2.2
@@ -298,6 +298,18 @@ gdk_display_manager_list_displays (GdkDisplayManager *manager)
   return GDK_DISPLAY_MANAGER_GET_CLASS (manager)->list_displays (manager);
 }
 
+/**
+ * gdk_display_manager_open_display:
+ * @manager: a #GdkDisplayManager
+ * @name: the name of the display to open
+ *
+ * Opens a display.
+ *
+ * Return value: (transfer none): a #GdkDisplay, or %NULL
+ *     if the display could not be opened
+ *
+ * Since: 3.0
+ */
 GdkDisplay *
 gdk_display_manager_open_display (GdkDisplayManager *manager,
                                   const gchar       *name)
