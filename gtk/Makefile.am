@@ -765,7 +765,9 @@ endif
 if USE_QUARTZ
 gtk_clipboard_dnd_c_sources = 	\
 	gtkclipboard-quartz.c	\
-	gtkdnd-quartz.c		
+	gtkdnd-quartz.c		\
+	gtkselection-quartz.c
+
 gtk_clipboard_dnd_h_sources = gtkquartz.h
 else
 gtk_clipboard_dnd_c_sources = gtkclipboard.c gtkdnd.c

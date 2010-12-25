@@ -32,7 +32,8 @@ _gdk_quartz_display_set_selection_owner (GdkDisplay *display,
                                          guint32     time,
                                          gint        send_event)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_val_if_reached(TRUE);
   return TRUE;
 }
 
@@ -40,7 +41,7 @@ GdkWindow*
 _gdk_quartz_display_get_selection_owner (GdkDisplay *display,
                                          GdkAtom     selection)
 {
-  /* FIXME: Implement */
+ /* Quartz doesn't have an X-selection, so it doesn't have a gdk_selection. */
   return NULL;
 }
 
@@ -51,7 +52,9 @@ _gdk_quartz_display_convert_selection (GdkDisplay *display,
                                        GdkAtom     target,
                                        guint32     time)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_if_reached();
+
 }
 
 gint
@@ -61,7 +64,8 @@ _gdk_quartz_display_get_selection_property (GdkDisplay *display,
                                             GdkAtom    *ret_type,
                                             gint       *ret_format)
 {
-  /* FIXME: Implement */
+  g_print ("Quartz windows do not support properties.\n");
+  g_return_val_if_reached(-1);
   return 0;
 }
 
@@ -73,15 +77,16 @@ _gdk_quartz_display_send_selection_notify (GdkDisplay      *display,
                                            GdkAtom          property,
                                            guint32          time)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_if_reached();
 }
 
 gchar *
 _gdk_quartz_display_utf8_to_string_target (GdkDisplay  *display,
                                            const gchar *str)
 {
-  /* FIXME: Implement */
-  return NULL;
+  /* UTF8 is the standard string on OSX */
+  return g_strdup (str);
 }
 
 static gint
@@ -101,7 +106,7 @@ make_list (const gchar  *text,
   while (p < text + length)
     {
       gchar *str;
-      
+
       q = p;
       while (*q && q < text + length)
 	q++;
@@ -135,7 +140,7 @@ make_list (const gchar  *text,
     *list = g_new (gchar *, n_strings + 1);
 
   (*list)[n_strings] = NULL;
-  
+
   i = n_strings;
   tmp_list = strings;
   while (tmp_list)
@@ -176,7 +181,7 @@ _gdk_quartz_display_text_property_to_utf8_list (GdkDisplay    *display,
     {
       gchar *enc_name = gdk_atom_name (encoding);
 
-      g_warning ("gdk_text_property_to_utf8_list_for_display: encoding %s not handled\n", enc_name);
+      g_warning ("gdk_text_property_to_utf8_list: encoding %s not handled\n", enc_name);
       g_free (enc_name);
 
       if (list)
