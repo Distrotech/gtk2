@@ -562,7 +562,6 @@ gtk_base_c_sources =            \
 	gtkscalebutton.c	\
 	gtkscrollbar.c		\
 	gtkscrolledwindow.c	\
-	gtkselection.c		\
 	gtkseparator.c		\
 	gtkseparatormenuitem.c	\
 	gtkseparatortoolitem.c	\
@@ -761,11 +760,11 @@ endif
 endif
 
 if USE_QUARTZ
-gtk_clipboard_dnd_c_sources = gtkclipboard-quartz.c gtkdnd-quartz.c gtkquartz.c
+gtk_clipboard_dnd_c_sources = gtkselection.c gtkselection-quartz.c gtkclipboard-quartz.c gtkdnd-quartz.c gtkquartz.c
 gtk_clipboard_dnd_h_sources = gtkquartz.h
 gtk_clipboard_dnd_c_sources_CFLAGS = "-xobjective-c"
 else
-gtk_clipboard_dnd_c_sources = gtkclipboard.c gtkdnd.c
+gtk_clipboard_dnd_c_sources = gtkselection.c gtkclipboard.c gtkdnd.c
 gtk_clipboard_dnd_c_sources_CFLAGS =
 endif
 EXTRA_DIST += gtkquartz.h

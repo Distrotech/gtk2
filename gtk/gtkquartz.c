@@ -271,6 +271,7 @@ _gtk_quartz_set_selection_data_for_pasteboard (NSPasteboard     *pasteboard,
 
   type = target_to_pasteboard_type (target);
   g_free (target);
+  g_return_if_fail (data != NULL);
 
   if ([type isEqualTo:NSStringPboardType]) 
     [pasteboard setString:[NSString stringWithUTF8String:(const char *)data]

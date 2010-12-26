@@ -633,6 +633,7 @@ gtk_target_table_free (GtkTargetEntry *targets,
   g_free (targets);
 }
 
+#ifndef GDK_WINDOWING_QUARTZ /* Quartz handled by gtkselection-quartz.c */
 /**
  * gtk_selection_owner_set_for_display:
  * @display: the #Gdkdisplay where the selection is set
@@ -735,7 +736,7 @@ gtk_selection_owner_set_for_display (GdkDisplay   *display,
   else
     return FALSE;
 }
-
+#endif /* GDK_WINDOWING_QUARTZ */
 /**
  * gtk_selection_owner_set:
  * @widget: (allow-none):  a #GtkWidget, or %NULL.
@@ -937,7 +938,7 @@ gtk_selection_add_targets (GtkWidget            *widget,
 #endif
 }
 
-
+#ifndef GDK_WINDOWING_QUARTZ /* Quartz is handled in gtkselection-quartz.c */
 /**
  * gtk_selection_remove_all:
  * @widget: a #GtkWidget 
@@ -998,8 +999,9 @@ gtk_selection_remove_all (GtkWidget *widget)
   /* Remove all selection lists */
   gtk_selection_target_list_remove (widget);
 }
+#endif /* GDK_WINDOWING_QUARTZ */
 
-
+#ifndef GDK_WINDOWING_QUARTZ /* Quartz is handled in gtkselection-quartz.c */
 /**
  * gtk_selection_convert:
  * @widget: The widget which acts as requestor
@@ -1111,7 +1113,7 @@ gtk_selection_convert (GtkWidget *widget,
   
   return TRUE;
 }
-
+#endif /* GDK_WINDOWING_QUARTZ */
 /**
  * gtk_selection_data_get_selection:
  * @selection_data: a pointer to a #GtkSelectionData structure.
@@ -2176,6 +2178,7 @@ gtk_selection_init (void)
   initialize = FALSE;
 }
 
+#ifndef GDK_WINDOWING_QUARTZ /* Quartz handled by gtkselection-quartz.c */
 /**
  * gtk_selection_clear:
  * @widget: a #GtkWidget
@@ -2610,6 +2613,7 @@ _gtk_selection_incr_event (GdkWindow	   *window,
   
   return TRUE;
 }
+#endif /* GDK_WINDOWING_QUARTZ */
 
 /*************************************************************
  * gtk_selection_incr_timeout:
@@ -2664,6 +2668,7 @@ gtk_selection_incr_timeout (GtkIncrInfo *info)
   return retval;
 }
 
+#ifndef GDK_WINDOWING_QUARTZ /* Quartz handled by gtkselection-quartz.c */
 /*************************************************************
  * _gtk_selection_notify:
  *     Handler for "selection-notify-event" signals on windows
@@ -2857,6 +2862,7 @@ _gtk_selection_property_notify (GtkWidget	*widget,
   
   return TRUE;
 }
+#endif /* GDK_WINDOWING_QUARTZ */
 
 /*************************************************************
  * gtk_selection_retrieval_timeout:

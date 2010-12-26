@@ -32,7 +32,8 @@ gdk_selection_owner_set_for_display (GdkDisplay *display,
 				     guint32     time,
 				     gint        send_event)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_val_if_reached(TRUE);
   return TRUE;
 }
 
@@ -40,7 +41,7 @@ GdkWindow*
 gdk_selection_owner_get_for_display (GdkDisplay *display,
 				     GdkAtom     selection)
 {
-  /* FIXME: Implement */
+ /* Quartz doesn't have an X-selection, so it doesn't have a gdk_selection. */
   return NULL;
 }
 
@@ -50,7 +51,9 @@ gdk_selection_convert (GdkWindow *requestor,
 		       GdkAtom    target,
 		       guint32    time)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_if_reached();
+
 }
 
 gint
@@ -59,7 +62,8 @@ gdk_selection_property_get (GdkWindow  *requestor,
 			    GdkAtom    *ret_type,
 			    gint       *ret_format)
 {
-  /* FIXME: Implement */
+  g_print ("Quartz windows do not support properties.\n");
+  g_return_val_if_reached(-1);
   return 0;
 }
 
@@ -71,7 +75,8 @@ gdk_selection_send_notify_for_display (GdkDisplay *display,
 				       GdkAtom     property,
 				       guint32     time)
 {
-  /* FIXME: Implement */
+  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_return_if_reached();
 }
 
 gint
@@ -82,8 +87,9 @@ gdk_text_property_to_text_list_for_display (GdkDisplay   *display,
 					    gint          length,
 					    gchar      ***list)
 {
-  /* FIXME: Implement */
-  return 0;
+  /* text and utf8 are equivalent on OSX */
+  return gdk_text_property_to_utf8_list_for_display (display, encoding, format,
+						     text, length, list);
 }
 
 gint
@@ -94,20 +100,21 @@ gdk_string_to_compound_text_for_display (GdkDisplay  *display,
 					 guchar     **ctext,
 					 gint        *length)
 {
-  /* FIXME: Implement */
+  *ctext = (guchar*)g_strdup (str);
+  *length = strlen (str);
   return 0;
 }
 
 void gdk_free_compound_text (guchar *ctext)
 {
-  /* FIXME: Implement */
+  g_free (ctext);
 }
 
 gchar *
 gdk_utf8_to_string_target (const gchar *str)
 {
-  /* FIXME: Implement */
-  return NULL;
+  /* UTF8 is the standard string on OSX */
+  return g_strdup (str);
 }
 
 gboolean
@@ -118,8 +125,11 @@ gdk_utf8_to_compound_text_for_display (GdkDisplay  *display,
 				       guchar     **ctext,
 				       gint        *length)
 {
-  /* FIXME: Implement */
-  return 0;
+  /* We don't use compound text on OSX, just stuff a copy of the string*/
+
+  *ctext = (guchar*)g_strdup (str);
+  *length = strlen (str);
+  return TRUE;
 }
 
 void
