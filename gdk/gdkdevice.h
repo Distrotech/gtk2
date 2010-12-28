@@ -161,8 +161,6 @@ gboolean              gdk_device_get_has_cursor (GdkDevice *device);
 
 /* Functions to configure a device */
 GdkInputSource gdk_device_get_source    (GdkDevice      *device);
-void           gdk_device_set_source    (GdkDevice      *device,
-                                         GdkInputSource  source);
 
 GdkInputMode   gdk_device_get_mode      (GdkDevice      *device);
 gboolean       gdk_device_set_mode      (GdkDevice      *device,
@@ -189,6 +187,15 @@ void     gdk_device_get_state    (GdkDevice         *device,
                                   GdkWindow         *window,
                                   gdouble           *axes,
                                   GdkModifierType   *mask);
+void     gdk_device_get_position (GdkDevice         *device,
+                                  GdkScreen        **screen,
+                                  gint              *x,
+                                  gint              *y);
+GdkWindow *
+         gdk_device_get_window_at_position
+                                 (GdkDevice         *device,
+                                  gint              *win_x,
+                                  gint              *win_y);
 gboolean gdk_device_get_history  (GdkDevice         *device,
                                   GdkWindow         *window,
                                   guint32            start,

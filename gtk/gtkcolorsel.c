@@ -1710,8 +1710,7 @@ grab_color_at_pointer (GdkScreen *screen,
   if (!pixbuf)
     {
       gint x, y;
-      GdkDisplay *display = gdk_screen_get_display (screen);
-      GdkWindow *window = gdk_display_get_window_at_device_position (display, device, &x, &y);
+      GdkWindow *window = gdk_device_get_window_at_position (device, &x, &y);
       if (!window)
 	return;
       pixbuf = gdk_pixbuf_get_from_window (window,
@@ -1804,7 +1803,6 @@ key_press (GtkWidget   *invisible,
            GdkEventKey *event,
            gpointer     data)
 {  
-  GdkDisplay *display = gtk_widget_get_display (invisible);
   GdkScreen *screen = gdk_event_get_screen ((GdkEvent *) event);
   GdkDevice *device, *pointer_device;
   guint state = event->state & gtk_accelerator_get_default_mod_mask ();
@@ -1813,7 +1811,7 @@ key_press (GtkWidget   *invisible,
 
   device = gdk_event_get_device ((GdkEvent * ) event);
   pointer_device = gdk_device_get_associated_device (device);
-  gdk_display_get_device_state (display, pointer_device, NULL, &x, &y, NULL);
+  gdk_device_get_position (pointer_device, NULL, &x, &y);
 
   dx = 0;
   dy = 0;

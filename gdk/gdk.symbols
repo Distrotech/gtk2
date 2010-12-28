@@ -59,9 +59,11 @@ gdk_device_get_mode
 gdk_device_get_name
 gdk_device_get_n_axes
 gdk_device_get_n_keys
+gdk_device_get_position
 gdk_device_get_source
 gdk_device_get_state
 gdk_device_get_type G_GNUC_CONST
+gdk_device_get_window_at_position
 gdk_device_grab
 gdk_device_grab_info_libgtk_only
 gdk_device_list_axes
@@ -73,7 +75,6 @@ gdk_device_manager_list_devices
 gdk_device_set_axis_use
 gdk_device_set_key
 gdk_device_set_mode
-gdk_device_set_source
 gdk_device_type_get_type G_GNUC_CONST
 gdk_device_ungrab
 gdk_device_warp
@@ -89,7 +90,6 @@ gdk_display_get_default_cursor_size
 gdk_display_get_default_group
 gdk_display_get_default_screen
 gdk_display_get_device_manager
-gdk_display_get_device_state
 gdk_display_get_event
 gdk_display_get_maximal_cursor_size
 gdk_display_get_name
@@ -97,7 +97,6 @@ gdk_display_get_n_screens
 gdk_display_get_pointer
 gdk_display_get_screen
 gdk_display_get_type G_GNUC_CONST
-gdk_display_get_window_at_device_position
 gdk_display_get_window_at_pointer
 gdk_display_has_pending
 gdk_display_is_closed

@@ -697,87 +697,6 @@ _gdk_display_enable_motion_hints (GdkDisplay *display,
 }
 
 /**
- * gdk_display_get_device_state:
- * @display: a #GdkDisplay.
- * @device: pointer device to query status about.
- * @screen: (out) (transfer none) (allow-none): location to store the #GdkScreen
- *          the @device is on, or %NULL.
- * @x: (out) (allow-none): location to store root window X coordinate of @device, or %NULL.
- * @y: (out) (allow-none): location to store root window Y coordinate of @device, or %NULL.
- * @mask: (out) (allow-none): location to store current modifier mask for @device, or %NULL.
- *
- * Gets the current location and state of @device for a given display.
- *
- * Since: 3.0
- **/
-void
-gdk_display_get_device_state (GdkDisplay       *display,
-                              GdkDevice        *device,
-                              GdkScreen       **screen,
-                              gint             *x,
-                              gint             *y,
-                              GdkModifierType  *mask)
-{
-  GdkScreen *tmp_screen;
-  gint tmp_x, tmp_y;
-  GdkModifierType tmp_mask;
-
-  g_return_if_fail (GDK_IS_DISPLAY (display));
-  g_return_if_fail (GDK_IS_DEVICE (device));
-  g_return_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD);
-
-  display->device_hooks->get_device_state (display, device, &tmp_screen, &tmp_x, &tmp_y, &tmp_mask);
-
-  if (screen)
-    *screen = tmp_screen;
-  if (x)
-    *x = tmp_x;
-  if (y)
-    *y = tmp_y;
-  if (mask)
-    *mask = tmp_mask;
-}
-
-/**
- * gdk_display_get_window_at_device_position:
- * @display: a #GdkDisplay.
- * @device: pointer #GdkDevice to query info to.
- * @win_x: (out) (allow-none): return location for the X coordinate of the device location,
- *         relative to the window origin, or %NULL.
- * @win_y: (out) (allow-none): return location for the Y coordinate of the device location,
- *         relative to the window origin, or %NULL.
- *
- * Obtains the window underneath @device, returning the location of the device in @win_x and @win_y. Returns
- * %NULL if the window tree under @device is not known to GDK (for example, belongs to another application).
- *
- * Returns: (transfer none): the #GdkWindow under the device position, or %NULL.
- *
- * Since: 3.0
- **/
-GdkWindow *
-gdk_display_get_window_at_device_position (GdkDisplay *display,
-                                           GdkDevice  *device,
-                                           gint       *win_x,
-                                           gint       *win_y)
-{
-  gint tmp_x, tmp_y;
-  GdkWindow *window;
-
-  g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
-  g_return_val_if_fail (GDK_IS_DEVICE (device), NULL);
-  g_return_val_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD, NULL);
-
-  window = display->device_hooks->window_at_device_position (display, device, &tmp_x, &tmp_y);
-
-  if (win_x)
-    *win_x = tmp_x;
-  if (win_y)
-    *win_y = tmp_y;
-
-  return window;
-}
-
-/**
  * gdk_display_set_device_hooks:
  * @display: a #GdkDisplay.
  * @new_hooks: (allow-none): a table of pointers to functions for getting quantities related
@@ -822,7 +741,7 @@ gdk_display_set_device_hooks (GdkDisplay                  *display,
  *
  * Since: 2.2
  *
- * Deprecated: 3.0: Use gdk_display_get_device_state() instead.
+ * Deprecated: 3.0: Use gdk_device_get_position() instead.
  **/
 void
 gdk_display_get_pointer (GdkDisplay      *display,
@@ -831,9 +750,26 @@ gdk_display_get_pointer (GdkDisplay      *display,
 			 gint            *y,
 			 GdkModifierType *mask)
 {
+  GdkScreen *tmp_screen;
+  gint tmp_x, tmp_y;
+  GdkModifierType tmp_mask;
+
   g_return_if_fail (GDK_IS_DISPLAY (display));
 
-  gdk_display_get_device_state (display, display->core_pointer, screen, x, y, mask);
+  /* We call get_device_state here manually instead of gdk_device_get_position()
+   * because we also care about the modifier mask */
+
+  display->device_hooks->get_device_state (display,
+                                           display->core_pointer,
+                                           &tmp_screen, &tmp_x, &tmp_y, &tmp_mask);
+  if (screen)
+    *screen = tmp_screen;
+  if (x)
+    *x = tmp_x;
+  if (y)
+    *y = tmp_y;
+  if (mask)
+    *mask = tmp_mask;
 }
 
 static GdkWindow *
@@ -915,7 +851,7 @@ gdk_window_real_window_get_device_position (GdkDisplay       *display,
  *
  * Since: 2.2
  *
- * Deprecated: 3.0: Use gdk_display_get_window_at_device_position() instead.
+ * Deprecated: 3.0: Use gdk_device_get_window_at_position() instead.
  **/
 GdkWindow *
 gdk_display_get_window_at_pointer (GdkDisplay *display,
@@ -924,7 +860,7 @@ gdk_display_get_window_at_pointer (GdkDisplay *display,
 {
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
 
-  return gdk_display_get_window_at_device_position (display, display->core_pointer, win_x, win_y);
+  return gdk_device_get_window_at_position (display->core_pointer, win_x, win_y);
 }
 
 static void

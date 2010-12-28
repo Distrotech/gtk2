@@ -399,6 +399,82 @@ gdk_device_get_state (GdkDevice       *device,
 }
 
 /**
+ * gdk_device_get_position:
+ * @device: pointer device to query status about.
+ * @screen: (out) (transfer none) (allow-none): location to store the #GdkScreen
+ *          the @device is on, or %NULL.
+ * @x: (out) (allow-none): location to store root window X coordinate of @device, or %NULL.
+ * @y: (out) (allow-none): location to store root window Y coordinate of @device, or %NULL.
+ *
+ * Gets the current location of @device.
+ *
+ * Since: 3.0
+ **/
+void
+gdk_device_get_position (GdkDevice        *device,
+                         GdkScreen       **screen,
+                         gint             *x,
+                         gint             *y)
+{
+  GdkScreen *tmp_screen;
+  GdkDisplay *display;
+  gint tmp_x, tmp_y;
+  GdkModifierType tmp_mask;
+
+  g_return_if_fail (GDK_IS_DEVICE (device));
+  g_return_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD);
+
+  display = gdk_device_get_display (device);
+  display->device_hooks->get_device_state (display, device, &tmp_screen, &tmp_x, &tmp_y, &tmp_mask);
+
+  if (screen)
+    *screen = tmp_screen;
+  if (x)
+    *x = tmp_x;
+  if (y)
+    *y = tmp_y;
+}
+
+/**
+ * gdk_device_get_window_at_position:
+ * @device: pointer #GdkDevice to query info to.
+ * @win_x: (out) (allow-none): return location for the X coordinate of the device location,
+ *         relative to the window origin, or %NULL.
+ * @win_y: (out) (allow-none): return location for the Y coordinate of the device location,
+ *         relative to the window origin, or %NULL.
+ *
+ * Obtains the window underneath @device, returning the location of the device in @win_x and @win_y. Returns
+ * %NULL if the window tree under @device is not known to GDK (for example, belongs to another application).
+ *
+ * Returns: (transfer none): the #GdkWindow under the device position, or %NULL.
+ *
+ * Since: 3.0
+ **/
+GdkWindow *
+gdk_device_get_window_at_position (GdkDevice  *device,
+                                   gint       *win_x,
+                                   gint       *win_y)
+{
+  GdkDisplay *display;
+  gint tmp_x, tmp_y;
+  GdkWindow *window;
+
+  g_return_val_if_fail (GDK_IS_DEVICE (device), NULL);
+  g_return_val_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD, NULL);
+
+  display = gdk_device_get_display (device);
+
+  window = display->device_hooks->window_at_device_position (display, device, &tmp_x, &tmp_y);
+
+  if (win_x)
+    *win_x = tmp_x;
+  if (win_y)
+    *win_y = tmp_y;
+
+  return window;
+}
+
+/**
  * gdk_device_get_history:
  * @device: a #GdkDevice
  * @window: the window with respect to which which the event coordinates will be reported
@@ -531,23 +607,6 @@ gdk_device_get_source (GdkDevice *device)
   g_return_val_if_fail (GDK_IS_DEVICE (device), 0);
 
   return device->source;
-}
-
-/**
- * gdk_device_set_source:
- * @device: a #GdkDevice.
- * @source: the source type.
- *
- * Sets the source type for an input device.
- **/
-void
-gdk_device_set_source (GdkDevice      *device,
-                       GdkInputSource  source)
-{
-  g_return_if_fail (GDK_IS_DEVICE (device));
-
-  device->source = source;
-  g_object_notify (G_OBJECT (device), "input-source");
 }
 
 /**
