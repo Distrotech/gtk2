@@ -745,9 +745,14 @@ gtk_style_update_from_context (GtkStyle *style)
   style->white.blue = 0xffff;
 
   for (i = 0; i < 5; i++)
-    style->background[i] = cairo_pattern_create_rgb (style->bg[i].red / 65535.0,
-                                                     style->bg[i].green / 65535.0,
-                                                     style->bg[i].blue / 65535.0);
+    {
+      if (style->background[i])
+        cairo_pattern_destroy (style->background[i]);
+
+      style->background[i] = cairo_pattern_create_rgb (style->bg[i].red / 65535.0,
+                                                       style->bg[i].green / 65535.0,
+                                                       style->bg[i].blue / 65535.0);
+    }
 }
 
 static void
@@ -1639,6 +1644,9 @@ gtk_default_draw_shadow (GtkStyle      *style,
   GtkStyleContext *context;
   GtkStylePrivate *priv;
 
+  if (shadow_type == GTK_SHADOW_NONE)
+    return;
+
   if (widget)
     context = gtk_widget_get_style_context (widget);
   else
@@ -1995,7 +2003,9 @@ gtk_default_draw_box (GtkStyle      *style,
   else
     {
       gtk_render_background (context, cr, x, y, width, height);
-      gtk_render_frame (context, cr, x, y, width, height);
+
+      if (shadow_type != GTK_SHADOW_NONE)
+	gtk_render_frame (context, cr, x, y, width, height);
     }
 
   cairo_restore (cr);
@@ -2255,6 +2265,9 @@ gtk_default_draw_shadow_gap (GtkStyle       *style,
   GtkStylePrivate *priv;
   GtkStateFlags flags = 0;
 
+  if (shadow_type == GTK_SHADOW_NONE)
+    return;
+
   if (widget)
     context = gtk_widget_get_style_context (widget);
   else
@@ -2361,15 +2374,17 @@ gtk_default_draw_box_gap (GtkStyle       *style,
                          (gdouble) width,
                          (gdouble) height);
 
-  gtk_render_frame_gap (context, cr,
-                        (gdouble) x,
-                        (gdouble) y,
-                        (gdouble) width,
-                        (gdouble) height,
-                        gap_side,
-                        (gdouble) gap_x,
-                        (gdouble) gap_x + gap_width);
 
+  if (shadow_type != GTK_SHADOW_NONE)
+    gtk_render_frame_gap (context, cr,
+			  (gdouble) x,
+			  (gdouble) y,
+			  (gdouble) width,
+			  (gdouble) height,
+			  gap_side,
+			  (gdouble) gap_x,
+			  (gdouble) gap_x + gap_width);
+  
   cairo_restore (cr);
   gtk_style_context_restore (context);
 }
