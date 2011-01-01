@@ -1126,7 +1126,8 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 {
   GtkDragSourceInfo *info;
   GdkDragContext *context;
-  NSWindow *nswindow;
+  NSWindow *nswindow = get_toplevel_nswindow (widget);
+  NSEvent *nsevent = [nswindow currentEvent];
 
   context = gdk_drag_begin (NULL, NULL);
   g_return_val_if_fail( context != NULL, NULL);
@@ -1134,7 +1135,9 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   context->is_source = TRUE;
 
   info = gtk_drag_get_source_info (context, TRUE);
-  
+  info->nsevent = nsevent;
+  [info->nsevent retain];
+
   info->source_widget = g_object_ref (widget);
   info->widget = g_object_ref (widget);
   info->target_list = target_list;
@@ -1201,9 +1204,6 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 	  }
     }
 
-  nswindow = get_toplevel_nswindow (widget);
-  info->nsevent = [nswindow currentEvent];
-  [info->nsevent retain];
 
   /* drag will begin in an idle handler to avoid nested run loops */
 
