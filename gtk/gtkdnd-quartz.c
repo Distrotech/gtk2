@@ -148,7 +148,8 @@ struct _GtkDragFindData
 {
   guint target_info;
   GtkSelectionData selection_data;
-
+  g_return_if_fail(info->source_widget != NULL);
+  g_return_if_fail(info->target_list != NULL);
   selection_data.selection = GDK_NONE;
   selection_data.data = NULL;
   selection_data.length = -1;
@@ -169,6 +170,13 @@ struct _GtkDragFindData
       
       g_free (selection_data.data);
     }
+}
+
+- (void)pasteboardChangedOwner: (NSPasteboard*)sender
+{
+    info->target_list = NULL;
+    info->widget = NULL;
+    info->source_widget = NULL;
 }
 
 - (id)initWithInfo:(GtkDragSourceInfo *)anInfo
