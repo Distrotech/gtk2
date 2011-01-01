@@ -562,6 +562,12 @@ gtk_selection_info_remove (GdkAtom selection, GtkWidget *owner)
       if (selection_info->selection == selection &&
 	  selection_info->owner == owner)
 	{
+	  /* Clear the clipboard; this will send a changedOwner to the
+	     pasteboard so that it won't try to retrieve the
+	     still-pending types later when the window isn't around to
+	     provide them. */
+	  GtkClipboard *clip = gtk_clipboard_get(selection_info->selection);
+	  gtk_clipboard_clear(clip);
 	  current_selections = g_list_remove_link (current_selections,
 						   tmp_list);
 	  g_list_free (tmp_list);
