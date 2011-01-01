@@ -39,7 +39,10 @@ _gdk_quartz_window_drag_begin (GdkWindow *window,
                                GdkDevice *device,
                                GList     *targets)
 {
-  g_assert (_gdk_quartz_drag_source_context == NULL);
+  /* If the context isn't NULL, then we're in a drag already and the
+     calling application didn't notice. Return NULL to prevent
+     queueing up another gdk_drag_begin_idle. */
+  g_return_val_if_fail (_gdk_quartz_drag_source_context == NULL, NULL);
 
   /* Create fake context */
   _gdk_quartz_drag_source_context = g_object_new (GDK_TYPE_QUARTZ_DRAG_CONTEXT,

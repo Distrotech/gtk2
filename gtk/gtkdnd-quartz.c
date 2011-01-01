@@ -1110,6 +1110,9 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   NSWindow *nswindow;
 
   context = gdk_drag_begin (gtk_widget_get_window (widget), NULL);
+/* If we've already started a drag, gdk_drag_begin will return NULL;
+ * we don't want to do anything in that event. */
+  g_return_val_if_fail( context != NULL, NULL);
 
   info = gtk_drag_get_source_info (context, TRUE);
   
