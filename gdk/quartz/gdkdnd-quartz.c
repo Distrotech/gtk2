@@ -111,7 +111,7 @@ GdkDragContext *
 gdk_drag_begin (GdkWindow     *window,
 		GList         *targets)
 {
-  g_assert (_gdk_quartz_drag_source_context == NULL);
+  g_return_val_if_fail (_gdk_quartz_drag_source_context == NULL, NULL);
   
   /* Create fake context */
   _gdk_quartz_drag_source_context = gdk_drag_context_new ();

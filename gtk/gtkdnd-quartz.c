@@ -1129,6 +1129,8 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   NSWindow *nswindow;
 
   context = gdk_drag_begin (NULL, NULL);
+  g_return_val_if_fail( context != NULL, NULL);
+
   context->is_source = TRUE;
 
   info = gtk_drag_get_source_info (context, TRUE);
