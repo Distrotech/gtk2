@@ -1115,7 +1115,12 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 {
   GtkDragSourceInfo *info;
   GdkDragContext *context;
-  NSWindow *nswindow;
+/* FIXME: This is a bit of a race condition, because there's a fairly
+ * large delay between receiving a motion event and the application
+ * deciding that it's a drag during which time the NSWindow might have
+ * registered another NSEvent. */
+  NSWindow *nswindow = get_toplevel_nswindow (widget);
+  NSEvent *nsevent = [nswindow currentEvent];
 
   context = gdk_drag_begin (gtk_widget_get_window (widget), NULL);
 /* If we've already started a drag, gdk_drag_begin will return NULL;
@@ -1123,7 +1128,9 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   g_return_val_if_fail( context != NULL, NULL);
 
   info = gtk_drag_get_source_info (context, TRUE);
-  
+  info->nsevent = nsevent;
+  [info->nsevent retain];
+
   info->source_widget = g_object_ref (widget);
   info->widget = g_object_ref (widget);
   info->target_list = target_list;
@@ -1166,9 +1173,6 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 	  }
     }
 
-  nswindow = get_toplevel_nswindow (widget);
-  info->nsevent = [nswindow currentEvent];
-  [info->nsevent retain];
 
   /* drag will begin in an idle handler to avoid nested run loops */
 
