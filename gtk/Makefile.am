@@ -56,8 +56,6 @@ INCLUDES =						\
 	$(GTK_DEP_CFLAGS)				\
 	$(INCLUDED_IMMODULE_DEFINE)
 
-gtarget=$(gdktarget)
-
 if PLATFORM_WIN32
 no_undefined = -no-undefined
 endif
@@ -100,7 +98,7 @@ endif
 # This places the generated .def file in srcdir, since it is expected to be there.
 # (The one from a tarball is)
 gtk.def: gtk.symbols
-	(echo -e EXPORTS; $(CPP) -P -DG_OS_WIN32 - <$(srcdir)/gtk.symbols | $(SED) -e '/^$$/d' -e 's/^/	/' -e 's/G_GNUC_[^ ]*//g') > $(srcdir)/gtk.def
+	$(AM_V_GEN) (echo -e EXPORTS; $(CPP) -P -DG_OS_WIN32 - <$(srcdir)/gtk.symbols | $(SED) -e '/^$$/d' -e 's/^/	/' -e 's/G_GNUC_[^ ]*//g') > $(srcdir)/gtk.def
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" gtk_all_c_sources="$(gtk_all_c_sources)"
 if OS_LINUX
@@ -840,12 +838,12 @@ BUILT_SOURCES = $(gtk_built_sources)
 gtkmarshalers.h: stamp-gtkmarshalers.h
 	@true
 stamp-gtkmarshalers.h: @REBUILD@ gtkmarshalers.list
-	$(GLIB_GENMARSHAL) --prefix=_gtk_marshal $(srcdir)/gtkmarshalers.list --header >> xgen-gmlh \
+	$(AM_V_GEN) $(GLIB_GENMARSHAL) --prefix=_gtk_marshal $(srcdir)/gtkmarshalers.list --header >> xgen-gmlh \
 	&& (cmp -s xgen-gmlh gtkmarshalers.h || cp xgen-gmlh gtkmarshalers.h) \
 	&& rm -f xgen-gmlh \
 	&& echo timestamp > $(@F)
 gtkmarshalers.c: @REBUILD@ gtkmarshalers.list
-	(echo "#include \"gtkmarshalers.h\""; \
+	$(AM_V_GEN) (echo "#include \"gtkmarshalers.h\""; \
 	 $(GLIB_GENMARSHAL) --prefix=_gtk_marshal $(srcdir)/gtkmarshalers.list --body) >> xgen-gmlc \
 	&& cp xgen-gmlc gtkmarshalers.c \
 	&& rm -f xgen-gmlc
@@ -853,19 +851,19 @@ gtkmarshalers.c: @REBUILD@ gtkmarshalers.list
 gtktypebuiltins.h: stamp-gtktypebuiltins.h
 	@true
 stamp-gtktypebuiltins.h: @REBUILD@ $(gtk_public_h_sources) gtktypebuiltins.h.template
-	( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.h.template \
+	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.h.template \
 		$(gtk_public_h_sources) ) >> xgen-gtbh \
 	&& (cmp -s xgen-gtbh gtktypebuiltins.h || cp xgen-gtbh gtktypebuiltins.h ) \
 	&& rm -f xgen-gtbh \
 	&& echo timestamp > $(@F)
 gtktypebuiltins.c: @REBUILD@ $(gtk_public_h_sources) gtktypebuiltins.c.template
-	( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.c.template \
+	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.c.template \
 		$(gtk_public_h_sources) ) > xgen-gtbc \
 	&& cp xgen-gtbc gtktypebuiltins.c  \
 	&& rm -f xgen-gtbc
 
 gtktypefuncs.c: @REBUILD@ $(top_srcdir)/gtk/*.h $(top_srcdir)/gdk/*.h Makefile
-	echo '#include <gtk/gtk.h>' > xgen-gtfsrc.c && \
+	$(AM_V_GEN) echo '#include <gtk/gtk.h>' > xgen-gtfsrc.c && \
 	  ${CPP} $(DEFS) $(INCLUDES) -DGTK_ENABLE_BROKEN $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) xgen-gtfsrc.c | \
 	  $(GREP) -o '\bg[td]k_[a-zA-Z0-9_]*_get_type\b' | \
 	  sort | uniq | \
@@ -989,18 +987,18 @@ endif
 #
 bin_PROGRAMS = \
 	gtk-query-immodules-3.0 \
-	gtk-update-icon-cache-3.0
+	gtk-update-icon-cache
 
-bin_SCRIPTS = gtk-builder-convert-3.0
+bin_SCRIPTS = gtk-builder-convert
 
 if OS_WIN32
 
 # Workaround for UAC silliness: programs with "update" in their name
 # are believed to be installers and require elevated privileges to be
 # used... Use a manifest file to tell Windows that
-# gtk-update-icon-cache-3.0.exe doesn't require any special privileges.
+# gtk-update-icon-cache.exe doesn't require any special privileges.
 
-GTK_UPDATE_ICON_CACHE_MANIFEST = gtk-update-icon-cache-3.0.exe.manifest
+GTK_UPDATE_ICON_CACHE_MANIFEST = gtk-update-icon-cache.exe.manifest
 
 bin_SCRIPTS += \
 	$(GTK_UPDATE_ICON_CACHE_MANIFEST)
@@ -1010,7 +1008,7 @@ $(GTK_UPDATE_ICON_CACHE_MANIFEST):
 	 echo '<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">' ; \
 	 echo '  <assemblyIdentity version="1.0.0.0"' ; \
 	 echo '     processorArchitecture="'$(EXE_MANIFEST_ARCHITECTURE)'"' ; \
-	 echo '     name="gtk-update-icon-cache-3.0.exe"' ; \
+	 echo '     name="gtk-update-icon-cache.exe"' ; \
 	 echo '     type="win32"/>' ; \
 	 echo '  <!-- Identify the application security requirements. -->' ; \
 	 echo '  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">' ; \
@@ -1030,8 +1028,8 @@ gtk_query_immodules_3_0_DEPENDENCIES = $(DEPS)
 gtk_query_immodules_3_0_LDADD = $(LDADDS)
 gtk_query_immodules_3_0_SOURCES = queryimmodules.c
 
-gtk_update_icon_cache_3_0_LDADD = $(GDK_PIXBUF_LIBS)
-gtk_update_icon_cache_3_0_SOURCES = updateiconcache.c
+gtk_update_icon_cache_LDADD = $(GDK_PIXBUF_LIBS)
+gtk_update_icon_cache_SOURCES = updateiconcache.c
 
 .PHONY: files test test-debug
 
@@ -1328,12 +1326,12 @@ if CROSS_COMPILING
 gtk_update_icon_cache_program = $(GTK_UPDATE_ICON_CACHE)
 else
 gtk_update_icon_cache_program =							\
-	   ./gtk-update-icon-cache-3.0
+	   ./gtk-update-icon-cache
 endif
 
 gtkbuiltincache.h: @REBUILD@ stamp-icons
-	$(MAKE) $(AM_MAKEFLAGS) gtk-update-icon-cache-3.0$(EXEEXT) $(GTK_UPDATE_ICON_CACHE_MANIFEST)
-	$(gtk_update_icon_cache_program) --force --ignore-theme-index		\
+	$(AM_V_at) $(MAKE) $(AM_MAKEFLAGS) gtk-update-icon-cache$(EXEEXT) $(GTK_UPDATE_ICON_CACHE_MANIFEST)
+	$(AM_V_GEN) $(gtk_update_icon_cache_program) --quiet --force --ignore-theme-index		\
 	   --source builtin_icons stock-icons > gtkbuiltincache.h.tmp &&        \
 	mv gtkbuiltincache.h.tmp gtkbuiltincache.h
 
@@ -1347,7 +1345,7 @@ EXTRA_DIST +=                   \
 	tree_minus.xpm		\
 	tree_plus.xpm		\
 	gtk.def			\
-	gtk-builder-convert-3.0	\
+	gtk-builder-convert	\
 	gtk-win32.rc		\
 	gtk-win32.rc.in		\
 	gtkwin32embed.h		\

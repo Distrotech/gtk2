@@ -4513,6 +4513,8 @@ gtk_window_destroy (GtkWidget *widget)
   GtkWindow *window = GTK_WINDOW (widget);
   GtkWindowPrivate *priv = window->priv;
 
+  gtk_window_release_application (window);
+
   toplevel_list = g_slist_remove (toplevel_list, window);
 
   if (priv->transient_parent)
@@ -4520,7 +4522,7 @@ gtk_window_destroy (GtkWidget *widget)
 
   /* frees the icons */
   gtk_window_set_icon_list (window, NULL);
-  
+
   if (priv->has_user_ref_count)
     {
       priv->has_user_ref_count = FALSE;
@@ -4918,9 +4920,7 @@ gtk_window_realize (GtkWidget *widget)
 
   gdk_window_set_user_data (gdk_window, window);
 
-  gtk_widget_style_attach (widget);
   context = gtk_widget_get_style_context (widget);
-
   gtk_style_context_set_background (context, gdk_window);
 
   if (priv->transient_parent &&

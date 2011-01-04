@@ -100,8 +100,6 @@ struct _GdkDisplay
   guint double_click_time;  /* Maximum time between clicks in msecs */
   GdkDevice *core_pointer;  /* Core pointer device */
 
-  const GdkDisplayDeviceHooks *device_hooks; /* Hooks for querying pointer */
-
   guint closed             : 1;  /* Whether this display has been closed */
   guint ignore_core_events : 1;  /* Don't send core motion and button event */
 

@@ -3654,6 +3654,9 @@ gtk_css_provider_get_default (void)
         ".tooltip {\n"
         "  background-color: @tooltip_bg_color; \n"
         "  color: @tooltip_fg_color; \n"
+        "  border-color: @tooltip_fg_color; \n"
+        "  border-width: 1;\n"
+        "  border-style: solid;\n"
         "}\n"
         "\n"
         ".button,\n"
@@ -3822,6 +3825,11 @@ gtk_css_provider_get_default (void)
         ".error {\n"
         "  background-color: @error_bg_color;\n"
         "  color: @error_fg_color;\n"
+        "}\n"
+        "\n"
+        ".highlight {\n"
+        "  background-color: @selected_bg_color;\n"
+        "  color: @selected_fg_color;\n"
         "}\n"
         "\n";
 

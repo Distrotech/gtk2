@@ -327,7 +327,7 @@ How to compile GTK+ itself
             <arg>--with-included-immodules=MODULE1,MODULE2,...</arg>
           </group>
           <group>
-            <arg>--enable-debug=[no|minimum|yes]</arg>
+            <arg>--enable-debug=[no/minimum/yes]</arg>
           </group>
           <group>
             <arg>--disable-Bsymbolic</arg>
@@ -354,13 +354,23 @@ How to compile GTK+ itself
             <arg>--enable-papi</arg>
           </group>
           <group>
-            <arg>--with-xinput=[no|yes]</arg>
+            <arg>--enable-xinput</arg>
+            <arg>--disable-xinput</arg>
           </group>
           <group>
-            <arg>--with-gdktarget=[x11|win32|quartz]</arg>
+            <arg>--enable-packagekit</arg>
+            <arg>--disable-packagekit</arg>
+	  </group>
+	  <group>
+            <arg>--enable-x11-backend</arg>
+            <arg>--disable-x11-backend</arg>
+            <arg>--enable-win32-backend</arg>
+            <arg>--disable-win32-backend</arg>
+            <arg>--enable-quartz-backend</arg>
+            <arg>--disable-quartz-backend</arg>
           </group>
           <group>
-            <arg>--disable-introspection</arg>
+            <arg>--enable-introspection=[no/auto/yes]</arg>
           </group>
         </cmdsynopsis>
       </para>
@@ -513,7 +523,8 @@ How to compile GTK+ itself
       </formalpara>
 
       <formalpara>
-        <title><systemitem>--with-xinput</systemitem></title>
+        <title><systemitem>--disable-xinput</systemitem> and
+           <systemitem>--enable-xinput</systemitem></title>
         <para>
           Controls whether GTK+ is built with support for the XInput
           or XInput2 extension. These extensions provide an extended
@@ -525,21 +536,42 @@ How to compile GTK+ itself
           information.
         </para>
       </formalpara>
+
       <formalpara>
-        <title><systemitem>--with-gdktarget</systemitem></title>
+        <title><systemitem>--disable-packagekit</systemitem> and
+           <systemitem>--enable-packagekit</systemitem></title>
+        <para>
+          By default the <command>configure</command> script will try
+          to build the PackageKit support for the open-with dialog if
+          the PackageKit libraries are found.
+          These options can be used to explicitly control whether
+          PackageKit support should be built.
+        </para>
+      </formalpara>
+
+      <formalpara>
+        <title><systemitem>--enable-x11-backend</systemitem>,
+	  <systemitem>--disable-x11-backend</systemitem>,
+	  <systemitem>--enable-win32-backend</systemitem>,
+	  <systemitem>--disable-win32-backend</systemitem>,
+	  <systemitem>--enable-quartz-backend</systemitem>,
+          and <systemitem>--disable-quartz-backend</systemitem></title>
 
         <para>
-          Toggles between the supported backends for GDK.
-          The default is x11, unless the platform is Windows, in which
-          case the default is win32. Other supported backends are
-          the quartz backend for OS X.
+          Enables specific backends for GDK.  If none of these options
+          are given, the x11 backend will be enabled by default,
+          unless the platform is Windows, in which case the default is
+          win32.  If any backend is explicitly enabled or disabled, no
+          other platform will be enabled automatically.  Other
+          supported backends are the quartz backend for OS X.
         </para>
       </formalpara>
       <formalpara>
-        <title><systemitem>--disable-introspection</systemitem></title>
+        <title><systemitem>--enable-introspection</systemitem></title>
 
         <para>
-          Build without introspection support.
+          Build with or without introspection support.
+          The default is 'auto'.
         </para>
       </formalpara>
     </refsect1>

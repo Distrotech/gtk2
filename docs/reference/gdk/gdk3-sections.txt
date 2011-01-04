@@ -126,10 +126,6 @@ gdk_display_set_double_click_distance
 gdk_display_get_pointer
 gdk_display_list_devices
 gdk_display_get_window_at_pointer
-GdkDisplayPointerHooks
-gdk_display_set_pointer_hooks
-GdkDisplayDeviceHooks
-gdk_display_set_device_hooks
 gdk_display_warp_pointer
 gdk_display_supports_cursor_color
 gdk_display_supports_cursor_alpha
@@ -472,10 +468,6 @@ gdk_window_get_device_events
 gdk_window_set_device_events
 gdk_window_get_source_events
 gdk_window_set_source_events
-
-<SUBSECTION>
-GdkPointerHooks
-gdk_set_pointer_hooks
 
 <SUBSECTION>
 gdk_offscreen_window_get_surface

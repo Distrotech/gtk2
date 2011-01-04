@@ -236,36 +236,99 @@ AC_ARG_ENABLE(debug,
               AC_HELP_STRING([--enable-debug=@<:@no/minimum/yes@:>@],
                              [turn on debugging @<:@default=debug_default@:>@]),,
               enable_debug=debug_default)
-AC_ARG_ENABLE(xkb,
-              [AC_HELP_STRING([--enable-xkb],
-                              [support XKB [default=maybe]])],,
-              [enable_xkb="maybe"])
-AC_ARG_ENABLE(xinerama,
-              [AC_HELP_STRING([--enable-xinerama],
-	                      [support xinerama extension if available [default=yes]])],,
-              [enable_xinerama="yes"])
+
 AC_ARG_ENABLE(rebuilds,
               [AC_HELP_STRING([--disable-rebuilds],
                               [disable all source autogeneration rules])],,
               [enable_rebuilds=yes])
 
-AC_ARG_WITH(xinput,
-            [AC_HELP_STRING([--with-xinput=@<:@no/yes@:>@], [support XInput])])
+AC_ARG_ENABLE(xkb,
+              [AC_HELP_STRING([--enable-xkb],
+                              [support XKB extension [default=maybe]])],,
+              [enable_xkb="maybe"])
+AC_ARG_ENABLE(xinerama,
+              [AC_HELP_STRING([--enable-xinerama],
+	                      [support Xinerama extension if available [default=yes]])],,
+              [enable_xinerama="yes"])
+AC_ARG_ENABLE(xinput,
+              [AC_HELP_STRING([--enable-xinput],
+                              [support XInput extension if available [default=yes]])],,
+              [enable_xinput="yes"])
 
-if test "$platform_win32" = yes; then
-  gdktarget=win32
-else
-  gdktarget=x11
+AC_ARG_ENABLE(x11-backend,
+              [AC_HELP_STRING([--enable-x11-backend],
+                              [enable the X11 gdk backend])],
+			      [backend_set=yes])
+AC_ARG_ENABLE(win32-backend,
+              [AC_HELP_STRING([--enable-win32-backend],
+                              [enable the Win32 gdk backend])],
+			      [backend_set=yes])
+AC_ARG_ENABLE(quartz-backend,
+              [AC_HELP_STRING([--enable-quartz-backend],
+                              [enable the quartz gdk backend])],
+			      [backend_set=yes])
+
+if test -z "$backend_set"; then
+  if test "$platform_win32" = yes; then
+    enable_win32_backend=yes
+  else
+    enable_x11_backend=yes
+  fi
 fi
 
-AC_ARG_WITH(gdktarget, [  --with-gdktarget=[[x11/win32/quartz]] select non-default GDK target],
-	gdktarget=$with_gdktarget)
+cairo_backends=
+backend_immodules=
+GDK_BACKENDS=
+GDK_EXTRA_LIBS=
+GDK_EXTRA_CFLAGS=
+GDK_WINDOWING=
+GIO_PACKAGE=gio-2.0
+PANGO_PACKAGES="pango pangocairo"
 
-AC_SUBST(gdktarget)
-case $gdktarget in
-  x11|win32|quartz) ;;
-  *) AC_MSG_ERROR([Invalid target for GDK: use x11, quartz or win32.]);;
-esac
+if test "x$enable_x11_backend" == xyes; then
+  # GDK calls the xlib backend "x11," cairo calls it "xlib." Other
+  # backend names are identical.
+  cairo_backends="$cairo_backends cairo-xlib"
+  GDK_BACKENDS="$GDK_BACKENDS x11"
+  # Pull in gio-unix for GDesktopAppInfo usage, see at least
+  # gdkapplaunchcontext-x11.c
+  GIO_PACKAGE=gio-unix-2.0
+  backend_immodules="$backend_immodules,xim"
+  GDK_WINDOWING="$GDK_WINDOWING
+#define GDK_WINDOWING_X11"
+fi
+
+if test "x$enable_win32_backend" == xyes; then
+  cairo_backends="$cairo_backends cairo-win32"
+  GDK_BACKENDS="$GDK_BACKENDS win32"
+  backend_immodules="$backend_immodules,ime"
+  GDK_WINDOWING="$GDK_WINDOWING
+#define GDK_NATIVE_WINDOW_POINTER
+#define GDK_WINDOWING_WIN32"
+  GDK_EXTRA_LIBS="$GDK_EXTRA_LIBS -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid"
+  AM_CONDITIONAL(USE_WIN32, true)
+  PANGO_PACKAGES="pangowin32 pangocairo"
+else
+  AM_CONDITIONAL(USE_WIN32, false)
+fi
+
+if test "x$enable_quartz_backend" == xyes; then
+  cairo_backends="$cairo_backends cairo-quartz"
+  GDK_BACKENDS="$GDK_BACKENDS quartz"
+  GDK_WINDOWING="$GDK_WINDOWING
+#define GDK_WINDOWING_QUARTZ"
+  GDK_EXTRA_LIBS="$GDK_EXTRA_LIBS -framework Cocoa"
+  AM_CONDITIONAL(USE_QUARTZ, true)
+else
+  AM_CONDITIONAL(USE_QUARTZ, false)
+fi
+
+
+AC_SUBST(GDK_BACKENDS)
+
+if test -z "$GDK_BACKENDS"; then
+  AC_MSG_ERROR([No GDK backends selected.])
+fi
 
 if test "x$enable_debug" = "xyes"; then
   test "$cflags_set" = set || CFLAGS="$CFLAGS -g"
@@ -358,18 +421,7 @@ PKG_CHECK_MODULES(BASE_DEPENDENCIES,
    cairo-gobject >= cairo_required_version dnl
    gdk-pixbuf-2.0 >= gdk_pixbuf_required_version])
 
-## In addition to checking that cairo is present, we also need to
-## check that the correct cairo backend is there. E.g. if the GDK
-## target is win32 we need the cairo-win32 backend and so on.
-cairo_backend=$gdktarget
-
-# GDK calls the xlib backend "x11," cairo calls it "xlib." Other
-# backend names are identical.
-if test "x$cairo_backend" = "xx11"; then
-   cairo_backend=xlib
-fi
-PKG_CHECK_MODULES(CAIRO_BACKEND,
-  [cairo-$cairo_backend >= cairo_required_version])
+PKG_CHECK_MODULES(CAIRO_BACKEND, [$cairo_backends])
 
 if test "$os_win32" != yes; then
     # libtool option to control which symbols are exported
@@ -726,8 +778,8 @@ dnl AC_HELP_STRING cause problems.
 dnl AC_HELP_STRING([--with-included-immodules=MODULE1 MODULE2 ...],
 dnl                [build the specified input method modules into gtk])
 AC_ARG_WITH(included_immodules,
-[  --with-included-immodules=MODULE1,MODULE2,...
-                          build the specified input methods into gtk])
+            AC_HELP_STRING([--with-included-immodules=MODULE1,MODULE2,...],
+                           [build the specified input methods into gtk]))
 
 if $dynworks; then
    :
@@ -738,14 +790,7 @@ else
    fi
 fi
 
-all_immodules="am-et,cedilla,cyrillic-translit"
-if test "$gdktarget" = "win32"; then
-   all_immodules="${all_immodules},ime"
-fi
-all_immodules="${all_immodules},inuktitut,ipa,multipress,thai,ti-er,ti-et,viqr"
-if test "$gdktarget" = "x11"; then
-   all_immodules="${all_immodules},xim"
-fi
+all_immodules="am-et,cedilla,cyrillic-translit,inuktitut,ipa,multipress,thai,ti-er,ti-et,viqr$backend_immodules"
 
 included_immodules=""
 # If the switch specified without listing any specific ones, include all
@@ -830,14 +875,11 @@ fi
 # Windowing system checks
 ########################################
 
-GDK_EXTRA_LIBS=
-GDK_EXTRA_CFLAGS=
-
 # GTK+ uses some X calls, so needs to link against X directly
 GTK_DEP_PACKAGES_FOR_X=
 GTK_DEP_LIBS_FOR_X=
 
-if test "x$gdktarget" = "xx11"; then
+if test "x$enable_x11_backend" == xyes; then
   X_PACKAGES=fontconfig
 
   #
@@ -1017,7 +1059,7 @@ if test "x$gdktarget" = "xx11"; then
   fi
 
   # set up things for XInput
-  if test "x$with_xinput" != "xno" && $PKG_CONFIG --exists "xi" ; then
+  if test "x$enable_xinput" != "xno" && $PKG_CONFIG --exists "xi" ; then
     have_xinput=yes
 
     AC_DEFINE(XINPUT_XFREE, 1,
@@ -1096,27 +1138,7 @@ else
   AM_CONDITIONAL(HAVE_X11R6, false)
 fi
 
-if test "x$gdktarget" = "xwin32"; then
-  GDK_EXTRA_LIBS="$GDK_EXTRA_LIBS -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid"
-  AM_CONDITIONAL(USE_WIN32, true)
-else
-  AM_CONDITIONAL(USE_WIN32, false)
-fi
-
-if test "x$gdktarget" = "xquartz"; then
-  GDK_EXTRA_LIBS="$GDK_EXTRA_LIBS -framework Cocoa"
-  AM_CONDITIONAL(USE_QUARTZ, true)
-else
-  AM_CONDITIONAL(USE_QUARTZ, false)
-fi
-
 # Check for Pango flags
-
-if test "x$gdktarget" = "xwin32"; then
-	PANGO_PACKAGES="pangowin32 pangocairo"
-else
-	PANGO_PACKAGES="pango pangocairo"
-fi
 
 AC_MSG_CHECKING(Pango flags)
 if $PKG_CONFIG --exists $PANGO_PACKAGES ; then
@@ -1147,12 +1169,7 @@ fi
 CFLAGS="$saved_cflags"
 LDFLAGS="$saved_ldflags"
 
-# Pull in gio-unix for GDesktopAppInfo usage, see at least gdkapplaunchcontext-x11.c
-if test "x$gdktarget" = "xx11"; then
-  GDK_PACKAGES="$PANGO_PACKAGES gio-unix-2.0 $X_PACKAGES gdk-pixbuf-2.0 cairo-$cairo_backend cairo-gobject"
-else
-  GDK_PACKAGES="$PANGO_PACKAGES gio-2.0 gdk-pixbuf-2.0 cairo-$cairo_backend cairo-gobject"
-fi
+GDK_PACKAGES="$PANGO_PACKAGES $GIO_PACKAGE $X_PACKAGES gdk-pixbuf-2.0 $cairo_backends cairo-gobject"
 
 GDK_DEP_LIBS="$GDK_EXTRA_LIBS `$PKG_CONFIG --libs $GDK_PACKAGES`"
 GDK_DEP_CFLAGS="`$PKG_CONFIG --cflags  gthread-2.0 $GDK_PACKAGES` $GDK_EXTRA_CFLAGS"
@@ -1161,7 +1178,7 @@ GDK_DEP_CFLAGS="`$PKG_CONFIG --cflags  gthread-2.0 $GDK_PACKAGES` $GDK_EXTRA_CFL
 # into the pkg-config files
 #
 if test $enable_explicit_deps != yes ; then
-  GDK_PACKAGES="$PANGO_PACKAGES gdk-pixbuf-2.0"
+  GDK_PACKAGES="$PANGO_PACKAGES gdk-pixbuf-2.0 cairo-gobject"
   GDK_EXTRA_LIBS=
 fi
 
@@ -1202,7 +1219,7 @@ else
 fi
 
 GTK_PACKAGES="atk cairo cairo-gobject gdk-pixbuf-2.0 gio-2.0"
-if test "x$gdktarget" = "xx11"; then
+if test "x$enable_x11_backend" == xyes; then
   GTK_PACKAGES="$GTK_PACKAGES pangoft2"
 fi
 GTK_EXTRA_LIBS=
@@ -1272,7 +1289,7 @@ LIBS="$old_LIBS"
 ################################################################
 
 AC_ARG_ENABLE(cups,
-              [AC_HELP_STRING([--disable-cups]
+              [AC_HELP_STRING([--disable-cups],
                               [disable cups print backend])],,
               [enable_cups=auto])
 
@@ -1332,7 +1349,7 @@ fi
 #
 
 AC_ARG_ENABLE(papi,
-              [AC_HELP_STRING([--disable-papi]
+              [AC_HELP_STRING([--disable-papi],
                               [disable papi print backend])],,
              [enable_papi=auto])
 
@@ -1367,7 +1384,7 @@ if test "$os_win32" != "yes"; then
 *** postscript backend enabled.]))
 
   AC_CHECK_HEADER(cairo-svg.h,,AC_MSG_ERROR([
-*** Can't find cairo-svg.h. You must build Cairo with the
+*** Cannot find cairo-svg.h. You must build Cairo with the
 *** svg backend enabled.]))
 fi
 
@@ -1418,15 +1435,15 @@ GOBJECT_INTROSPECTION_CHECK([0.9.3])
 #################################################
 
 AC_ARG_ENABLE(packagekit,
-	      AC_HELP_STRING([--disable-packagekit],
-			     [build packagekit open with module]))
+              AC_HELP_STRING([--disable-packagekit],
+                             [build packagekit open-with module]))
 
 ENABLE_PACKAGEKIT=
 if test "os_win32" != "yes"; then
-   	if test "x$enable_packagekit" != "xno"; then
-	   	ENABLE_PACKAGEKIT=1
-      	   	AC_DEFINE(ENABLE_PACKAGEKIT, 1, [define to enable packagekit])
-	fi
+        if test "x$enable_packagekit" != "xno"; then
+                ENABLE_PACKAGEKIT=1
+                AC_DEFINE(ENABLE_PACKAGEKIT, 1, [define to enable packagekit])
+        fi
 fi
 
 AC_SUBST(ENABLE_PACKAGEKIT)
@@ -1518,20 +1535,7 @@ _______EOF
 	  mv $outfile gdk/gdkconfig.h
 	fi
 ],[
-gdk_windowing=''
-if expr "$gdktarget" : ".*x11.*" > /dev/null ; then
-  gdk_windowing='$gdk_windowing
-#define GDK_WINDOWING_X11'
-fi
-if expr "$gdktarget" : ".*win32.*" > /dev/null ; then
-  gdk_windowing='$gdk_windowing
-#define GDK_NATIVE_WINDOW_POINTER
-#define GDK_WINDOWING_WIN32'
-fi
-if expr "$gdktarget" : ".*quartz.*" > /dev/null ; then
-  gdk_windowing='$gdk_windowing
-#define GDK_WINDOWING_QUARTZ'
-fi
+gdk_windowing='$GDK_WINDOWING'
 ])
 
 dnl
@@ -1621,4 +1625,4 @@ perf/Makefile
 AC_OUTPUT
 
 echo "configuration:
-        target:             $gdktarget"
+        backends:             $GDK_BACKENDS"

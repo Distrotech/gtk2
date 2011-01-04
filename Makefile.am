@@ -71,8 +71,8 @@ gtk+-*-3.0-uninstalled.pc: gtk+-3.0-uninstalled.pc
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gdk-3.0.pc gtk+-3.0.pc gail-3.0.pc
 
-pkgconfig_DATA += $(patsubst %,gtk+-%-3.0.pc,@gdktarget@)
-pkgconfig_DATA += $(patsubst %,gdk-%-3.0.pc,@gdktarget@)
+pkgconfig_DATA += ${GDK_BACKENDS:%=gtk+-%-3.0.pc}
+pkgconfig_DATA += ${GDK_BACKENDS:%=gdk-%-3.0.pc}
 
 if OS_UNIX
 pkgconfig_DATA += gtk+-unix-print-3.0.pc
@@ -95,8 +95,7 @@ distclean-local:
 	fi
 
 ChangeLog:
-	@echo Creating $@
-	@if test -d "$(srcdir)/.git"; then \
+	$(AM_V_GEN) if test -d "$(srcdir)/.git"; then \
 	  (GIT_DIR=$(top_srcdir)/.git ./missing --run git log GTK_2_16_0^^.. --stat) | fmt --split-only > $@.tmp \
 	  && mv -f $@.tmp $@ \
 	  || ($(RM) $@.tmp; \

@@ -1893,8 +1893,6 @@ gtk_notebook_realize (GtkWidget *widget)
   priv->event_window = gdk_window_new (gtk_widget_get_parent_window (widget),
 					   &attributes, attributes_mask);
   gdk_window_set_user_data (priv->event_window, notebook);
-
-  gtk_widget_style_attach (widget);
 }
 
 static void
@@ -8090,7 +8088,7 @@ gtk_notebook_get_tab_detachable (GtkNotebook *notebook,
  * notebook or widget.
  *
  * Note that 2 notebooks must share a common group identificator
- * (see gtk_notebook_set_group()) to allow automatic tabs
+ * (see gtk_notebook_set_group_name()) to allow automatic tabs
  * interchange between them.
  *
  * If you want a widget to interact with a notebook through DnD

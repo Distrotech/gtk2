@@ -19,6 +19,8 @@
 
 #include "config.h"
 
+#include <math.h>
+
 #include "gdkdeviceprivate.h"
 #include "gdkdisplayprivate.h"
 #include "gdkinternals.h"
@@ -416,19 +418,25 @@ gdk_device_get_position (GdkDevice        *device,
                          gint             *x,
                          gint             *y)
 {
-  GdkScreen *tmp_screen;
   GdkDisplay *display;
   gint tmp_x, tmp_y;
-  GdkModifierType tmp_mask;
+  GdkScreen *default_screen;
+  GdkWindow *root;
 
   g_return_if_fail (GDK_IS_DEVICE (device));
   g_return_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD);
 
   display = gdk_device_get_display (device);
-  display->device_hooks->get_device_state (display, device, &tmp_screen, &tmp_x, &tmp_y, &tmp_mask);
+  default_screen = gdk_display_get_default_screen (display);
+
+  _gdk_device_query_state (device,
+                           gdk_screen_get_root_window (default_screen),
+                           &root, NULL,
+                           &tmp_x, &tmp_y,
+                           NULL, NULL, NULL);
 
   if (screen)
-    *screen = tmp_screen;
+    *screen = gdk_window_get_screen (root);
   if (x)
     *x = tmp_x;
   if (y)
@@ -455,16 +463,26 @@ gdk_device_get_window_at_position (GdkDevice  *device,
                                    gint       *win_x,
                                    gint       *win_y)
 {
-  GdkDisplay *display;
   gint tmp_x, tmp_y;
   GdkWindow *window;
 
   g_return_val_if_fail (GDK_IS_DEVICE (device), NULL);
   g_return_val_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD, NULL);
 
-  display = gdk_device_get_display (device);
+  window = _gdk_device_window_at_position (device, &tmp_x, &tmp_y, NULL, FALSE);
 
-  window = display->device_hooks->window_at_device_position (display, device, &tmp_x, &tmp_y);
+  /* This might need corrections, as the native window returned
+     may contain client side children */
+  if (window)
+    {
+      double xx, yy;
+
+      window = _gdk_window_find_descendant_at (window,
+					       tmp_x, tmp_y,
+					       &xx, &yy);
+      tmp_x = floor (xx + 0.5);
+      tmp_y = floor (yy + 0.5);
+    }
 
   if (win_x)
     *win_x = tmp_x;

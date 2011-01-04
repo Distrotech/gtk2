@@ -338,12 +338,27 @@ struct _GtkStyleContextClass
 #define GTK_STYLE_CLASS_VIEW "view"
 
 /**
+ * GTK_STYLE_CLASS_HIGHLIGHT:
+ *
+ * A CSS class defining a highlighted area, such as headings in
+ * assistants.
+ */
+#define GTK_STYLE_CLASS_HIGHLIGHT "highlight"
+
+/**
  * GTK_STYLE_CLASS_FRAME:
  *
  * A CSS class defining a frame delimiting content, such as GtkFrame
  * or the scrolled window frame around the scrollable area.
  */
 #define GTK_STYLE_CLASS_FRAME "frame"
+
+/**
+ * GTK_STYLE_CLASS_DND:
+ *
+ * A CSS class for a drag-and-drop indicator
+ */
+#define GTK_STYLE_CLASS_DND "dnd"
 
 /**
  * GTK_STYLE_CLASS_INFO:
