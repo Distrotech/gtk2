@@ -26,18 +26,15 @@
 
 #include "config.h"
 
-#include "gtkintl.h"
+#include "gtkwindow.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-#include "gdk/gdk.h"
-#include "gdk/gdkkeysyms.h"
 
 #include "gtkprivate.h"
 #include "gtkrc.h"
-#include "gtkwindow.h"
 #include "gtkwindowprivate.h"
 #include "gtkaccelgroupprivate.h"
 #include "gtkbindings.h"
@@ -51,6 +48,8 @@
 #include "gtkplug.h"
 #include "gtkbuildable.h"
 #include "gtkwidgetprivate.h"
+#include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 #ifdef GDK_WINDOWING_X11
 #include "x11/gdkx.h"

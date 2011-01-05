@@ -33,7 +33,6 @@
 #include <math.h>
 #include <string.h>
 
-#include "gdk/gdkkeysyms.h"
 #include "gtkalignment.h"
 #include "gtkbindings.h"
 #include "gtkcelleditable.h"
@@ -59,6 +58,7 @@
 #include "gtkwindow.h"
 #include "gtktreeview.h"
 #include "gtktreeselection.h"
+#include "gtktypebuiltins.h"
 #include "gtkprivate.h"
 #include "gtkentryprivate.h"
 #include "gtkcelllayout.h"

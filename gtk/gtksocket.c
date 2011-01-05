@@ -31,8 +31,7 @@
 
 #include <string.h>
 
-#include "gdk/gdkkeysyms.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtksizerequest.h"
 #include "gtkwindowprivate.h"

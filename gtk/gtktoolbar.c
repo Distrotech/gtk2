@@ -32,19 +32,17 @@
 
 #include "config.h"
 
-#include "gtktoolbar.h"
-
 #include <math.h>
 #include <string.h>
 
-#include <gdk/gdkkeysyms.h>
+#include "gtktoolbar.h"
 
 #include "gtkarrow.h"
 #include "gtkbindings.h"
 #include "gtkhbox.h"
 #include "gtkimage.h"
 #include "gtklabel.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkmenu.h"
 #include "gtkorientable.h"
@@ -57,6 +55,7 @@
 #include "gtkvbox.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 
 /**

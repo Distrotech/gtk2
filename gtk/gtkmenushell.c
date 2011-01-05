@@ -25,11 +25,11 @@
  */
 
 #include "config.h"
-#include "gdk/gdkkeysyms.h"
+
 #include "gtkbindings.h"
 #include "gtkkeyhash.h"
 #include "gtklabel.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkmenubar.h"
 #include "gtkmenuitemprivate.h"
@@ -40,6 +40,7 @@
 #include "gtkwindow.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 #define MENU_SHELL_TIMEOUT   500
 

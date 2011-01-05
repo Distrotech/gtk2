@@ -30,8 +30,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include <gdk/gdkkeysyms.h>
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkorientable.h"
 #include "gtkrange.h"
@@ -40,6 +39,7 @@
 #include "gtkwindow.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 /**
  * SECTION:gtkrange

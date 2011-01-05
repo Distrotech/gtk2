@@ -332,7 +332,6 @@ gtk_public_h_sources = 		\
 	gtktreestore.h		\
 	gtktreeview.h		\
 	gtktreeviewcolumn.h	\
-	gtktypeutils.h		\
 	gtkuimanager.h		\
 	gtkvbbox.h		\
 	gtkvbox.h		\
@@ -394,6 +393,7 @@ gtk_private_h_sources =		\
 	gtkimcontextsimpleseqs.h \
 	gtkintl.h		\
 	gtkkeyhash.h		\
+	gtkmainprivate.h	\
 	gtkmenuprivate.h	\
 	gtkmenuitemprivate.h	\
 	gtkmenushellprivate.h	\
@@ -432,6 +432,7 @@ gtk_private_h_sources =		\
 	gtktreeprivate.h	\
 	gtkwidgetprivate.h	\
 	gtkwindowprivate.h	\
+	gtktreemenu.h		\
 	$(gtk_clipboard_dnd_h_sources) \
 	$(gtk_appchooser_impl_h_sources)
 
@@ -650,6 +651,7 @@ gtk_base_c_sources = 		\
 	gtktooltip.c		\
 	gtktreedatalist.c	\
 	gtktreednd.c		\
+	gtktreemenu.c		\
 	gtktreemodel.c		\
 	gtktreemodelfilter.c	\
 	gtktreemodelsort.c	\
@@ -659,7 +661,6 @@ gtk_base_c_sources = 		\
 	gtktreeview.c		\
 	gtktreeviewcolumn.c	\
 	gtktypebuiltins.c	\
-	gtktypeutils.c		\
 	gtkuimanager.c		\
 	gtkvbbox.c		\
 	gtkvbox.c		\

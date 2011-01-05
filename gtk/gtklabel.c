@@ -31,11 +31,10 @@
 #include "gtklabel.h"
 #include "gtkaccellabel.h"
 #include "gtkdnd.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkpango.h"
 #include "gtkwindow.h"
-#include "gdk/gdkkeysyms.h"
 #include "gtkclipboard.h"
 #include "gtkimagemenuitem.h"
 #include "gtkintl.h"
@@ -51,6 +50,7 @@
 #include "gtkshow.h"
 #include "gtktooltip.h"
 #include "gtkprivate.h"
+#include "gtktypebuiltins.h"
 
 /*rint() is only available in GCC and/or C99*/
 #if (__STDC_VERSION__ < 199901L && !defined __GNUC__)

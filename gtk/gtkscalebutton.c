@@ -42,9 +42,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gdk/gdkkeysyms.h>
-
 #include "gtkbindings.h"
 #include "gtkframe.h"
 #include "gtkmain.h"
@@ -56,7 +53,7 @@
 #include "gtkstock.h"
 #include "gtkvbox.h"
 #include "gtkwindow.h"
-
+#include "gtktypebuiltins.h"
 #include "gtkintl.h"
 
 /**

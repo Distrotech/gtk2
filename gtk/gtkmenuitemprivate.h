@@ -42,6 +42,7 @@ struct _GtkMenuItemPrivate
   guint timer_from_keypress    : 1;
   guint from_menubar           : 1;
   guint use_action_appearance  : 1;
+  guint reserve_indicator      : 1;
 
   guint timer;
 
@@ -56,7 +57,14 @@ gboolean _gtk_menu_item_is_selectable        (GtkWidget     *menu_item);
 void     _gtk_menu_item_popup_submenu        (GtkWidget     *menu_item,
                                               gboolean       with_delay);
 void     _gtk_menu_item_popdown_submenu      (GtkWidget     *menu_item);
-
+void	  _gtk_menu_item_refresh_accel_path  (GtkMenuItem   *menu_item,
+					      const gchar   *prefix,
+					      GtkAccelGroup *accel_group,
+					      gboolean	     group_changed);
+gboolean  _gtk_menu_item_is_selectable       (GtkWidget     *menu_item);
+void      _gtk_menu_item_popup_submenu       (GtkWidget     *menu_item,
+					      gboolean       with_delay);
+void      _gtk_menu_item_popdown_submenu     (GtkWidget     *menu_item);
 
 G_END_DECLS
 

@@ -30,13 +30,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "gdk/gdkkeysyms.h"
 #include "gtkscale.h"
 #include "gtkiconfactory.h"
 #include "gtkicontheme.h"
 #include "gtkmarshalers.h"
 #include "gtkbindings.h"
 #include "gtkorientable.h"
+#include "gtktypebuiltins.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
 #include "gtkbuildable.h"

@@ -28,7 +28,6 @@
 
 #include "gtkmenubar.h"
 
-#include "gdk/gdkkeysyms.h"
 #include "gtkbindings.h"
 #include "gtkmain.h"
 #include "gtkmarshalers.h"
@@ -38,9 +37,9 @@
 #include "gtksettings.h"
 #include "gtksizerequest.h"
 #include "gtkwindow.h"
-
 #include "gtkintl.h"
 #include "gtkprivate.h"
+#include "gtktypebuiltins.h"
 
 #define BORDER_SPACING  0
 #define DEFAULT_IPADDING 1
@@ -313,7 +312,6 @@ gtk_menu_bar_size_request (GtkWidget      *widget,
 	    {
               gint toggle_size;
 
-	      GTK_MENU_ITEM (child)->priv->show_submenu_indicator = FALSE;
               gtk_widget_get_preferred_size (child, &child_requisition, NULL);
               gtk_menu_item_toggle_size_request (GTK_MENU_ITEM (child),
                                                  &toggle_size);

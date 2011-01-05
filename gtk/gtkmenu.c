@@ -25,13 +25,15 @@
  */
 
 #include "config.h"
+
 #include <string.h>
-#include "gdk/gdkkeysyms.h"
+
+#include  <gobject/gvaluecollector.h>
+
 #include "gtkaccellabel.h"
 #include "gtkaccelmap.h"
 #include "gtkbindings.h"
 #include "gtkcheckmenuitem.h"
-#include  <gobject/gvaluecollector.h>
 #include "gtkmain.h"
 #include "gtkmarshalers.h"
 #include "gtkmenuprivate.h"
@@ -44,6 +46,7 @@
 #include "gtksettings.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 #define NAVIGATION_REGION_OVERSHOOT 50  /* How much the navigation region
                                          * extends below the submenu
@@ -271,12 +274,6 @@ static const gchar attach_data_key[] = "gtk-menu-attach-data";
 
 static guint menu_signals[LAST_SIGNAL] = { 0 };
 
-static GtkMenuPrivate *
-gtk_menu_get_private (GtkMenu *menu)
-{
-  return G_TYPE_INSTANCE_GET_PRIVATE (menu, GTK_TYPE_MENU, GtkMenuPrivate);
-}
-
 G_DEFINE_TYPE (GtkMenu, gtk_menu, GTK_TYPE_MENU_SHELL)
 
 static void
@@ -322,7 +319,7 @@ is_grid_attached (AttachInfo *ai)
 static void
 menu_ensure_layout (GtkMenu *menu)
 {
-  GtkMenuPrivate *priv = gtk_menu_get_private (menu);
+  GtkMenuPrivate *priv = menu->priv;
 
   if (!priv->have_layout)
     {
@@ -408,7 +405,7 @@ menu_ensure_layout (GtkMenu *menu)
 static gint
 gtk_menu_get_n_columns (GtkMenu *menu)
 {
-  GtkMenuPrivate *priv = gtk_menu_get_private (menu);
+  GtkMenuPrivate *priv = menu->priv;
 
   menu_ensure_layout (menu);
 
@@ -418,7 +415,7 @@ gtk_menu_get_n_columns (GtkMenu *menu)
 static gint
 gtk_menu_get_n_rows (GtkMenu *menu)
 {
-  GtkMenuPrivate *priv = gtk_menu_get_private (menu);
+  GtkMenuPrivate *priv = menu->priv;
 
   menu_ensure_layout (menu);
 
@@ -2876,7 +2873,7 @@ gtk_menu_draw (GtkWidget *widget,
   GtkBorder menu_border;
 
   menu = GTK_MENU (widget);
-  priv = gtk_menu_get_private (menu);
+  priv = menu->priv;
   context = gtk_widget_get_style_context (widget);
   window = gtk_widget_get_window (widget);
   state = gtk_widget_get_state_flags (widget);
@@ -3033,7 +3030,6 @@ gtk_menu_get_preferred_width (GtkWidget *widget,
        * case the toggle size request depends on the size
        * request of a child of the child (e.g. for ImageMenuItem)
        */
-       GTK_MENU_ITEM (child)->priv->show_submenu_indicator = TRUE;
        gtk_widget_get_preferred_width (child, &child_min, &child_nat);
 
        gtk_menu_item_toggle_size_request (GTK_MENU_ITEM (child), &toggle_size);
@@ -4175,7 +4171,7 @@ gtk_menu_enter_notify (GtkWidget        *widget,
 
       if (GTK_IS_MENU (menu))
         {
-          GtkMenuPrivate *priv = gtk_menu_get_private (GTK_MENU (menu));
+          GtkMenuPrivate *priv = (GTK_MENU (menu))->priv;
           GtkMenuShell *menu_shell = GTK_MENU_SHELL (menu);
 
           if (priv->seen_item_enter)

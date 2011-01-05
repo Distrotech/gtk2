@@ -46,7 +46,7 @@
 #include "gtkintl.h"
 #include "gtkprivate.h"
 #include "gtkstock.h"
-#include "gdkkeysyms.h"
+#include "gtktypebuiltins.h"
 
 /**
  * SECTION:gtkinfobar

@@ -34,22 +34,26 @@
  * @Short_description: Displays a calendar and allows the user to select a date
  * @Title: GtkCalendar
  *
- * #GtkCalendar is a widget that displays a calendar, one month at a time. It
- * can be created with gtk_calendar_new().
+ * #GtkCalendar is a widget that displays a Gregorian calendar, one month
+ * at a time. It can be created with gtk_calendar_new().
  *
  * The month and year currently displayed can be altered with
- * gtk_calendar_select_month(). The exact day can be selected from the displayed
- * month using gtk_calendar_select_day().
+ * gtk_calendar_select_month(). The exact day can be selected from the
+ * displayed month using gtk_calendar_select_day().
  *
- * To place a visual marker on a particular day, use gtk_calendar_mark_day() and
- * to remove the marker, gtk_calendar_unmark_day(). Alternative, all marks can
- * be cleared with gtk_calendar_clear_marks().
+ * To place a visual marker on a particular day, use gtk_calendar_mark_day()
+ * and to remove the marker, gtk_calendar_unmark_day(). Alternative, all
+ * marks can be cleared with gtk_calendar_clear_marks().
  *
  * The way in which the calendar itself is displayed can be altered using
  * gtk_calendar_set_display_options().
  *
  * The selected date can be retrieved from a #GtkCalendar using
  * gtk_calendar_get_date().
+ *
+ * Users should be aware that, although the Gregorian calendar is the legal
+ * calendar in most countries, it was adopted progressively between 1582 and
+ * 1929. Display before these dates is likely to be historically incorrect.
  */
 
 #include "config.h"
@@ -77,7 +81,6 @@
 #include "gtkmarshalers.h"
 #include "gtktooltip.h"
 #include "gtkprivate.h"
-#include "gdk/gdkkeysyms.h"
 
 /***************************************************************************/
 /* The following date routines are taken from the lib_date package. 
@@ -3874,12 +3877,12 @@ gtk_calendar_unmark_day (GtkCalendar *calendar,
 /**
  * gtk_calendar_get_date:
  * @calendar: a #GtkCalendar
- * @year: (allow-none): location to store the year number, or %NULL
+ * @year: (allow-none): location to store the year as a decimal number (e.g. 2011), or %NULL
  * @month: (allow-none): location to store the month number (between 0 and 11), or %NULL
  * @day: (allow-none): location to store the day number (between 1 and 31), or %NULL
- * 
+ *
  * Obtains the selected date from a #GtkCalendar.
- **/
+ */
 void
 gtk_calendar_get_date (GtkCalendar *calendar,
 		       guint	   *year,

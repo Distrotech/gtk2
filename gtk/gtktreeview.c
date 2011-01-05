@@ -19,16 +19,16 @@
 
 
 #include "config.h"
+
 #include <math.h>
 #include <string.h>
-#include <gdk/gdkkeysyms.h>
 
 #include "gtktreeview.h"
 #include "gtkrbtree.h"
 #include "gtktreednd.h"
 #include "gtktreeprivate.h"
 #include "gtkcellrenderer.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkbuildable.h"
 #include "gtkbutton.h"
@@ -49,6 +49,7 @@
 #include "gtkprivate.h"
 #include "gtkwidgetprivate.h"
 #include "gtkentryprivate.h"
+#include "gtktypebuiltins.h"
 
 
 /**

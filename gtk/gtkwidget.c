@@ -25,15 +25,21 @@
  */
 
 #include "config.h"
+
 #include <stdarg.h>
 #include <string.h>
 #include <locale.h>
+
+#include <gobject/gvaluecollector.h>
+#include <gobject/gobjectnotifyqueue.c>
+#include <cairo-gobject.h>
+
 #include "gtkcontainer.h"
 #include "gtkaccelmap.h"
 #include "gtkclipboard.h"
 #include "gtkiconfactory.h"
 #include "gtkintl.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkrc.h"
 #include "gtkselection.h"
@@ -44,11 +50,6 @@
 #include "gtkwindowprivate.h"
 #include "gtkbindings.h"
 #include "gtkprivate.h"
-#include "gdk/gdk.h"
-#include <gobject/gvaluecollector.h>
-#include <gobject/gobjectnotifyqueue.c>
-#include <cairo-gobject.h>
-#include "gdk/gdkkeysyms.h"
 #include "gtkaccessible.h"
 #include "gtktooltip.h"
 #include "gtkinvisible.h"
@@ -62,6 +63,7 @@
 #include "gtkmodifierstyle.h"
 #include "gtkversion.h"
 #include "gtkdebug.h"
+#include "gtktypebuiltins.h"
 
 
 /**

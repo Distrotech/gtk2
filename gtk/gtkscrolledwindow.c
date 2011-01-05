@@ -25,15 +25,16 @@
  */
 
 #include "config.h"
+
 #include <math.h>
-#include <gdk/gdkkeysyms.h>
+
 #include "gtkbindings.h"
 #include "gtkmarshalers.h"
 #include "gtkscrollable.h"
 #include "gtkscrolledwindow.h"
 #include "gtkwindow.h"
-#include "gtktypeutils.h"
 #include "gtkprivate.h"
+#include "gtktypebuiltins.h"
 #include "gtkintl.h"
 
 

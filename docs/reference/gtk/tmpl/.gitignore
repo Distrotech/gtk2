@@ -8,6 +8,7 @@ gtkbuilder.sgml
 gtkbutton.sgml
 gtkcalendar.sgml
 gtkcelleditable.sgml
+gtkcelllayout.sgml
 gtkcellrenderer.sgml
 gtkcellrenderertext.sgml
 gtkcellview.sgml
@@ -16,9 +17,14 @@ gtkcolorsel.sgml
 gtkcombobox.sgml
 gtkcomboboxentry.sgml
 gtkcontainer.sgml
+gtkdialog.sgml
+gtkdrawingarea.sgml
 gtkeditable.sgml
 gtkentry.sgml
 gtkentrybuffer.sgml
+gtkeventbox.sgml
+gtkexpander.sgml
+gtkfeatures.sgml
 gtkhbox.sgml
 gtkiconview.sgml
 gtkimcontextsimple.sgml
@@ -26,6 +32,7 @@ gtkimmulticontext.sgml
 gtkitemfactory.sgml
 gtklayout.sgml
 gtklinkbutton.sgml
+gtkmain.sgml
 gtkmessagedialog.sgml
 gtknotebook.sgml
 gtkobject.sgml

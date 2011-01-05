@@ -28,20 +28,22 @@
  */
 
 #include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <locale.h>
-#include "gdk/gdkkeysyms.h"
+
 #include "gtkbindings.h"
 #include "gtkspinbutton.h"
 #include "gtkentryprivate.h"
-#include "gtkmain.h"
+#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtksettings.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtktypebuiltins.h"
 
 #define MIN_SPIN_BUTTON_WIDTH 30
 #define MAX_TIMER_CALLS       5

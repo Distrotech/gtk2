@@ -26,6 +26,7 @@
  */
 
 #include "config.h"
+
 #include <string.h>
 
 #define GTK_TEXT_USE_INTERNAL_UNSUPPORTED_API
@@ -44,12 +45,12 @@
 #include "gtktextdisplay.h"
 #include "gtktextview.h"
 #include "gtkimmulticontext.h"
-#include "gdk/gdkkeysyms.h"
 #include "gtkprivate.h"
 #include "gtktextutil.h"
 #include "gtkwidgetprivate.h"
 #include "gtkwindow.h"
 #include "gtkscrollable.h"
+#include "gtktypebuiltins.h"
 
 
 /**
@@ -9369,7 +9370,9 @@ gtk_text_view_add_child_at_anchor (GtkTextView          *text_view,
  * @ypos: Y position of child in window coordinates
  *
  * Adds a child at fixed coordinates in one of the text widget's
- * windows. The window must have nonzero size (see
+ * windows.
+ *
+ * The window must have nonzero size (see
  * gtk_text_view_set_border_window_size()). Note that the child
  * coordinates are given relative to the #GdkWindow in question, and
  * that these coordinates have no sane relationship to scrolling. When
@@ -9379,12 +9382,8 @@ gtk_text_view_add_child_at_anchor (GtkTextView          *text_view,
  * text window), you'll need to compute the child's correct position
  * in buffer coordinates any time scrolling occurs or buffer changes
  * occur, and then call gtk_text_view_move_child() to update the
- * child's position. Unfortunately there's no good way to detect that
- * scrolling has occurred, using the current API; a possible hack
- * would be to update all child positions when the scroll adjustments
- * change or the text buffer changes. See bug 64518 on
- * bugzilla.gnome.org for status of fixing this issue.
- **/
+ * child's position.
+ */
 void
 gtk_text_view_add_child_in_window (GtkTextView       *text_view,
                                    GtkWidget         *child,
