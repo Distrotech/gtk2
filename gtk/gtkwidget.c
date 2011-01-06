@@ -3721,14 +3721,6 @@ gtk_widget_unparent (GtkWidget *widget)
   if (gtk_container_get_focus_child (GTK_CONTAINER (priv->parent)) == widget)
     gtk_container_set_focus_child (GTK_CONTAINER (priv->parent), NULL);
 
-  /* If we are unanchoring the child, we save around the toplevel
-   * to emit hierarchy changed
-   */
-  if (priv->parent->priv->anchored)
-    g_object_ref (toplevel);
-  else
-    toplevel = NULL;
-
   gtk_widget_queue_draw_child (widget);
 
   /* Reset the width and height here, to force reallocation if we
@@ -3747,6 +3739,14 @@ gtk_widget_unparent (GtkWidget *widget)
 	gtk_widget_unrealize (widget);
     }
 
+  /* If we are unanchoring the child, we save around the toplevel
+   * to emit hierarchy changed
+   */
+  if (priv->parent->priv->anchored)
+    g_object_ref (toplevel);
+  else
+    toplevel = NULL;
+
   /* Removing a widget from a container restores the child visible
    * flag to the default state, so it doesn't affect the child
    * in the next parent.
@@ -3755,7 +3755,6 @@ gtk_widget_unparent (GtkWidget *widget)
 
   old_parent = priv->parent;
   priv->parent = NULL;
-  gtk_widget_set_parent_window (widget, NULL);
 
   /* parent may no longer expand if the removed
    * child was expand=TRUE and could therefore
@@ -3775,6 +3774,13 @@ gtk_widget_unparent (GtkWidget *widget)
       _gtk_widget_propagate_hierarchy_changed (widget, toplevel);
       g_object_unref (toplevel);
     }
+
+  /* Now that the parent pointer is nullified and the hierarchy-changed
+   * already passed, go ahead and unset the parent window, if we are unparenting
+   * an embeded GtkWindow the window will become toplevel again and hierarchy-changed
+   * will fire again for the new subhierarchy.
+   */
+  gtk_widget_set_parent_window (widget, NULL);
 
   g_object_notify (G_OBJECT (widget), "parent");
   g_object_thaw_notify (G_OBJECT (widget));
@@ -8638,6 +8644,7 @@ gtk_widget_get_default_style (void)
 }
 
 #ifdef G_ENABLE_DEBUG
+
 /* Verify invariants, see docs/widget_system.txt for notes on much of
  * this.  Invariants may be temporarily broken while we're in the
  * process of updating state, of course, so you can only
@@ -9068,6 +9075,16 @@ gtk_widget_render_icon (GtkWidget      *widget,
  * @parent_window: the new parent window.
  *
  * Sets a non default parent window for @widget.
+ *
+ * For GtkWindow classes, setting a @parent_window effects whether 
+ * the window is a toplevel window or can be embedded into other
+ * widgets.
+ *
+ * <note><para>
+ * For GtkWindow classes, this needs to be called before the
+ * window is realized.
+ * </para></note>
+ * 
  **/
 void
 gtk_widget_set_parent_window   (GtkWidget           *widget,
@@ -9088,6 +9105,13 @@ gtk_widget_set_parent_window   (GtkWidget           *widget,
 	g_object_unref (old_parent_window);
       if (parent_window)
 	g_object_ref (parent_window);
+
+      /* Unset toplevel flag when adding a parent window to a widget,
+       * this is the primary entry point to allow toplevels to be
+       * embeddable.
+       */
+      if (GTK_IS_WINDOW (widget) && !GTK_IS_PLUG (widget))
+	_gtk_window_set_is_toplevel (GTK_WINDOW (widget), parent_window == NULL);
     }
 }
 

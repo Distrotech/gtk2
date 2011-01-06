@@ -1991,10 +1991,11 @@ static void
 gtk_menu_scrollbar_changed (GtkAdjustment *adjustment,
                             GtkMenu       *menu)
 {
-  g_return_if_fail (GTK_IS_MENU (menu));
+  double value;
 
-  if (adjustment->value != menu->priv->scroll_offset)
-    gtk_menu_scroll_to (menu, adjustment->value);
+  value = gtk_adjustment_get_value (adjustment);
+  if (menu->priv->scroll_offset != value)
+    gtk_menu_scroll_to (menu, value);
 }
 
 static void
@@ -2149,7 +2150,7 @@ gtk_menu_set_tearoff_state (GtkMenu  *menu,
                                 priv->tearoff_scrollbar,
                                 FALSE, FALSE, 0);
 
-              if (priv->tearoff_adjustment->upper > height)
+              if (gtk_adjustment_get_upper (priv->tearoff_adjustment) > height)
                 gtk_widget_show (priv->tearoff_scrollbar);
 
               gtk_widget_show (priv->tearoff_hbox);
@@ -2756,20 +2757,13 @@ gtk_menu_size_allocate (GtkWidget     *widget,
             }
           else
             {
-              priv->tearoff_adjustment->upper = priv->requested_height;
-              priv->tearoff_adjustment->page_size = allocation->height;
-
-              if (priv->tearoff_adjustment->value + priv->tearoff_adjustment->page_size >
-                  priv->tearoff_adjustment->upper)
-                {
-                  gint value;
-                  value = priv->tearoff_adjustment->upper - priv->tearoff_adjustment->page_size;
-                  if (value < 0)
-                    value = 0;
-                  gtk_menu_scroll_to (menu, value);
-                }
-
-              gtk_adjustment_changed (priv->tearoff_adjustment);
+              gtk_adjustment_configure (priv->tearoff_adjustment,
+                                        gtk_adjustment_get_value (priv->tearoff_adjustment),
+                                        0,
+                                        priv->requested_height,
+                                        gtk_adjustment_get_step_increment (priv->tearoff_adjustment),
+                                        gtk_adjustment_get_page_increment (priv->tearoff_adjustment),
+                                        allocation->height);
 
               if (!gtk_widget_get_visible (priv->tearoff_scrollbar))
                 {
@@ -4759,15 +4753,8 @@ gtk_menu_scroll_to (GtkMenu *menu,
 
   widget = GTK_WIDGET (menu);
 
-  if (priv->tearoff_active &&
-      priv->tearoff_adjustment &&
-      (priv->tearoff_adjustment->value != offset))
-    {
-      priv->tearoff_adjustment->value =
-        CLAMP (offset,
-               0, priv->tearoff_adjustment->upper - priv->tearoff_adjustment->page_size);
-      gtk_adjustment_value_changed (priv->tearoff_adjustment);
-    }
+  if (priv->tearoff_active && priv->tearoff_adjustment)
+    gtk_adjustment_set_value (priv->tearoff_adjustment, offset);
 
   /* Move/resize the viewport according to arrows: */
   gtk_widget_get_allocation (widget, &allocation);

@@ -1621,6 +1621,7 @@ gtk_hseparator_get_type
 GtkIconView
 GtkIconViewForeachFunc
 gtk_icon_view_new
+gtk_icon_view_new_with_area
 gtk_icon_view_new_with_model
 gtk_icon_view_set_model
 gtk_icon_view_get_model
@@ -1678,7 +1679,7 @@ gtk_icon_view_unset_model_drag_source
 gtk_icon_view_unset_model_drag_dest
 gtk_icon_view_set_reorderable
 gtk_icon_view_get_reorderable
-gtk_icon_view_set_drag_dest_item 
+gtk_icon_view_set_drag_dest_item
 gtk_icon_view_get_drag_dest_item
 gtk_icon_view_get_dest_item_at_pos
 gtk_icon_view_create_drag_icon
@@ -2270,6 +2271,34 @@ GtkNotebookPrivate
 </SECTION>
 
 <SECTION>
+<FILE>gtknumerableicon</FILE>
+<TITLE>GtkNumerableIcon</TITLE>
+GtkNumerableIcon
+gtk_numerable_icon_new
+gtk_numerable_icon_new_with_style_context
+gtk_numerable_icon_get_background_gicon
+gtk_numerable_icon_set_background_gicon
+gtk_numerable_icon_get_background_icon_name
+gtk_numerable_icon_set_background_icon_name
+gtk_numerable_icon_get_count
+gtk_numerable_icon_set_count
+gtk_numerable_icon_get_label
+gtk_numerable_icon_set_label
+gtk_numerable_icon_get_style_context
+gtk_numerable_icon_set_style_context
+<SUBSECTION Standard>
+GTK_NUMERABLE_ICON
+GTK_IS_NUMERABLE_ICON
+GTK_TYPE_NUMERABLE_ICON
+GTK_NUMERABLE_ICON_CLASS
+GTK_IS_NUMERABLE_ICON_CLASS
+GTK_NUMERABLE_ICON_GET_CLASS
+
+<SUBSECTION Private>
+gtk_numerable_icon_get_type
+</SECTION>
+
+<SECTION>
 <FILE>gtkoffscreenwindow</FILE>
 <TITLE>GtkOffscreenWindow</TITLE>
 GtkOffscreenWindow
@@ -2449,11 +2478,9 @@ gtk_range_set_fill_level
 gtk_range_set_restrict_to_fill_level
 gtk_range_set_show_fill_level
 gtk_range_get_adjustment
-gtk_range_set_update_policy
 gtk_range_set_adjustment
 gtk_range_get_inverted
 gtk_range_set_inverted
-gtk_range_get_update_policy
 gtk_range_get_value
 gtk_range_set_increments
 gtk_range_set_range
@@ -3922,6 +3949,7 @@ gtk_tree_model_get_iter_first
 gtk_tree_model_get_path
 gtk_tree_model_get_value
 gtk_tree_model_iter_next
+gtk_tree_model_iter_previous
 gtk_tree_model_iter_children
 gtk_tree_model_iter_has_child
 gtk_tree_model_iter_n_children
@@ -4526,8 +4554,6 @@ gtk_cell_renderer_get_preferred_size
 gtk_cell_renderer_get_preferred_width
 gtk_cell_renderer_get_preferred_width_for_height
 gtk_cell_renderer_get_request_mode
-gtk_cell_view_get_desired_height_for_width_of_row
-gtk_cell_view_get_desired_width_of_row
 
 <SUBSECTION Standard>
 GTK_CELL_RENDERER
@@ -5984,7 +6010,6 @@ GtkShadowType
 GtkStateType
 GtkStateFlags
 GtkToolbarStyle
-GtkUpdateType
 GtkWindowPosition
 GtkWindowType
 GtkSortType

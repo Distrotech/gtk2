@@ -275,6 +275,8 @@ HTML_IMAGES = \
 	$(top_srcdir)/gtk/stock-icons/24/gtk-page-setup.png		\
 	$(srcdir)/images/aboutdialog.png				\
 	$(srcdir)/images/accel-label.png				\
+	$(srcdir)/images/appchooserbutton.png				\
+	$(srcdir)/images/appchooserdialog.png				\
 	$(srcdir)/images/assistant.png					\
 	$(srcdir)/images/button.png					\
 	$(srcdir)/images/check-button.png				\
@@ -351,7 +353,9 @@ HTML_IMAGES = \
 	$(srcdir)/images/sliders.png					\
 	$(srcdir)/images/focus.png					\
 	$(srcdir)/images/handles.png					\
-	$(srcdir)/images/extensions.png
+	$(srcdir)/images/extensions.png					\
+	$(srcdir)/images/numerableicon.png				\
+	$(srcdir)/images/numerableicon2.png
 
 # Extra options to supply to gtkdoc-fixref
 FIXXREF_OPTIONS=--extra-dir=../gdk/html \
