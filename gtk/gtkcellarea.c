@@ -231,7 +231,7 @@
  * give every row it's minimum or natural height or, if the model content
  * is expected to fit inside the layouting widget without scrolling, it
  * would make sense to calculate the allocation for each row at
- * #GtkWidget.size_allocate() time using gtk_distribute_natural_allocation().
+ * #GtkWidget::size-allocate time using gtk_distribute_natural_allocation().
  * </para>
  * </refsect2>
  * <refsect2 id="cell-area-events-and-focus">
@@ -2489,7 +2489,7 @@ gtk_cell_area_class_list_cell_properties (GtkCellAreaClass  *aclass,
  *           with @first_prop_name
  *
  * Adds @renderer to @area, setting cell properties at the same time.
- * See gtk_cell_area_add() and gtk_cell_area_child_set() for more details.
+ * See gtk_cell_area_add() and gtk_cell_area_cell_set() for more details.
  *
  * Since: 3.0
  */
@@ -2945,11 +2945,12 @@ gtk_cell_area_activate (GtkCellArea         *area,
  * @area: a #GtkCellArea
  * @renderer: the #GtkCellRenderer to give focus to
  *
- * This is generally called from #GtkCellArea implementations
- * either gtk_cell_area_grab_focus() or gtk_cell_area_update_focus()
- * is called. It's also up to the #GtkCellArea implementation
- * to update the focused cell when receiving events from
- * gtk_cell_area_event() appropriately.
+ * Explicitly sets the currently focused cell to @renderer.
+ *
+ * This is generally called by implementations of
+ * #GtkCellAreaClass.focus() or #GtkCellAreaClass.event(),
+ * however it can also be used to implement functions such
+ * as gtk_tree_view_set_cursor_on_cell().
  *
  * Since: 3.0
  */
