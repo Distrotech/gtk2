@@ -1135,7 +1135,17 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   GtkDragSourceInfo *info;
   GdkDragContext *context;
   NSWindow *nswindow = get_toplevel_nswindow (widget);
-  NSEvent *nsevent = [nswindow currentEvent];
+  NSPoint point = {(double)event->motion.x, (double)event->motion.y};
+  NSEvent *nsevent = [NSEvent mouseEventWithType: NSLeftMouseDown
+		      location: point
+		      modifierFlags: 0
+		      timestamp: event->motion.time
+		      windowNumber: [nswindow windowNumber]
+		      context: [nswindow graphicsContext]
+		      eventNumber: 0
+		      clickCount: 1
+		      pressure: 0.0 ];
+  g_return_val_if_fail(nsevent != NULL, NULL);
 
   context = gdk_drag_begin (NULL, NULL);
   g_return_val_if_fail( context != NULL, NULL);
