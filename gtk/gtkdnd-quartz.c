@@ -1118,13 +1118,18 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 {
   GtkDragSourceInfo *info;
   GdkDragContext *context;
-/* FIXME: This is a bit of a race condition, because there's a fairly
- * large delay between receiving a motion event and the application
- * deciding that it's a drag during which time the NSWindow might have
- * registered another NSEvent. */
   NSWindow *nswindow = get_toplevel_nswindow (widget);
-  NSEvent *nsevent = [nswindow currentEvent];
-
+  NSPoint point = {(double)event->motion.x, (double)event->motion.y};
+  NSEvent *nsevent = [NSEvent mouseEventWithType: NSLeftMouseDown
+		      location: point
+		      modifierFlags: 0
+		      timestamp: event->motion.time
+		      windowNumber: [nswindow windowNumber]
+		      context: [nswindow graphicsContext]
+		      eventNumber: 0
+		      clickCount: 1
+		      pressure: 0.0 ];
+  g_return_val_if_fail(nsevent != NULL, NULL);
   context = gdk_drag_begin (gtk_widget_get_window (widget), NULL);
 /* If we've already started a drag, gdk_drag_begin will return NULL;
  * we don't want to do anything in that event. */
