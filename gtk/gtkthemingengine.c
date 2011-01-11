@@ -2323,13 +2323,13 @@ gtk_theming_engine_render_layout (GtkThemingEngine *engine,
       cairo_set_matrix (cr, &cairo_matrix);
     }
   else
-    cairo_translate (cr, x, y);
+    cairo_move_to (cr, x, y);
 
   if (flags & GTK_STATE_FLAG_INSENSITIVE)
     {
       cairo_save (cr);
       cairo_set_source_rgb (cr, 1, 1, 1);
-      cairo_move_to (cr, 1, 1);
+      cairo_move_to (cr, x + 1, y + 1);
       _gtk_pango_fill_layout (cr, layout);
       cairo_restore (cr);
     }
@@ -2604,7 +2604,7 @@ gtk_theming_engine_render_handle (GtkThemingEngine *engine,
   cairo_rectangle (cr, x, y, width, height);
   cairo_fill (cr);
 
-  if (gtk_theming_engine_has_class (engine, "grip"))
+  if (gtk_theming_engine_has_class (engine, GTK_STYLE_CLASS_GRIP))
     {
       GtkJunctionSides sides;
       gint skip = -1;
@@ -2869,7 +2869,7 @@ gtk_theming_engine_render_handle (GtkThemingEngine *engine,
 
       cairo_restore (cr);
     }
-  else if (gtk_theming_engine_has_class (engine, "paned"))
+  else if (gtk_theming_engine_has_class (engine, GTK_STYLE_CLASS_PANE_SEPARATOR))
     {
       if (width > height)
         for (xx = x + width / 2 - 15; xx <= x + width / 2 + 15; xx += 5)

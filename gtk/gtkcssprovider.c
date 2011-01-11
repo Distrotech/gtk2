@@ -2682,14 +2682,14 @@ border_parse_str (const gchar  *str,
   border = gtk_border_new ();
 
   SKIP_SPACES (str);
-  if (!g_ascii_isdigit (*str))
+  if (!g_ascii_isdigit (*str) && *str != '-')
     return border;
 
   first = unit_parse_str (str, end_str);
   str = *end_str;
   SKIP_SPACES (str);
 
-  if (!g_ascii_isdigit (*str))
+  if (!g_ascii_isdigit (*str) && *str != '-')
     {
       border->left = border->right = border->top = border->bottom = (gint) first;
       *end_str = (gchar *) str;
@@ -2700,7 +2700,7 @@ border_parse_str (const gchar  *str,
   str = *end_str;
   SKIP_SPACES (str);
 
-  if (!g_ascii_isdigit (*str))
+  if (!g_ascii_isdigit (*str) && *str != '-')
     {
       border->top = border->bottom = (gint) first;
       border->left = border->right = (gint) second;
@@ -2712,7 +2712,7 @@ border_parse_str (const gchar  *str,
   str = *end_str;
   SKIP_SPACES (str);
 
-  if (!g_ascii_isdigit (*str))
+  if (!g_ascii_isdigit (*str) && *str != '-')
     {
       border->top = (gint) first;
       border->left = border->right = (gint) second;
@@ -3620,7 +3620,7 @@ gtk_css_provider_get_default (void)
         "  color: @selected_fg_color;\n"
         "}\n"
         "\n"
-        ".expander {\n"
+        ".expander, .view.expander {\n"
         "  color: #fff;\n"
         "}\n"
         "\n"
@@ -3646,6 +3646,15 @@ gtk_css_provider_get_default (void)
         ".view {\n"
         "  background-color: @base_color;\n"
         "  color: @text_color;\n"
+        "}\n"
+        ".view:selected {\n"
+        "  background-color: shade (@bg_color, 0.9);\n"
+        "  color: @fg_color;\n"
+        "}\n"
+        "\n"
+        ".view:selected:focused {\n"
+        "  background-color: @selected_bg_color;\n"
+        "  color: @selected_fg_color;\n"
         "}\n"
         "\n"
         "GtkTreeView > row {\n"
@@ -3762,6 +3771,10 @@ gtk_css_provider_get_default (void)
         "  border-width: 1;\n"
         "}\n"
         "\n"
+        "GtkScrolledWindow.frame {\n"
+        "  padding: 0;\n"
+        "}\n"
+        "\n"
         ".menu,\n"
         ".menubar,\n"
         ".toolbar {\n"
@@ -3844,6 +3857,34 @@ gtk_css_provider_get_default (void)
         "\n"
         ".dark-area-focus {\n"
         "  color: #fff;\n"
+        "}\n"
+        "GtkCalendar.view {\n"
+        "  border-width: 1;\n"
+        "  border-style: inset;\n"
+        "  padding: 1;\n"
+        "}\n"
+        "\n"
+        "GtkCalendar.view:inconsistent {\n"
+        "  color: darker (@bg_color);\n"
+        "}\n"
+        "\n"
+        "GtkCalendar.header {\n"
+        "  background-color: @bg_color;\n"
+        "  border-style: outset;\n"
+        "  border-width: 2;\n"
+        "}\n"
+        "\n"
+        "GtkCalendar.highlight {\n"
+        "  border-width: 0;\n"
+        "}\n"
+        "\n"
+        "GtkCalendar.button {\n"
+        "  background-color: @bg_color;\n"
+        "}\n"
+        "\n"
+        "GtkCalendar.button:hover {\n"
+        "  background-color: lighter (@bg_color);\n"
+        "  color: @fg_color;\n"
         "}\n"
         "\n";
 
