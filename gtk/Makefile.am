@@ -172,7 +172,7 @@ gtk_public_h_sources = 		\
 	gtkcellarea.h		\
 	gtkcellareacontext.h	\
 	gtkcellareabox.h	\
-	gtkcellareaboxcontext.h	\
+	gtkcellareaboxcontextprivate.h	\
 	gtkcelleditable.h	\
 	gtkcelllayout.h		\
 	gtkcellrenderer.h	\
@@ -304,6 +304,7 @@ gtk_public_h_sources = 		\
 	gtktable.h		\
 	gtktearoffmenuitem.h	\
 	gtktestutils.h		\
+	gtktextattributes.h	\
 	gtktextbuffer.h		\
 	gtktextbufferrichtext.h	\
 	gtktextchild.h		\
@@ -625,6 +626,7 @@ gtk_base_c_sources = 		\
 	gtktable.c		\
 	gtktearoffmenuitem.c	\
 	gtktestutils.c		\
+	gtktextattributes.c	\
 	gtktextbtree.c		\
 	gtktextbuffer.c		\
 	gtktextbufferrichtext.c	\
@@ -890,10 +892,10 @@ libgtk_3_0_la_LIBADD = $(libadd)
 libgtk_3_0_la_DEPENDENCIES = $(deps)
 
 #libgtk_win32_3_0_la_LDFLAGS = $(libtool_opts) -Wl,-luuid
-#libgtk_win32_3_0_la_LIBADD = $(libadd) -lole32 -lgdi32 -lcomdlg32 -lwinspool -lcomctl32
-#libgtk_win32_3_0_la_DEPENDENCIES = $(gtk_def) $(gtk_win32_res) $(deps)
 
 if USE_WIN32
+libgtk_3_0_la_LIBADD += -lole32 -lgdi32 -lcomdlg32 -lwinspool -lcomctl32 -luuid
+libgtk_3_0_la_DEPENDENCIES += $(gtk_def) $(gtk_win32_res) $(deps)
 libgtk_target_ldflags = $(gtk_win32_res_ldflag) $(gtk_win32_symbols)
 endif
 
@@ -967,6 +969,7 @@ Gtk_3_0_gir_SCANNERFLAGS = --warn-all --add-include-path=$(top_builddir)/gdk
 if USE_X11
 Gtk_3_0_gir_SCANNERFLAGS += --add-include-path=$(top_builddir)/gdk/x11
 endif
+Gtk_3_0_gir_SCANNERFLAGS += --c-include="gtk/gtk.h"
 Gtk_3_0_gir_INCLUDES = Atk-1.0 Gdk-3.0
 Gtk_3_0_gir_CFLAGS = \
 		$(INCLUDES) \
