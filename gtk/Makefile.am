@@ -3,7 +3,8 @@ include $(top_srcdir)/Makefile.decl
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
 INTROSPECTION_SCANNER_ARGS = \
-	--add-include-path=../gdk
+	--add-include-path=../gdk \
+	--warn-all
 INTROSPECTION_COMPILER_ARGS = \
 	--includedir=$(srcdir) \
     --includedir=. \
@@ -965,7 +966,9 @@ introspection_files = \
     gtktypebuiltins.c
 
 Gtk-3.0.gir: $(INTROSPECTION_SCANNER) libgtk-3.0.la $(top_builddir)/gdk/Gdk-3.0.gir Makefile
-Gtk_3_0_gir_SCANNERFLAGS = --warn-all --add-include-path=$(top_builddir)/gdk
+Gtk_3_0_gir_SCANNERFLAGS = 			\
+	--add-include-path=$(top_builddir)/gdk	\
+	--include-uninstalled=$(top_builddir)/gdk/Gdk-3.0.gir
 if USE_X11
 Gtk_3_0_gir_SCANNERFLAGS += --add-include-path=$(top_builddir)/gdk/x11
 endif
@@ -978,6 +981,7 @@ Gtk_3_0_gir_CFLAGS = \
 		-DGTK_TEXT_USE_INTERNAL_UNSUPPORTED_API
 Gtk_3_0_gir_LIBS = libgtk-3.0.la
 Gtk_3_0_gir_FILES = $(introspection_files)
+Gtk_3_0_gir_EXPORT_PACKAGES = gtk+-3.0
 INTROSPECTION_GIRS += Gtk-3.0.gir
 
 girdir = $(datadir)/gir-1.0
@@ -993,8 +997,11 @@ endif
 # Installed tools
 #
 bin_PROGRAMS = \
-	gtk-query-immodules-3.0 \
-	gtk-update-icon-cache
+	gtk-query-immodules-3.0
+
+if BUILD_ICON_CACHE
+bin_PROGRAMS += gtk-update-icon-cache
+endif
 
 bin_SCRIPTS = gtk-builder-convert
 
@@ -1035,8 +1042,10 @@ gtk_query_immodules_3_0_DEPENDENCIES = $(DEPS)
 gtk_query_immodules_3_0_LDADD = $(LDADDS)
 gtk_query_immodules_3_0_SOURCES = queryimmodules.c
 
+if BUILD_ICON_CACHE
 gtk_update_icon_cache_LDADD = $(GDK_PIXBUF_LIBS)
 gtk_update_icon_cache_SOURCES = updateiconcache.c
+endif
 
 .PHONY: files test test-debug
 
@@ -1329,11 +1338,10 @@ stamp-icons: $(STOCK_ICONS)
 	) done 								\
 	&& touch stamp-icons
 
-if CROSS_COMPILING
+if USE_EXTERNAL_ICON_CACHE
 gtk_update_icon_cache_program = $(GTK_UPDATE_ICON_CACHE)
 else
-gtk_update_icon_cache_program =							\
-	   ./gtk-update-icon-cache
+gtk_update_icon_cache_program = ./gtk-update-icon-cache
 endif
 
 gtkbuiltincache.h: @REBUILD@ stamp-icons

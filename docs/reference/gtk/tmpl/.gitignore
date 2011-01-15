@@ -35,6 +35,7 @@ gtklayout.sgml
 gtklinkbutton.sgml
 gtkmain.sgml
 gtkmenubar.sgml
+gtkmenushell.sgml
 gtkmessagedialog.sgml
 gtknotebook.sgml
 gtkobject.sgml
@@ -44,6 +45,7 @@ gtkpagesetupunixdialog.sgml
 gtkpaned.sgml
 gtkpapersize.sgml
 gtkprinter.sgml
+gtkprintjob.sgml
 gtkprogressbar.sgml
 gtkradioaction.sgml
 gtkradiobutton.sgml
@@ -58,6 +60,7 @@ gtkscale.sgml
 gtkscalebutton.sgml
 gtkscrollbar.sgml
 gtkscrolledwindow.sgml
+gtkselection.sgml
 gtkseparator.sgml
 gtkseparatormenuitem.sgml
 gtkseparatortoolitem.sgml
@@ -66,6 +69,7 @@ gtkstatusbar.sgml
 gtkstyle.sgml
 gtktesting.sgml
 gtktextiter.sgml
+gtktexttag.sgml
 gtktexttagtable.sgml
 gtktextview.sgml
 gtktoggleaction.sgml

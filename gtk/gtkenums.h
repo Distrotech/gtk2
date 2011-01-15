@@ -245,7 +245,15 @@ typedef enum
   GTK_JUSTIFY_FILL
 } GtkJustification;
 
-/* Menu keyboard movement types */
+/**
+ * GtkMenuDirectionType:
+ * @GTK_MENU_DIR_PARENT: To the parent menu shell
+ * @GTK_MENU_DIR_CHILD: To the submenu, if any, associated with the item
+ * @GTK_MENU_DIR_NEXT: To the next menu item
+ * @GTK_MENU_DIR_PREV: To the previous menu item
+ *
+ * An enumeration representing directional movements within a menu.
+ */
 typedef enum
 {
   GTK_MENU_DIR_PARENT,
@@ -611,7 +619,18 @@ typedef enum
   GTK_WINDOW_POPUP
 } GtkWindowType;
 
-/* Text wrap */
+/**
+ * GtkWrapMode:
+ * @GTK_WRAP_NONE: do not wrap lines; just make the text area wider
+ * @GTK_WRAP_CHAR: wrap text, breaking lines anywhere the cursor can
+ *     appear (between characters, usually - if you want to be technical,
+ *     between graphemes, see pango_get_log_attrs())
+ * @GTK_WRAP_WORD: wrap text, breaking lines in between words
+ * @GTK_WRAP_WORD_CHAR: wrap text, breaking lines in between words, or if
+ *     that is not enough, also between graphemes
+ *
+ * Describes a type of line wrapping.
+ */
 typedef enum
 {
   GTK_WRAP_NONE,
