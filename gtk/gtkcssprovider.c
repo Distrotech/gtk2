@@ -970,6 +970,8 @@ selector_style_info_free (SelectorStyleInfo *info)
 
   if (info->path)
     selector_path_unref (info->path);
+
+  g_slice_free (SelectorStyleInfo, info);
 }
 
 static void
@@ -3695,6 +3697,7 @@ gtk_css_provider_get_default (void)
         ".trough {\n"
         "  border-style: inset;\n"
         "  border-width: 1;\n"
+        "  padding: 0;\n"
         "}\n"
         "\n"
         ".entry {\n"
@@ -3718,6 +3721,8 @@ gtk_css_provider_get_default (void)
         "  background-color: @selected_bg_color;\n"
         "  border-color: shade (@selected_bg_color, 0.7);\n"
         "  color: @selected_fg_color;\n"
+        "  border-style: outset;\n"
+        "  border-width: 1;\n"
         "}\n"
         "\n"
         "GtkCheckButton:hover,\n"
