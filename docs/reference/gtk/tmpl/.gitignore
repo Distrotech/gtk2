@@ -26,6 +26,8 @@ gtkenum.sgml
 gtkeventbox.sgml
 gtkexpander.sgml
 gtkfeatures.sgml
+gtkfixed.sgml
+gtkfilefilter.sgml
 gtkhbox.sgml
 gtkiconview.sgml
 gtkimcontextsimple.sgml
@@ -34,6 +36,7 @@ gtkitemfactory.sgml
 gtklayout.sgml
 gtklinkbutton.sgml
 gtkmain.sgml
+gtkmenu.sgml
 gtkmenubar.sgml
 gtkmenushell.sgml
 gtkmessagedialog.sgml
