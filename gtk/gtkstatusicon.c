@@ -1185,7 +1185,7 @@ gtk_status_icon_new_from_pixbuf (GdkPixbuf *pixbuf)
 
 /**
  * gtk_status_icon_new_from_file:
- * @filename: a filename
+ * @filename: (type filename): a filename
  * 
  * Creates a status icon displaying the file @filename. 
  *
@@ -1913,7 +1913,7 @@ gtk_status_icon_set_from_pixbuf (GtkStatusIcon *status_icon,
 /**
  * gtk_status_icon_set_from_file:
  * @status_icon: a #GtkStatusIcon
- * @filename: a filename
+ * @filename: (type filename): a filename
  * 
  * Makes @status_icon display the file @filename.
  * See gtk_status_icon_new_from_file() for details.
@@ -2464,14 +2464,14 @@ gtk_status_icon_position_menu (GtkMenu  *menu,
 /**
  * gtk_status_icon_get_geometry:
  * @status_icon: a #GtkStatusIcon
- * @screen: (out) (transfer none) (allow-none): return location for the screen, or %NULL if the
- *          information is not needed
- * @area: (out) (allow-none): return location for the area occupied by the status
- *        icon, or %NULL
- * @orientation: (out) (allow-none): return location for the orientation of the panel
- *    in which the status icon is embedded, or %NULL. A panel
- *    at the top or bottom of the screen is horizontal, a panel
- *    at the left or right is vertical.
+ * @screen: (out) (transfer none) (allow-none): return location for
+ *          the screen, or %NULL if the information is not needed
+ * @area: (out) (allow-none): return location for the area occupied by
+ *        the status icon, or %NULL
+ * @orientation: (out) (allow-none): return location for the
+ *    orientation of the panel in which the status icon is embedded,
+ *    or %NULL. A panel at the top or bottom of the screen is
+ *    horizontal, a panel at the left or right is vertical.
  *
  * Obtains information about the location of the status icon
  * on screen. This information can be used to e.g. position 

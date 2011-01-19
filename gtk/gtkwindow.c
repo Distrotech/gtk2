@@ -2629,7 +2629,7 @@ gtk_window_release_application (GtkWindow *window)
 /**
  * gtk_window_set_application:
  * @window: a #GtkWindow
- * @application: a #GtkApplication, or %NULL
+ * @application: (allow-none): a #GtkApplication, or %NULL
  *
  * Sets or unsets the #GtkApplication associated with the window.
  *
@@ -3686,7 +3686,7 @@ load_pixbuf_verbosely (const char *filename,
 /**
  * gtk_window_set_icon_from_file:
  * @window: a #GtkWindow
- * @filename: location of icon file
+ * @filename: (type filename): location of icon file
  * @err: (allow-none): location to store error, or %NULL.
  *
  * Sets the icon for @window.  
@@ -3864,7 +3864,7 @@ gtk_window_get_default_icon_name (void)
 
 /**
  * gtk_window_set_default_icon_from_file:
- * @filename: location of icon file
+ * @filename: (type filename): location of icon file
  * @err: (allow-none): location to store error, or %NULL.
  *
  * Sets an icon to be used as fallback for windows that haven't
@@ -8048,7 +8048,7 @@ gtk_window_begin_move_drag  (GtkWindow *window,
                               timestamp);
 }
 
-/** 
+/**
  * gtk_window_set_screen:
  * @window: a #GtkWindow.
  * @screen: a #GdkScreen.
@@ -8335,8 +8335,8 @@ gtk_window_group_remove_window (GtkWindowGroup *window_group,
  *
  * Returns a list of the #GtkWindows that belong to @window_group.
  *
- * Returns: (element-type GtkWidget) (transfer container): A newly-allocated list of
- *   windows inside the group.
+ * Returns: (element-type GtkWindow) (transfer container): A
+ *   newly-allocated list of windows inside the group.
  *
  * Since: 2.14
  **/

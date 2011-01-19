@@ -737,7 +737,9 @@ gtk_icon_theme_set_search_path (GtkIconTheme *icon_theme,
 /**
  * gtk_icon_theme_get_search_path:
  * @icon_theme: a #GtkIconTheme
- * @path: (allow-none) (array length=n_elements) (out): location to store a list of icon theme path directories or %NULL
+
+ * @path: (allow-none) (array length=n_elements) (element-type filename) (out):
+ *        location to store a list of icon theme path directories or %NULL .
  *        The stored value should be freed with g_strfreev().
  * @n_elements: location to store number of elements
  *              in @path, or %NULL
@@ -773,7 +775,7 @@ gtk_icon_theme_get_search_path (GtkIconTheme      *icon_theme,
 /**
  * gtk_icon_theme_append_search_path:
  * @icon_theme: a #GtkIconTheme
- * @path: directory name to append to the icon path
+ * @path: (type filename): directory name to append to the icon path
  * 
  * Appends a directory to the search path. 
  * See gtk_icon_theme_set_search_path(). 
@@ -802,7 +804,7 @@ gtk_icon_theme_append_search_path (GtkIconTheme *icon_theme,
 /**
  * gtk_icon_theme_prepend_search_path:
  * @icon_theme: a #GtkIconTheme
- * @path: directory name to prepend to the icon path
+ * @path: (type filename): directory name to prepend to the icon path
  * 
  * Prepends a directory to the search path. 
  * See gtk_icon_theme_set_search_path().
@@ -835,8 +837,8 @@ gtk_icon_theme_prepend_search_path (GtkIconTheme *icon_theme,
 /**
  * gtk_icon_theme_set_custom_theme:
  * @icon_theme: a #GtkIconTheme
- * @theme_name: name of icon theme to use instead of configured theme,
- *   or %NULL to unset a previously set custom theme
+ * @theme_name: (allow-none): name of icon theme to use instead of
+ *   configured theme, or %NULL to unset a previously set custom theme
  * 
  * Sets the name of the icon theme that the #GtkIconTheme object uses
  * overriding system configuration. This function cannot be called
@@ -1720,8 +1722,8 @@ add_key_to_list (gpointer  key,
 /**
  * gtk_icon_theme_list_icons:
  * @icon_theme: a #GtkIconTheme
- * @context: a string identifying a particular type of icon,
- *           or %NULL to list all icons.
+ * @context: (allow-none): a string identifying a particular type of
+ *           icon, or %NULL to list all icons.
  * 
  * Lists the icons in the current icon theme. Only a subset
  * of the icons can be listed by providing a context string.
@@ -1791,10 +1793,10 @@ gtk_icon_theme_list_icons (GtkIconTheme *icon_theme,
  * Gets the list of contexts available within the current
  * hierarchy of icon themes
  *
- * Return value: (element-type utf8) (transfer full): a #GList list holding the names of all the
- *  contexts in the theme. You must first free each element
- *  in the list with g_free(), then free the list itself
- *  with g_list_free().
+ * Return value: (element-type utf8) (transfer full): a #GList list
+ *  holding the names of all the contexts in the theme. You must first
+ *  free each element in the list with g_free(), then free the list
+ *  itself with g_list_free().
  *
  * Since: 2.12
  **/
@@ -2697,10 +2699,9 @@ gtk_icon_info_get_base_size (GtkIconInfo *icon_info)
  * no filename if a builtin icon is returned; in this
  * case, you should use gtk_icon_info_get_builtin_pixbuf().
  * 
- * Return value: the filename for the icon, or %NULL
- *  if gtk_icon_info_get_builtin_pixbuf() should
- *  be used instead. The return value is owned by
- *  GTK+ and should not be modified or freed.
+ * Return value: (type filename): the filename for the icon, or %NULL
+ *  if gtk_icon_info_get_builtin_pixbuf() should be used instead. The
+ *  return value is owned by GTK+ and should not be modified or freed.
  *
  * Since: 2.4
  **/
