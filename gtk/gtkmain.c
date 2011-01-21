@@ -935,7 +935,7 @@ gtk_set_debug_flags (guint flags)
 }
 
 /**
- * gtk_get_option_group:
+ * gtk_get_option_group: (skip)
  * @open_default_display: whether to open the default display
  *     when parsing the commandline arguments
  *
@@ -975,12 +975,13 @@ gtk_get_option_group (gboolean open_default_display)
 /**
  * gtk_init_with_args:
  * @argc: a pointer to the number of command line arguments
- * @argv: a pointer to the array of command line arguments
+ * @argv: (inout) (array length=argc): a pointer to the array of
+ * command line arguments
  * @parameter_string: a string which is displayed in
  *    the first line of <option>--help</option> output, after
  *    <literal><replaceable>programname</replaceable> [OPTION...]</literal>
- * @entries: a %NULL-terminated array of #GOptionEntrys
- *    describing the options of your program
+ * @entries: (array zero-terminated=1): a %NULL-terminated array
+ *    of #GOptionEntrys describing the options of your program
  * @translation_domain: a translation domain to use for translating
  *    the <option>--help</option> output for the options in @entries
  *    and the @parameter_string with gettext(), or %NULL
@@ -1036,7 +1037,8 @@ gtk_init_with_args (gint                 *argc,
 /**
  * gtk_parse_args:
  * @argc: (inout): a pointer to the number of command line arguments
- * @argv: (array) (inout): a pointer to the array of command line arguments
+ * @argv: (array length=argc) (inout): a pointer to the array of
+ *     command line arguments
  *
  * Parses command line arguments, and initializes global
  * attributes of GTK+, but does not actually open a connection
@@ -2297,7 +2299,7 @@ gtk_device_grab_remove (GtkWidget *widget,
 }
 
 /**
- * gtk_key_snooper_install:
+ * gtk_key_snooper_install: (skip)
  * @snooper: a #GtkKeySnoopFunc
  * @func_data: data to pass to @snooper
  *
@@ -2383,9 +2385,9 @@ gtk_invoke_key_snoopers (GtkWidget *grab_widget,
  * the current event will be the #GdkEventButton that triggered
  * the ::clicked signal.
  *
- * Return value: a copy of the current event, or %NULL if there is
- *     no current event. The returned event must be freed with
- *     gdk_event_free().
+ * Return value: (transfer full): a copy of the current event, or
+ *     %NULL if there is no current event. The returned event must be
+ *     freed with gdk_event_free().
  */
 GdkEvent*
 gtk_get_current_event (void)
@@ -2416,7 +2418,7 @@ gtk_get_current_event_time (void)
 
 /**
  * gtk_get_current_event_state:
- * @state: a location to store the state of the current event
+ * @state: (out): a location to store the state of the current event
  *
  * If there is a current event and it has a state field, place
  * that state field in @state and return %TRUE, otherwise return

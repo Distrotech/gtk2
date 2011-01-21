@@ -377,7 +377,7 @@ gdk_device_get_property (GObject    *object,
 }
 
 /**
- * gdk_device_get_state:
+ * gdk_device_get_state: (skip)
  * @device: a #GdkDevice.
  * @window: a #GdkWindow.
  * @axes: an array of doubles to store the values of the axes of @device in,
@@ -493,12 +493,12 @@ gdk_device_get_window_at_position (GdkDevice  *device,
 }
 
 /**
- * gdk_device_get_history:
+ * gdk_device_get_history: (skip)
  * @device: a #GdkDevice
  * @window: the window with respect to which which the event coordinates will be reported
  * @start: starting timestamp for range of events to return
  * @stop: ending timestamp for the range of events to return
- * @events: (array length=n_events) (out) (transfer none): location to store a newly-allocated array of #GdkTimeCoord, or %NULL
+ * @events: (array length=n_events) (out) (transfer full): location to store a newly-allocated array of #GdkTimeCoord, or %NULL
  * @n_events: location to store the length of @events, or %NULL
  *
  * Obtains the motion history for a pointer device; given a starting and
@@ -554,8 +554,8 @@ _gdk_device_allocate_history (GdkDevice *device,
 }
 
 /**
- * gdk_device_free_history:
- * @events: (inout) (transfer none): an array of #GdkTimeCoord.
+ * gdk_device_free_history: (skip)
+ * @events: an array of #GdkTimeCoord.
  * @n_events: the length of the array.
  *
  * Frees an array of #GdkTimeCoord that was returned by gdk_device_get_history().
@@ -697,8 +697,8 @@ gdk_device_get_n_keys (GdkDevice *device)
  * gdk_device_get_key:
  * @device: a #GdkDevice.
  * @index_: the index of the macro button to get.
- * @keyval: return value for the keyval.
- * @modifiers: return value for modifiers.
+ * @keyval: (out): return value for the keyval.
+ * @modifiers: (out): return value for modifiers.
  *
  * If @index_ has a valid keyval, this function will return %TRUE
  * and fill in @keyval and @modifiers with the keyval settings.
@@ -912,9 +912,10 @@ _gdk_device_set_associated_device (GdkDevice *device,
  * the list of slave devices attached to it, otherwise it will return
  * %NULL
  *
- * Returns: (transfer container): the list of slave devices, or %NULL. The
- *          list must be freed with g_list_free(), the contents of the list
- *          are owned by GTK+ and should not be freed.
+ * Returns: (transfer container) (element-type GdkDevice): the list of
+ *          slave devices, or %NULL. The list must be freed with
+ *          g_list_free(), the contents of the list are owned by GTK+
+ *          and should not be freed.
  **/
 GList *
 gdk_device_list_slave_devices (GdkDevice *device)
@@ -1023,9 +1024,9 @@ gdk_device_list_axes (GdkDevice *device)
 }
 
 /**
- * gdk_device_get_axis_value:
+ * gdk_device_get_axis_value: (skip)
  * @device: a pointer #GdkDevice.
- * @axes: pointer to an array of axes
+ * @axes: (array): pointer to an array of axes
  * @axis_label: #GdkAtom with the axis label.
  * @value: location to store the found value.
  *
@@ -1070,11 +1071,11 @@ gdk_device_get_axis_value (GdkDevice *device,
 }
 
 /**
- * gdk_device_get_axis:
+ * gdk_device_get_axis: (skip)
  * @device: a #GdkDevice
- * @axes: pointer to an array of axes
+ * @axes: (array): pointer to an array of axes
  * @use: the use to look for
- * @value: location to store the found value.
+ * @value: (out): location to store the found value.
  *
  * Interprets an array of double as axis values for a given device,
  * and locates the value in the array for a given axis use.

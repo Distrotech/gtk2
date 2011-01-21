@@ -597,7 +597,7 @@ _gdk_display_enable_motion_hints (GdkDisplay *display,
 /**
  * gdk_display_get_pointer:
  * @display: a #GdkDisplay
- * @screen: (allow-none): location to store the screen that the
+ * @screen: (out) (allow-none): location to store the screen that the
  *          cursor is on, or %NULL.
  * @x: (out) (allow-none): location to store root window X coordinate of pointer, or %NULL.
  * @y: (out) (allow-none): location to store root window Y coordinate of pointer, or %NULL.
@@ -1571,7 +1571,8 @@ gdk_display_supports_clipboard_persistence (GdkDisplay *display)
  * @display:          a #GdkDisplay
  * @clipboard_window: a #GdkWindow belonging to the clipboard owner
  * @time_:            a timestamp
- * @targets:	      an array of targets that should be saved, or %NULL
+ * @targets:	      (array length=n_targets): an array of targets
+ *                    that should be saved, or %NULL
  *                    if all available targets should be saved.
  * @n_targets:        length of the @targets array
  *
@@ -1694,7 +1695,7 @@ gdk_event_send_client_message_for_display (GdkDisplay     *display,
 }
 
 /**
- * gdk_display_add_client_message_filter:
+ * gdk_display_add_client_message_filter: (skip)
  * @display: a #GdkDisplay for which this message filter applies
  * @message_type: the type of ClientMessage events to receive.
  *   This will be checked against the @message_type field
@@ -1718,7 +1719,7 @@ gdk_display_add_client_message_filter (GdkDisplay   *display,
 }
 
 /**
- * gdk_add_client_message_filter:
+ * gdk_add_client_message_filter: (skip)
  * @message_type: the type of ClientMessage events to receive. This will be
  *     checked against the <structfield>message_type</structfield> field of the
  *     XClientMessage event struct.
@@ -1756,7 +1757,7 @@ gdk_display_real_get_app_launch_context (GdkDisplay *display)
  * Returns a #GdkAppLaunchContext suitable for launching
  * applications on the given display.
  *
- * Returns: a new #GdkAppLaunchContext for @display.
+ * Returns: (transfer full): a new #GdkAppLaunchContext for @display.
  *     Free with g_object_unref() when done
  *
  * Since: 3.0
@@ -1771,7 +1772,7 @@ gdk_display_get_app_launch_context (GdkDisplay *display)
  * gdk_drag_get_protocol_for_display:
  * @display: the #GdkDisplay where the destination window resides
  * @xid: the windowing system id of the destination window.
- * @protocol: location where the supported DND protocol is returned.
+ * @protocol: (out): location where the supported DND protocol is returned.
  *
  * Finds out the DND protocol supported by a window.
  *

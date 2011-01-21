@@ -1184,10 +1184,10 @@ attach_widget_screen_changed (GtkWidget *attach_widget,
 }
 
 /**
- * gtk_menu_attach_to_widget:
+ * gtk_menu_attach_to_widget: (skip)
  * @menu: a #GtkMenu
  * @attach_widget: the #GtkWidget that the menu will be attached to
- * @detacher: the user supplied callback functions that will be called
+ * @detacher: the user supplied callback function that will be called
  *            when the menu calls gtk_menu_detach()
  *
  * Attaches the menu to the widget and provides a callback function
@@ -1251,7 +1251,7 @@ gtk_menu_attach_to_widget (GtkMenu           *menu,
  *
  * Returns the #GtkWidget that the menu is attached to.
  *
- * Returns: the #GtkWidget that the menu is attached to
+ * Returns: (transfer none): the #GtkWidget that the menu is attached to
  */
 GtkWidget*
 gtk_menu_get_attach_widget (GtkMenu *menu)
@@ -1737,15 +1737,15 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
 }
 
 /**
- * gtk_menu_popup:
- * @menu: a #GtkMenu.
+ * gtk_menu_popup: (skip)
+ * @menu: a #GtkMenu
  * @parent_menu_shell: (allow-none): the menu shell containing the
  *     triggering menu item, or %NULL
  * @parent_menu_item: (allow-none): the menu item whose activation
  *     triggered the popup, or %NULL
  * @func: (allow-none): a user supplied function used to position
  *     the menu, or %NULL
- * @data: (allow-none): user supplied data to be passed to @func.
+ * @data: user supplied data to be passed to @func.
  * @button: the mouse button which was pressed to initiate the event.
  * @activate_time: the time at which the activation event occurred.
  *
@@ -1889,9 +1889,9 @@ gtk_menu_popdown (GtkMenu *menu)
  * Returns the selected menu item from the menu.  This is used by the
  * #GtkOptionMenu.
  *
- * Returns: the #GtkMenuItem that was last selected in the menu.  If a
- *          selection has not yet been made, the first menu item is
- *          selected.
+ * Returns: (transfer none): the #GtkMenuItem that was last selected
+ *          in the menu.  If a selection has not yet been made, the
+ *          first menu item is selected.
  */
 GtkWidget*
 gtk_menu_get_active (GtkMenu *menu)
@@ -1995,7 +1995,7 @@ gtk_menu_set_accel_group (GtkMenu       *menu,
  * Gets the #GtkAccelGroup which holds global accelerators for the
  * menu.  See gtk_menu_set_accel_group().
  *
- * Returns: the #GtkAccelGroup associated with the menu.
+ * Returns: (transfer none): the #GtkAccelGroup associated with the menu.
  */
 GtkAccelGroup*
 gtk_menu_get_accel_group (GtkMenu *menu)

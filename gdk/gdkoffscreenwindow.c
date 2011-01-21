@@ -334,7 +334,7 @@ gdk_offscreen_window_get_device_state (GdkWindow       *window,
  * If you need to keep this around over window resizes, you need to
  * add a reference to it.
  *
- * Returns: The offscreen surface, or %NULL if not offscreen
+ * Returns: (transfer none): The offscreen surface, or %NULL if not offscreen
  */
 cairo_surface_t *
 gdk_offscreen_window_get_surface (GdkWindow *window)
@@ -784,7 +784,7 @@ gdk_offscreen_window_class_init (GdkOffscreenWindowClass *klass)
   impl_class->set_opacity = NULL;
   impl_class->set_composited = NULL;
   impl_class->destroy_notify = NULL;
-  impl_class->register_dnd = NULL;
+  impl_class->register_dnd = gdk_offscreen_window_do_nothing;
   impl_class->drag_begin = NULL;
   impl_class->process_updates_recurse = gdk_offscreen_window_process_updates_recurse;
   impl_class->sync_rendering = NULL;

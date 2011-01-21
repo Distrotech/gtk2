@@ -329,7 +329,7 @@ _gtk_theming_engine_set_context (GtkThemingEngine *engine,
 }
 
 /**
- * gtk_theming_engine_register_property:
+ * gtk_theming_engine_register_property: (skip)
  * @name_space: namespace for the property name
  * @parse_func: parsing function to use, or %NULL
  * @pspec: the #GParamSpec for the new property
@@ -473,7 +473,7 @@ gtk_theming_engine_get (GtkThemingEngine *engine,
  * gtk_theming_engine_get_style_property:
  * @engine: a #GtkThemingEngine
  * @property_name: the name of the widget style property
- * @value: (out) (transfer full): Return location for the property value, free with
+ * @value: Return location for the property value, free with
  *         g_value_unset() after use.
  *
  * Gets the value for a widget style property.
@@ -881,8 +881,9 @@ gtk_theming_engine_get_margin (GtkThemingEngine *engine,
  *
  * Returns the font description for a given state.
  *
- * Returns: the #PangoFontDescription for the given state. This
- *          object is owned by GTK+ and should not be freed.
+ * Returns: (transfer none): the #PangoFontDescription for the given
+ *          state. This object is owned by GTK+ and should not be
+ *          freed.
  *
  * Since: 3.0
  **/
@@ -1029,7 +1030,7 @@ gtk_theming_engine_load (const gchar *name)
  *
  * Returns the #GdkScreen to which @engine currently rendering to.
  *
- * Returns: a #GdkScreen, or %NULL.
+ * Returns: (transfer none): a #GdkScreen, or %NULL.
  **/
 GdkScreen *
 gtk_theming_engine_get_screen (GtkThemingEngine *engine)

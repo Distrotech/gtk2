@@ -577,6 +577,9 @@ gtk_cell_view_request_model (GtkCellView        *cellview,
   GtkTreeIter         iter;
   gboolean            valid;
 
+  if (!priv->model)
+    return;
+
   valid = gtk_tree_model_iter_children (priv->model, &iter, parent);
   while (valid)
     {
@@ -1179,7 +1182,7 @@ gtk_cell_view_get_displayed_row (GtkCellView *cell_view)
  * gtk_cell_view_get_size_of_row:
  * @cell_view: a #GtkCellView
  * @path: a #GtkTreePath 
- * @requisition: return location for the size 
+ * @requisition: (out): return location for the size 
  *
  * Sets @requisition to the size needed by @cell_view to display 
  * the model row pointed to by @path.

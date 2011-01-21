@@ -864,7 +864,7 @@ gtk_style_has_context (GtkStyle *style)
 }
 
 /**
- * gtk_style_attach:
+ * gtk_style_attach: (skip)
  * @style: a #GtkStyle.
  * @window: a #GdkWindow.
  *
@@ -919,7 +919,7 @@ gtk_style_detach (GtkStyle *style)
  * and the default icon factory, returning an icon set if found,
  * otherwise %NULL.
  *
- * Return value: icon set of @stock_id
+ * Return value: (transfer none): icon set of @stock_id
  *
  * Deprecated:3.0: Use gtk_style_context_lookup_icon_set() instead
  */
@@ -944,7 +944,7 @@ gtk_style_lookup_icon_set (GtkStyle   *style,
  * gtk_style_lookup_color:
  * @style: a #GtkStyle
  * @color_name: the name of the logical color to look up
- * @color: the #GdkColor to fill in
+ * @color: (out): the #GdkColor to fill in
  *
  * Looks up @color_name in the style's logical color mappings,
  * filling in @color and returning %TRUE if found, otherwise

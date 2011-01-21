@@ -4719,7 +4719,7 @@ gtk_widget_queue_shallow_draw (GtkWidget *widget)
 /**
  * gtk_widget_size_allocate:
  * @widget: a #GtkWidget
- * @allocation: (inout): position and size to be allocated to @widget
+ * @allocation: position and size to be allocated to @widget
  *
  * This function is only used by #GtkContainer subclasses, to assign a size
  * and position to their child widgets.
@@ -11459,7 +11459,7 @@ gtk_widget_input_shape_combine_region (GtkWidget *widget,
  */
 
 /**
- * gtk_widget_class_install_style_property_parser:
+ * gtk_widget_class_install_style_property_parser: (skip)
  * @klass: a #GtkWidgetClass
  * @pspec: the #GParamSpec for the style property
  * @parser: the parser for the style property
@@ -11515,8 +11515,8 @@ gtk_widget_class_install_style_property (GtkWidgetClass *klass,
  * gtk_widget_class_find_style_property:
  * @klass: a #GtkWidgetClass
  * @property_name: the name of the style property to find
- * @returns: (allow-none): the #GParamSpec of the style property or %NULL if @class has no
- *   style property with that name.
+ * @returns: (transfer none): the #GParamSpec of the style property or
+ *   %NULL if @class has no style property with that name.
  *
  * Finds a style property of a widget class by name.
  *
@@ -11538,8 +11538,9 @@ gtk_widget_class_find_style_property (GtkWidgetClass *klass,
  * gtk_widget_class_list_style_properties:
  * @klass: a #GtkWidgetClass
  * @n_properties: location to return the number of style properties found
- * @returns: an newly allocated array of #GParamSpec*. The array must
- *       be freed with g_free().
+ * @returns: (array length=n_properties) (transfer container): an
+ *       newly allocated array of #GParamSpec*. The array must be
+ *       freed with g_free().
  *
  * Returns all style properties of a widget class.
  *

@@ -2598,7 +2598,7 @@ gtk_window_get_opacity (GtkWindow *window)
  *
  * Gets the #GtkApplication associated with the window (if any).
  *
- * Return value: a #GtkApplication, or %NULL
+ * Return value: (transfer none): a #GtkApplication, or %NULL
  *
  * Since: 3.0
  **/
@@ -3426,7 +3426,7 @@ gtk_window_unrealize_icon (GtkWindow *window)
 /**
  * gtk_window_set_icon_list:
  * @window: a #GtkWindow
- * @list: (element-type GdkPixbuf) (transfer container): list of #GdkPixbuf
+ * @list: (element-type GdkPixbuf): list of #GdkPixbuf
  *
  * Sets up the icon representing a #GtkWindow. The icon is used when
  * the window is minimized (also known as iconified).  Some window
@@ -5581,8 +5581,8 @@ gtk_window_get_has_resize_grip (GtkWindow *window)
 /**
  * gtk_window_get_resize_grip_area:
  * @window: a #GtkWindow
- * @rect: a pointer to a #GdkRectangle which we should store the
- *     resize grip area
+ * @rect: (out): a pointer to a #GdkRectangle which we should store
+ *     the resize grip area
  *
  * If a window has a resize grip, this will retrieve the grip
  * position, width and height into the specified #GdkRectangle.
@@ -8416,7 +8416,7 @@ gtk_window_has_group (GtkWindow *window)
  * Gets the current grab widget of the given group,
  * see gtk_grab_add().
  *
- * Returns: the current grab widget of the group
+ * Returns: (transfer none): the current grab widget of the group
  *
  * Since: 2.22
  */
@@ -8515,7 +8515,7 @@ _gtk_window_group_remove_device_grab (GtkWindowGroup *window_group,
  *
  * Returns the current grab widget for @device, or %NULL if none.
  *
- * Returns: The grab widget, or %NULL
+ * Returns: (transfer none): The grab widget, or %NULL
  *
  * Since: 3.0
  */

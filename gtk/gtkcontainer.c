@@ -1196,10 +1196,10 @@ gtk_container_class_install_child_property (GtkContainerClass *cclass,
 
 /**
  * gtk_container_class_find_child_property:
- * @cclass: a #GtkContainerClass
+ * @cclass: (type GtkContainerClass): a #GtkContainerClass
  * @property_name: the name of the child property to find
- * @returns: (allow-none): the #GParamSpec of the child property or %NULL if @class has no
- *   child property with that name.
+ * @returns: (transfer none): the #GParamSpec of the child property or
+ *           %NULL if @class has no child property with that name.
  *
  * Finds a child property of a container class by name.
  */
@@ -1218,10 +1218,11 @@ gtk_container_class_find_child_property (GObjectClass *cclass,
 
 /**
  * gtk_container_class_list_child_properties:
- * @cclass: a #GtkContainerClass
+ * @cclass: (type GtkContainerClass): a #GtkContainerClass
  * @n_properties: location to return the number of child properties found
- * @returns: a newly allocated %NULL-terminated array of #GParamSpec*.
- *           The array must be freed with g_free().
+ * @returns: (array length=n_properties) (transfer container): a newly
+ *           allocated %NULL-terminated array of #GParamSpec*.  The
+ *           array must be freed with g_free().
  *
  * Returns all child properties of a container class.
  */
@@ -1865,7 +1866,7 @@ gtk_container_class_handle_border_width (GtkContainerClass *klass)
 /**
  * gtk_container_forall:
  * @container: a #GtkContainer
- * @callback: a callback
+ * @callback: (scope call): a callback
  * @callback_data: callback user data
  *
  * Invokes @callback on each child of @container, including children
@@ -1951,8 +1952,9 @@ gtk_container_set_focus_child (GtkContainer *container,
  * currently focused widget. That can be obtained by calling
  * gtk_window_get_focus().
  *
- * Returns: The child widget which will recieve the focus inside @container when
- *          the @conatiner is focussed, or %NULL if none is set.
+ * Returns: (transfer none): The child widget which will receive the
+ *          focus inside @container when the @conatiner is focussed,
+ *          or %NULL if none is set.
  *
  * Since: 2.14
  **/
