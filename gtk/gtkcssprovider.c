@@ -21,14 +21,17 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <gtk/gtk.h>
-#include <gtkstyleprovider.h>
+
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <cairo-gobject.h>
 
 #include "gtkanimationdescription.h"
 #include "gtk9slice.h"
+#include "gtkgradient.h"
+#include "gtkthemingengine.h"
+#include "gtkstyleprovider.h"
 #include "gtkcssprovider.h"
+#include "gtkstylecontextprivate.h"
 #include "gtkprivate.h"
 
 /**
@@ -1320,14 +1323,12 @@ gtk_css_provider_get_style (GtkStyleProvider *provider,
                             GtkWidgetPath    *path)
 {
   GtkCssProvider *css_provider;
-  GtkCssProviderPrivate *priv;
   GtkStyleProperties *props;
   GArray *priority_info;
   guint i;
 
   css_provider = GTK_CSS_PROVIDER (provider);
   props = gtk_style_properties_new ();
-  priv = css_provider->priv;
 
   css_provider_dump_symbolic_colors (css_provider, props);
   priority_info = css_provider_get_selectors (css_provider, path);
@@ -3761,6 +3762,7 @@ gtk_css_provider_get_default (void)
         "  border-style: solid;\n"
         "  border-width: 1;\n"
         "  background-color: @base_color;\n"
+        "  border-color: @fg_color;\n"
         "}\n"
         "\n"
         ".check:active, .radio:active,\n"

@@ -173,7 +173,6 @@ gtk_public_h_sources = 		\
 	gtkcellarea.h		\
 	gtkcellareacontext.h	\
 	gtkcellareabox.h	\
-	gtkcellareaboxcontextprivate.h	\
 	gtkcelleditable.h	\
 	gtkcelllayout.h		\
 	gtkcellrenderer.h	\
@@ -382,6 +381,7 @@ gtk_private_h_sources =		\
 	gtkappchooseronline.h	\
 	gtkbuilderprivate.h	\
 	gtkbuttonprivate.h	\
+	gtkcellareaboxcontextprivate.h	\
 	gtkcustompaperunixdialog.h \
 	gtkdndcursors.h		\
 	gtkentryprivate.h	\
@@ -421,6 +421,7 @@ gtk_private_h_sources =		\
 	gtksettingsprivate.h	\
 	gtksizegroup-private.h	\
 	gtksocketprivate.h	\
+	gtkstylecontextprivate.h \
 	gtktextbtree.h		\
 	gtktextbufferserialize.h \
 	gtktextchildprivate.h	\
