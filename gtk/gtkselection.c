@@ -193,7 +193,7 @@ static const char gtk_selection_handler_key[] = "gtk-selection-handlers";
  * 
  * Creates a new #GtkTargetList from an array of #GtkTargetEntry.
  * 
- * Return value: the new #GtkTargetList.
+ * Return value: (transfer full): the new #GtkTargetList.
  **/
 GtkTargetList *
 gtk_target_list_new (const GtkTargetEntry *targets,
@@ -577,7 +577,7 @@ gtk_target_list_find (GtkTargetList *list,
  * allocated and should be freed using gtk_target_table_free() when no
  * longer needed.
  *
- * Return value: the new table.
+ * Return value: (array length=n_targets) (transfer full): the new table.
  *
  * Since: 2.10
  **/
@@ -611,7 +611,7 @@ gtk_target_table_new_from_list (GtkTargetList *list,
 
 /**
  * gtk_target_table_free:
- * @targets: a #GtkTargetEntry array
+ * @targets: (array length=n_targets): a #GtkTargetEntry array
  * @n_targets: the number of entries in the array
  *
  * This function frees a target table as returned by
@@ -1120,7 +1120,7 @@ gtk_selection_convert (GtkWidget *widget,
  *
  * Retrieves the selection #GdkAtom of the selection data.
  *
- * Returns: the selection #GdkAtom of the selection data.
+ * Returns: (transfer none): the selection #GdkAtom of the selection data.
  *
  * Since: 2.16
  **/
@@ -1138,7 +1138,7 @@ gtk_selection_data_get_selection (GtkSelectionData *selection_data)
  *
  * Retrieves the target of the selection.
  *
- * Returns:  the target of the selection.
+ * Returns: (transfer none): the target of the selection.
  *
  * Since: 2.14
  **/
@@ -1156,7 +1156,7 @@ gtk_selection_data_get_target (GtkSelectionData *selection_data)
  *
  * Retrieves the data type of the selection.
  *
- * Returns:  the data type of the selection.
+ * Returns: (transfer none): the data type of the selection.
  *
  * Since: 2.14
  **/
@@ -1245,7 +1245,7 @@ gtk_selection_data_get_display (GtkSelectionData *selection_data)
  * @selection_data: a pointer to a #GtkSelectionData structure.
  * @type: the type of selection data
  * @format: format (number of bits in a unit)
- * @data: pointer to the data (will be copied)
+ * @data: (array length=length): pointer to the data (will be copied)
  * @length: length of the data
  * 
  * Stores new data into a #GtkSelectionData object. Should
@@ -1800,7 +1800,8 @@ gtk_selection_data_get_uris (GtkSelectionData *selection_data)
 /**
  * gtk_selection_data_get_targets:
  * @selection_data: a #GtkSelectionData object
- * @targets: location to store an array of targets. The result
+ * @targets: (out) (array length=n_atoms) (transfer container):
+ *           location to store an array of targets. The result
  *           stored here must be freed with g_free().
  * @n_atoms: location to store number of items in @targets.
  * 

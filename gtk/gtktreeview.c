@@ -12612,8 +12612,8 @@ gtk_tree_view_real_set_cursor (GtkTreeView     *tree_view,
 /**
  * gtk_tree_view_get_cursor:
  * @tree_view: A #GtkTreeView
- * @path: (out) (allow-none): A pointer to be filled with the current cursor path, or %NULL
- * @focus_column: (out) (allow-none): A pointer to be filled with the current focus column, or %NULL
+ * @path: (out) (transfer full) (allow-none): A pointer to be filled with the current cursor path, or %NULL
+ * @focus_column: (out) (transfer none) (allow-none): A pointer to be filled with the current focus column, or %NULL
  *
  * Fills in @path and @focus_column with the current path and focus column.  If
  * the cursor isn't currently set, then *@path will be %NULL.  If no column
@@ -12769,7 +12769,7 @@ gtk_tree_view_get_bin_window (GtkTreeView *tree_view)
  * @x: The x position to be identified (relative to bin_window).
  * @y: The y position to be identified (relative to bin_window).
  * @path: (out) (allow-none): A pointer to a #GtkTreePath pointer to be filled in, or %NULL
- * @column: (out) (allow-none): A pointer to a #GtkTreeViewColumn pointer to be filled in, or %NULL
+ * @column: (out) (transfer none) (allow-none): A pointer to a #GtkTreeViewColumn pointer to be filled in, or %NULL
  * @cell_x: (out) (allow-none): A pointer where the X coordinate relative to the cell can be placed, or %NULL
  * @cell_y: (out) (allow-none): A pointer where the Y coordinate relative to the cell can be placed, or %NULL
  *
@@ -13425,7 +13425,7 @@ gtk_tree_view_enable_model_drag_source (GtkTreeView              *tree_view,
 /**
  * gtk_tree_view_enable_model_drag_dest:
  * @tree_view: a #GtkTreeView
- * @targets: the table of targets that the drag will support
+ * @targets: (array length=n_targets): the table of targets that the drag will support
  * @n_targets: the number of items in @targets
  * @actions: the bitmask of possible actions for a drag from this
  *    widget
