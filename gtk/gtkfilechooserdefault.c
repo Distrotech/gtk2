@@ -63,6 +63,8 @@
 #include "gtksizerequest.h"
 #include "gtkstock.h"
 #include "gtktable.h"
+#include "gtktoolbar.h"
+#include "gtktoolbutton.h"
 #include "gtktooltip.h"
 #include "gtktreednd.h"
 #include "gtktreeprivate.h"
@@ -2451,27 +2453,27 @@ filter_create (GtkFileChooserDefault *impl)
 }
 
 static GtkWidget *
-button_new (GtkFileChooserDefault *impl,
-	    const char            *text,
-	    const char            *stock_id,
-	    gboolean               sensitive,
-	    gboolean               show,
-	    GCallback              callback)
+toolbutton_new (GtkFileChooserDefault *impl,
+                GIcon                 *icon,
+                gboolean               sensitive,
+                gboolean               show,
+                GCallback              callback)
 {
-  GtkWidget *button;
+  GtkToolItem *item;
   GtkWidget *image;
 
-  button = gtk_button_new_with_mnemonic (text);
-  image = gtk_image_new_from_stock (stock_id, GTK_ICON_SIZE_BUTTON);
-  gtk_button_set_image (GTK_BUTTON (button), image);
+  item = gtk_tool_button_new (NULL, NULL);
+  image = gtk_image_new_from_gicon (icon, GTK_ICON_SIZE_SMALL_TOOLBAR);
+  gtk_widget_show (image);
+  gtk_tool_button_set_icon_widget (GTK_TOOL_BUTTON (item), image);
 
-  gtk_widget_set_sensitive (button, sensitive);
-  g_signal_connect (button, "clicked", callback, impl);
+  gtk_widget_set_sensitive (GTK_WIDGET (item), sensitive);
+  g_signal_connect (item, "clicked", callback, impl);
 
   if (show)
-    gtk_widget_show (button);
+    gtk_widget_show (GTK_WIDGET (item));
 
-  return button;
+  return GTK_WIDGET (item);
 }
 
 /* Looks for a path among the shortcuts; returns its index or -1 if it doesn't exist */
@@ -3699,10 +3701,13 @@ shortcuts_list_create (GtkFileChooserDefault *impl)
 				       NULL);
 
   renderer = gtk_cell_renderer_text_new ();
-  g_object_set (renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
-  g_signal_connect (renderer, "edited", 
+  g_object_set (renderer,
+                "width-chars", 12,
+                "ellipsize", PANGO_ELLIPSIZE_END,
+                NULL);
+  g_signal_connect (renderer, "edited",
 		    G_CALLBACK (shortcuts_edited), impl);
-  g_signal_connect (renderer, "editing-canceled", 
+  g_signal_connect (renderer, "editing-canceled",
 		    G_CALLBACK (shortcuts_editing_canceled), impl);
   gtk_tree_view_column_pack_start (column, renderer, TRUE);
   gtk_tree_view_column_set_attributes (column, renderer,
@@ -3724,46 +3729,57 @@ shortcuts_pane_create (GtkFileChooserDefault *impl,
 		       GtkSizeGroup          *size_group)
 {
   GtkWidget *vbox;
-  GtkWidget *hbox;
+  GtkWidget *toolbar;
   GtkWidget *widget;
+  GtkStyleContext *context;
+  GIcon *icon;
 
-  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_widget_show (vbox);
 
   /* Shortcuts tree */
 
   widget = shortcuts_list_create (impl);
+
+  gtk_size_group_add_widget (size_group, widget);
+  context = gtk_widget_get_style_context (widget);
+  gtk_style_context_set_junction_sides (context, GTK_JUNCTION_BOTTOM);
+
   gtk_box_pack_start (GTK_BOX (vbox), widget, TRUE, TRUE, 0);
 
   /* Box for buttons */
 
-  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  gtk_box_set_homogeneous (GTK_BOX (hbox), TRUE);
-  gtk_size_group_add_widget (size_group, hbox);
-  gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
-  gtk_widget_show (hbox);
+  toolbar = gtk_toolbar_new ();
+  gtk_toolbar_set_icon_size (GTK_TOOLBAR (toolbar), GTK_ICON_SIZE_MENU);
+
+  gtk_box_pack_start (GTK_BOX (vbox), toolbar, FALSE, FALSE, 0);
+  gtk_widget_show (toolbar);
+
+  context = gtk_widget_get_style_context (toolbar);
+  gtk_style_context_set_junction_sides (context, GTK_JUNCTION_TOP);
 
   /* Add bookmark button */
+  icon = g_themed_icon_new_with_default_fallbacks ("list-add-symbolic");
+  impl->browse_shortcuts_add_button = toolbutton_new (impl,
+                                                      icon,
+                                                      FALSE,
+                                                      TRUE,
+                                                      G_CALLBACK (add_bookmark_button_clicked_cb));
+  g_object_unref (icon);
 
-  impl->browse_shortcuts_add_button = button_new (impl,
-						  _("_Add"),
-						  GTK_STOCK_ADD,
-						  FALSE,
-						  TRUE,
-						  G_CALLBACK (add_bookmark_button_clicked_cb));
-  gtk_box_pack_start (GTK_BOX (hbox), impl->browse_shortcuts_add_button, TRUE, TRUE, 0);
+  gtk_toolbar_insert (GTK_TOOLBAR (toolbar), GTK_TOOL_ITEM (impl->browse_shortcuts_add_button), 0);
   gtk_widget_set_tooltip_text (impl->browse_shortcuts_add_button,
                                _("Add the selected folder to the Bookmarks"));
 
   /* Remove bookmark button */
-
-  impl->browse_shortcuts_remove_button = button_new (impl,
-						     _("_Remove"),
-						     GTK_STOCK_REMOVE,
-						     FALSE,
-						     TRUE,
-						     G_CALLBACK (remove_bookmark_button_clicked_cb));
-  gtk_box_pack_start (GTK_BOX (hbox), impl->browse_shortcuts_remove_button, TRUE, TRUE, 0);
+  icon = g_themed_icon_new_with_default_fallbacks ("list-remove-symbolic");
+  impl->browse_shortcuts_remove_button = toolbutton_new (impl,
+                                                         icon,
+                                                         FALSE,
+                                                         TRUE,
+                                                         G_CALLBACK (remove_bookmark_button_clicked_cb));
+  g_object_unref (icon);
+  gtk_toolbar_insert (GTK_TOOLBAR (toolbar), GTK_TOOL_ITEM (impl->browse_shortcuts_remove_button), 1);
   gtk_widget_set_tooltip_text (impl->browse_shortcuts_remove_button,
                                _("Remove the selected bookmark"));
 
@@ -4454,6 +4470,7 @@ file_pane_create (GtkFileChooserDefault *impl,
 
   widget = create_file_list (impl);
   gtk_box_pack_start (GTK_BOX (hbox), widget, TRUE, TRUE, 0);
+  gtk_size_group_add_widget (size_group, widget);
 
   /* Preview */
 
@@ -4470,7 +4487,6 @@ file_pane_create (GtkFileChooserDefault *impl,
   gtk_widget_show (widget);
   gtk_box_pack_end (GTK_BOX (impl->filter_combo_hbox), widget, FALSE, FALSE, 0);
 
-  gtk_size_group_add_widget (size_group, impl->filter_combo_hbox);
   gtk_box_pack_end (GTK_BOX (vbox), impl->filter_combo_hbox, FALSE, FALSE, 0);
 
   return vbox;
@@ -4989,7 +5005,7 @@ browse_widgets_create (GtkFileChooserDefault *impl)
   GtkWidget *widget;
   GtkSizeGroup *size_group;
 
-  /* size group is used by the [+][-] buttons and the filter combo */
+  /* size group is used by the scrolled windows of the panes */
   size_group = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 
@@ -5032,6 +5048,7 @@ browse_widgets_create (GtkFileChooserDefault *impl)
   gtk_box_pack_start (GTK_BOX (impl->location_entry_box), impl->location_label, FALSE, FALSE, 0);
 
   /* Paned widget */
+
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_widget_show (hpaned);
   gtk_box_pack_start (GTK_BOX (vbox), hpaned, TRUE, TRUE, 0);

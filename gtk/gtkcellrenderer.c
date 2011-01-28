@@ -683,6 +683,8 @@ gtk_cell_renderer_render (GtkCellRenderer      *cell,
 {
   gboolean selected = FALSE;
   GtkCellRendererPrivate *priv = cell->priv;
+  GtkStyleContext *context;
+  GtkStateFlags state;
 
   g_return_if_fail (GTK_IS_CELL_RENDERER (cell));
   g_return_if_fail (GTK_CELL_RENDERER_GET_CLASS (cell)->render != NULL);
@@ -702,13 +704,21 @@ gtk_cell_renderer_render (GtkCellRenderer      *cell,
   gdk_cairo_rectangle (cr, background_area);
   cairo_clip (cr);
 
+  context = gtk_widget_get_style_context (widget);
+
+  gtk_style_context_save (context);
+  gtk_style_context_add_class (context, GTK_STYLE_CLASS_CELL);
+
+  state = gtk_cell_renderer_get_state (cell, widget, flags);
+  gtk_style_context_set_state (context, state);
+
   GTK_CELL_RENDERER_GET_CLASS (cell)->render (cell,
                                               cr,
 					      widget,
 					      background_area,
 					      cell_area,
 					      flags);
-
+  gtk_style_context_restore (context);
   cairo_restore (cr);
 }
 
@@ -1662,4 +1672,49 @@ gtk_cell_renderer_get_aligned_area (GtkCellRenderer      *cell,
   g_assert (aligned_area->y >= cell_area->y && aligned_area->y <= cell_area->y + cell_area->height);
   g_assert ((aligned_area->x - cell_area->x) + aligned_area->width <= cell_area->width);
   g_assert ((aligned_area->y - cell_area->y) + aligned_area->height <= cell_area->height);
+}
+
+/**
+ * gtk_cell_renderer_get_state:
+ * @cell: a #GtkCellRenderer, or %NULL
+ * @widget: a #GtkWidget, or %NULL
+ * @cell_state: cell renderer state
+ *
+ * Translates the cell renderer state to a #GtkStateFlags,
+ * based on the cell renderer and widget sensitivity, and
+ * the given #GtkCellRendererState
+ *
+ * Returns: the widget state flags applying to @cell
+ *
+ * Since: 3.0
+ **/
+GtkStateFlags
+gtk_cell_renderer_get_state (GtkCellRenderer      *cell,
+			     GtkWidget            *widget,
+			     GtkCellRendererState  cell_state)
+{
+  GtkStateFlags state = 0;
+
+  g_return_val_if_fail (!cell || GTK_IS_CELL_RENDERER (cell), 0);
+  g_return_val_if_fail (!widget || GTK_IS_WIDGET (widget), 0);
+
+  if ((widget && !gtk_widget_get_sensitive (widget)) ||
+      (cell && !gtk_cell_renderer_get_sensitive (cell)))
+    state |= GTK_STATE_FLAG_INSENSITIVE;
+  else
+    {
+      if ((cell_state & GTK_CELL_RENDERER_SELECTED) != 0)
+        {
+          state |= GTK_STATE_FLAG_SELECTED;
+
+          if ((widget && gtk_widget_has_focus (widget)) &&
+              (cell_state & GTK_CELL_RENDERER_FOCUSED) != 0)
+            state |= GTK_STATE_FLAG_FOCUSED;
+        }
+
+      if ((cell_state & GTK_CELL_RENDERER_PRELIT) != 0)
+        state |= GTK_STATE_FLAG_PRELIGHT;
+    }
+
+  return state;
 }

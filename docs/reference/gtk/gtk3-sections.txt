@@ -4426,8 +4426,6 @@ gtk_cell_area_foreach
 gtk_cell_area_foreach_alloc
 gtk_cell_area_event
 gtk_cell_area_render
-gtk_cell_area_set_style_detail
-gtk_cell_area_get_style_detail
 gtk_cell_area_get_cell_allocation
 gtk_cell_area_get_cell_at_position
 gtk_cell_area_create_context
@@ -4557,6 +4555,7 @@ gtk_cell_renderer_get_alignment
 gtk_cell_renderer_set_alignment
 gtk_cell_renderer_get_padding
 gtk_cell_renderer_set_padding
+gtk_cell_renderer_get_state
 gtk_cell_renderer_is_activatable
 
 <SUBSECTION Width-for-height>
