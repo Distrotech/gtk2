@@ -407,7 +407,6 @@ gtk_private_h_sources =		\
 	gtknumerableiconprivate.h \
 	gtkpango.h		\
 	gtkpathbar.h		\
-	gtkplugprivate.h	\
 	gtkprintoperation-private.h \
 	gtkprintutils.h		\
 	gtkprivate.h		\
@@ -578,7 +577,6 @@ gtk_base_c_sources = 		\
 	gtkpango.c		\
 	gtkpapersize.c		\
 	gtkpathbar.c		\
-	gtkplug.c		\
 	gtkprintcontext.c	\
 	gtkprintoperation.c	\
 	gtkprintoperationpreview.c \
@@ -614,7 +612,6 @@ gtk_base_c_sources = 		\
 	gtksizegroup.c		\
 	gtksizerequest.c	\
 	gtkshow.c		\
-	gtksocket.c		\
 	gtkspinbutton.c		\
 	gtkspinner.c		\
 	gtkstatusbar.c		\
@@ -724,26 +721,20 @@ gtk_c_sources += $(gtk_os_win32_c_sources)
 endif
 
 gtk_use_x11_c_sources = 	\
-	gtkplug-x11.c		\
-	gtksocket-x11.c		\
+	gtkplug.c		\
+	gtksocket.c		\
 	gtkxembed.c		\
 	gtktrayicon-x11.c	\
 	gtkmountoperation-x11.c
 gtk_use_win32_c_sources = 	\
-	gtkplug-win32.c		\
-	gtksocket-win32.c	\
 	gtkwin32embed.c		\
 	gtkwin32embedwidget.c	\
 	gtkmountoperation-stub.c
 gtk_use_quartz_c_sources = 	\
 	gtksearchenginequartz.c	\
 	gtkquartz.c		\
-	gtkplug-stub.c		\
-	gtksocket-stub.c	\
 	gtkmountoperation-stub.c
 gtk_use_stub_c_sources = 	\
-	gtkplug-stub.c		\
-	gtksocket-stub.c	\
 	gtkmountoperation-stub.c
 gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_stub_c_sources)
 if USE_X11

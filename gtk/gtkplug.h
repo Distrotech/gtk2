@@ -30,6 +30,11 @@
 #ifndef __GTK_PLUG_H__
 #define __GTK_PLUG_H__
 
+#include <gdk/gdk.h>
+
+#ifdef GDK_WINDOWING_X11
+
+#include <gdk/gdkx.h>
 
 #include <gtk/gtksocket.h>
 #include <gtk/gtkwindow.h>
@@ -74,28 +79,25 @@ struct _GtkPlugClass
 GType      gtk_plug_get_type  (void) G_GNUC_CONST;
 
 #ifndef GDK_MULTIHEAD_SAFE
-void       gtk_plug_construct (GtkPlug         *plug,
-			       GdkNativeWindow  socket_id);
-GtkWidget* gtk_plug_new       (GdkNativeWindow  socket_id);
+void       gtk_plug_construct             (GtkPlug         *plug,
+			                   Window           socket_id);
+GtkWidget* gtk_plug_new                   (Window           socket_id);
 #endif
 
 void       gtk_plug_construct_for_display (GtkPlug         *plug,
 					   GdkDisplay      *display,
-					   GdkNativeWindow  socket_id);
+					   Window           socket_id);
 GtkWidget* gtk_plug_new_for_display       (GdkDisplay      *display,
-					   GdkNativeWindow  socket_id);
+					   Window           socket_id);
 
-GdkNativeWindow gtk_plug_get_id (GtkPlug         *plug);
+Window     gtk_plug_get_id                (GtkPlug         *plug);
 
 gboolean  gtk_plug_get_embedded (GtkPlug         *plug);
 
 GdkWindow *gtk_plug_get_socket_window (GtkPlug   *plug);
 
-void _gtk_plug_add_to_socket      (GtkPlug   *plug,
-				   GtkSocket *socket_);
-void _gtk_plug_remove_from_socket (GtkPlug   *plug,
-				   GtkSocket *socket_);
-
 G_END_DECLS
+
+#endif /* GDK_WINDOWING_X11 */
 
 #endif /* __GTK_PLUG_H__ */
