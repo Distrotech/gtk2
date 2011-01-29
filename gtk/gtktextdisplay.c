@@ -78,6 +78,7 @@
 #include "config.h"
 #include "gtktextdisplay.h"
 #include "gtkwidgetprivate.h"
+#include "gtkstylecontextprivate.h"
 #include "gtkintl.h"
 
 /* DO NOT go putting private headers in here. This file should only
@@ -780,12 +781,12 @@ render_para (GtkTextRenderer    *text_renderer,
 		    (at_last_line && line_display->insert_index == byte_offset + line->length)))
 	    {
 	      GdkRectangle cursor_rect;
-              GdkColor cursor_color;
+              GdkRGBA cursor_color;
               cairo_t *cr = text_renderer->cr;
 
-	      /* we draw text using base color on filled cursor rectangle of cursor color
-	       * (normally white on black) */
-	      _gtk_widget_get_cursor_color (text_renderer->widget, &cursor_color);
+              /* we draw text using base color on filled cursor rectangle of cursor color
+               * (normally white on black) */
+              _gtk_style_context_get_cursor_color (context, &cursor_color, NULL);
 
 	      cursor_rect.x = x + line_display->x_offset + line_display->block_cursor.x;
 	      cursor_rect.y = y + line_display->block_cursor.y + line_display->top_margin;
@@ -797,7 +798,7 @@ render_para (GtkTextRenderer    *text_renderer,
               gdk_cairo_rectangle (cr, &cursor_rect);
               cairo_clip (cr);
 
-              gdk_cairo_set_source_color (cr, &cursor_color);
+              gdk_cairo_set_source_rgba (cr, &cursor_color);
               cairo_paint (cr);
 
               /* draw text under the cursor if any */
