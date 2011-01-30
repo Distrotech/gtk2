@@ -63,6 +63,7 @@
 #include "gtkmodifierstyle.h"
 #include "gtkversion.h"
 #include "gtkdebug.h"
+#include "gtkplug.h"
 #include "gtktypebuiltins.h"
 
 
@@ -8760,7 +8761,8 @@ gtk_widget_reset_style (GtkWidget *widget)
  *
  * This function is not useful for applications.
  *
- * Deprecated:3.0: Use #GtkStyleContext instead
+ * Deprecated:3.0: Use #GtkStyleContext instead, and
+ *     gtk_widget_reset_style()
  */
 void
 gtk_widget_reset_rc_styles (GtkWidget *widget)
@@ -8778,7 +8780,9 @@ gtk_widget_reset_rc_styles (GtkWidget *widget)
  * Returns: (transfer none): the default style. This #GtkStyle
  *     object is owned by GTK+ and should not be modified or freed.
  *
- * Deprecated:3.0: Use #GtkStyleContext instead
+ * Deprecated:3.0: Use #GtkStyleContext instead, and
+ *     gtk_css_provider_get_default() to obtain a #GtkStyleProvider
+ *     with the default widget style information.
  */
 GtkStyle*
 gtk_widget_get_default_style (void)
@@ -10831,25 +10835,23 @@ _gtk_widget_peek_request_cache (GtkWidget *widget)
 
 /*
  * _gtk_widget_set_device_window:
- * @widget: a #GtkWidget.
- * @device: a #GdkDevice.
- * @window: the new device window.
+ * @widget: a #GtkWidget
+ * @device: a #GdkDevice
+ * @window: the new device window
  *
- * Sets pointer window for @widget and @device.  Does not ref @window.
+ * Sets pointer window for @widget and @device.
+ * Does not ref @window.
  */
 void
 _gtk_widget_set_device_window (GtkWidget *widget,
                                GdkDevice *device,
                                GdkWindow *window)
 {
-  GtkWidgetPrivate *priv;
   GHashTable *device_window;
 
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (GDK_IS_DEVICE (device));
-  g_return_if_fail (!window || GDK_IS_WINDOW (window));
-
-  priv = widget->priv;
+  g_return_if_fail (window == NULL || GDK_IS_WINDOW (window));
 
   if (!gtk_widget_get_mapped (widget))
     return;
@@ -10878,23 +10880,19 @@ _gtk_widget_set_device_window (GtkWidget *widget,
 
 /*
  * _gtk_widget_get_device_window:
- * @widget: a #GtkWidget.
- * @device: a #GdkDevice.
+ * @widget: a #GtkWidget
+ * @device: a #GdkDevice
  *
- * Return value: the device window set on the #GdkScreen @widget is attached
- * to, or %NULL.
+ * Return value: the device window set on @widget, or %NULL
  */
 GdkWindow *
 _gtk_widget_get_device_window (GtkWidget *widget,
                                GdkDevice *device)
 {
-  GtkWidgetPrivate *priv;
   GHashTable *device_window;
 
   g_return_val_if_fail (GTK_IS_WIDGET (widget), NULL);
   g_return_val_if_fail (GDK_IS_DEVICE (device), NULL);
-
-  priv = widget->priv;
 
   if (!gtk_widget_get_mapped (widget))
     return NULL;
@@ -10909,24 +10907,22 @@ _gtk_widget_get_device_window (GtkWidget *widget,
 
 /*
  * _gtk_widget_list_devices:
- * @widget: a #GtkWidget.
+ * @widget: a #GtkWidget
  *
- * Returns the list of #GdkDevices that is currently on top of any widget #GdkWindow.
- * Free the list with g_list_free(), the elements are owned by GTK+ and must not
- * be freed.
+ * Returns the list of #GdkDevices that is currently on top
+ * of any window belonging to @widget.
+ * Free the list with g_list_free(), the elements are owned
+ * by GTK+ and must not be freed.
  */
 GList *
 _gtk_widget_list_devices (GtkWidget *widget)
 {
-  GtkWidgetPrivate *priv;
   GHashTableIter iter;
   GHashTable *device_window;
   GList *devices = NULL;
   gpointer key, value;
 
   g_return_val_if_fail (GTK_IS_WIDGET (widget), NULL);
-
-  priv = widget->priv;
 
   if (!gtk_widget_get_mapped (widget))
     return NULL;
