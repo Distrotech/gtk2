@@ -1729,17 +1729,11 @@ motif_drag_context_new (GdkWindow *dest_window,
   context->protocol = GDK_DRAG_PROTO_MOTIF;
   context->is_source = FALSE;
 
-  context->source_window = gdk_x11_window_lookup_for_display (display, source_window);
-  if (context->source_window)
-    g_object_ref (context->source_window);
-  else
+  context->source_window = gdk_x11_window_foreign_new_for_display (display, source_window);
+  if (!context->source_window)
     {
-      context->source_window = gdk_x11_window_foreign_new_for_display (display, source_window);
-      if (!context->source_window)
-        {
-          g_object_unref (context_x11);
-          return NULL;
-        }
+      g_object_unref (context_x11);
+      return NULL;
     }
 
   context->dest_window = dest_window;
@@ -2899,17 +2893,11 @@ xdnd_enter_filter (GdkXEvent *xev,
   device_manager = gdk_display_get_device_manager (display);
   gdk_drag_context_set_device (context, gdk_device_manager_get_client_pointer (device_manager));
 
-  context->source_window = gdk_x11_window_lookup_for_display (display, source_window);
-  if (context->source_window)
-    g_object_ref (context->source_window);
-  else
+  context->source_window = gdk_x11_window_foreign_new_for_display (display, source_window);
+  if (!context->source_window)
     {
-      context->source_window = gdk_x11_window_foreign_new_for_display (display, source_window);
-      if (!context->source_window)
-        {
-          g_object_unref (context);
-          return GDK_FILTER_REMOVE;
-        }
+      g_object_unref (context);
+      return GDK_FILTER_REMOVE;
     }
   context->dest_window = event->any.window;
   g_object_ref (context->dest_window);
@@ -3205,15 +3193,15 @@ _gdk_x11_window_drag_begin (GdkWindow *window,
   return context;
 }
 
-GdkNativeWindow
+Window
 _gdk_x11_display_get_drag_protocol (GdkDisplay      *display,
-                                    GdkNativeWindow  xid,
+                                    Window           xid,
                                     GdkDragProtocol *protocol,
                                     guint           *version)
 
 {
   GdkWindow *window;
-  GdkNativeWindow retval;
+  Window retval;
 
   base_precache_atoms (display);
 
@@ -3226,10 +3214,10 @@ _gdk_x11_display_get_drag_protocol (GdkDisplay      *display,
           *protocol = GDK_DRAG_PROTO_XDND;
           *version = 5;
           xdnd_precache_atoms (display);
-          GDK_NOTE (DND, g_message ("Entering local Xdnd window %#x\n", xid));
+          GDK_NOTE (DND, g_message ("Entering local Xdnd window %#x\n", (guint) xid));
           return xid;
         }
-      else if (_gdk_x11_display_is_root_window (display, (Window) xid))
+      else if (_gdk_x11_display_is_root_window (display, xid))
         {
           *protocol = GDK_DRAG_PROTO_ROOTWIN;
           GDK_NOTE (DND, g_message ("Entering root window\n"));
@@ -3240,13 +3228,13 @@ _gdk_x11_display_get_drag_protocol (GdkDisplay      *display,
     {
       *protocol = GDK_DRAG_PROTO_XDND;
       xdnd_precache_atoms (display);
-      GDK_NOTE (DND, g_message ("Entering Xdnd window %#x\n", xid));
+      GDK_NOTE (DND, g_message ("Entering Xdnd window %#x\n", (guint) xid));
       return retval;
     }
   else if ((retval = motif_check_dest (display, xid)))
     {
       *protocol = GDK_DRAG_PROTO_MOTIF;
-      GDK_NOTE (DND, g_message ("Entering motif window %#x\n", xid));
+      GDK_NOTE (DND, g_message ("Entering motif window %#x\n", (guint) xid));
       return retval;
     }
   else
@@ -3332,13 +3320,7 @@ gdk_x11_drag_context_find_window (GdkDragContext  *context,
                                                       &context_x11->version);
 
       if (recipient != None)
-        {
-          dest_window = gdk_x11_window_lookup_for_display (display, recipient);
-          if (dest_window)
-            g_object_ref (dest_window);
-          else
-            dest_window = gdk_x11_window_foreign_new_for_display (display, recipient);
-        }
+        dest_window = gdk_x11_window_foreign_new_for_display (display, recipient);
       else
         dest_window = NULL;
     }

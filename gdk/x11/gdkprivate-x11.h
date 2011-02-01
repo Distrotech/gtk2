@@ -182,6 +182,12 @@ void _gdk_x11_display_update_grab_info_ungrab (GdkDisplay *display,
 void _gdk_x11_display_queue_events            (GdkDisplay *display);
 
 
+GdkAppLaunchContext *_gdk_x11_display_get_app_launch_context (GdkDisplay *display);
+Window      _gdk_x11_display_get_drag_protocol     (GdkDisplay      *display,
+                                                    Window           xid,
+                                                    GdkDragProtocol *protocol,
+                                                    guint           *version);
+
 gboolean    _gdk_x11_display_set_selection_owner   (GdkDisplay *display,
                                                     GdkWindow  *owner,
                                                     GdkAtom     selection,
@@ -190,7 +196,7 @@ gboolean    _gdk_x11_display_set_selection_owner   (GdkDisplay *display,
 GdkWindow * _gdk_x11_display_get_selection_owner   (GdkDisplay *display,
                                                     GdkAtom     selection);
 void        _gdk_x11_display_send_selection_notify (GdkDisplay       *display,
-                                                    GdkNativeWindow  requestor,
+                                                    GdkWindow        *requestor,
                                                     GdkAtom          selection,
                                                     GdkAtom          target,
                                                     GdkAtom          property,

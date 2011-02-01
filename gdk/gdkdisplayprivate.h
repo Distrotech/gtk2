@@ -164,10 +164,6 @@ struct _GdkDisplayClass
 
   GList *                    (*list_devices)       (GdkDisplay *display);
   GdkAppLaunchContext *      (*get_app_launch_context) (GdkDisplay *display);
-  GdkNativeWindow            (*get_drag_protocol)      (GdkDisplay      *display,
-                                                        GdkNativeWindow  winid,
-                                                        GdkDragProtocol *protocol,
-                                                        guint           *version);
 
   void                       (*before_process_all_updates) (GdkDisplay *display);
   void                       (*after_process_all_updates)  (GdkDisplay *display);
@@ -202,7 +198,7 @@ struct _GdkDisplayClass
                                                      guint32       time,
                                                      gboolean      send_event);
   void                       (*send_selection_notify) (GdkDisplay *dispay,
-                                                       GdkNativeWindow  requestor,
+                                                       GdkWindow        *requestor,
                                                        GdkAtom          selection,
                                                        GdkAtom          target,
                                                        GdkAtom          property,

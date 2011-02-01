@@ -814,7 +814,11 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
       event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, xevent->xselectionrequest.selection);
       event->selection.target = gdk_x11_xatom_to_atom_for_display (display, xevent->xselectionrequest.target);
       event->selection.property = gdk_x11_xatom_to_atom_for_display (display, xevent->xselectionrequest.property);
-      event->selection.requestor = xevent->xselectionrequest.requestor;
+      if (xevent->xselectionrequest.requestor != None)
+        event->selection.requestor = gdk_x11_window_foreign_new_for_display (display,
+                                                                             xevent->xselectionrequest.requestor);
+      else
+        event->selection.requestor = NULL;
       event->selection.time = xevent->xselectionrequest.time;
 
       break;
@@ -2552,13 +2556,6 @@ gdk_x11_display_error_trap_pop_ignored (GdkDisplay *display)
   gdk_x11_display_error_trap_pop_internal (display, FALSE);
 }
 
-extern GdkAppLaunchContext *_gdk_x11_display_get_app_launch_context (GdkDisplay *display);
-extern GdkNativeWindow      _gdk_x11_display_get_drag_protocol      (GdkDisplay *display,
-                                                                     GdkNativeWindow  xid,
-                                                                     GdkDragProtocol *protocol,
-                                                                     guint           *version);
-
-
 /**
  * gdk_x11_set_sm_client_id:
  * @sm_client_id: the client id assigned by the session manager when the
@@ -2661,7 +2658,6 @@ gdk_x11_display_class_init (GdkX11DisplayClass * class)
   display_class->supports_composite = gdk_x11_display_supports_composite;
   display_class->list_devices = gdk_x11_display_list_devices;
   display_class->get_app_launch_context = _gdk_x11_display_get_app_launch_context;
-  display_class->get_drag_protocol = _gdk_x11_display_get_drag_protocol;
   display_class->get_cursor_for_type = _gdk_x11_display_get_cursor_for_type;
   display_class->get_cursor_for_name = _gdk_x11_display_get_cursor_for_name;
   display_class->get_cursor_for_pixbuf = _gdk_x11_display_get_cursor_for_pixbuf;

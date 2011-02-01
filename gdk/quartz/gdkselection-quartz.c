@@ -69,18 +69,6 @@ _gdk_quartz_display_get_selection_property (GdkDisplay *display,
   return 0;
 }
 
-void
-_gdk_quartz_display_send_selection_notify (GdkDisplay      *display,
-                                           GdkNativeWindow  requestor,
-                                           GdkAtom          selection,
-                                           GdkAtom          target,
-                                           GdkAtom          property,
-                                           guint32          time)
-{
-  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
-  g_return_if_reached();
-}
-
 gchar *
 _gdk_quartz_display_utf8_to_string_target (GdkDisplay  *display,
                                            const gchar *str)
