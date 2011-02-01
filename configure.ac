@@ -1674,7 +1674,6 @@ gtk/Makefile
 gtk/makefile.msc
 gtk/gtkversion.h
 gtk/gtk-win32.rc
-gtk/theme-bits/Makefile
 gtk/tests/Makefile
 modules/Makefile
 modules/other/Makefile
@@ -1702,7 +1701,10 @@ AC_OUTPUT
 included_immodules=${included_immodules//,/ }
 included_immodules=${included_immodules:-none}
 
-echo "configuration:"
+echo ""
+echo "        GTK+ $GTK_VERSION"
+echo "        ==========="
+echo ""
 echo "        GDK backends:         $GDK_BACKENDS"
 if test "x$enable_x11_backend" = "xyes"; then
 echo "        X11 extensions:       $X_EXTENSIONS"

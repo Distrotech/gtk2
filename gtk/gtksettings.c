@@ -100,6 +100,8 @@ struct _GtkSettingsPrivate
   GData *queued_settings;      /* of type GtkSettingsValue* */
   GtkSettingsPropertyValue *property_values;
   GdkScreen *screen;
+  GtkCssProvider *theme_provider;
+  GtkCssProvider *key_theme_provider;
 };
 
 typedef enum
@@ -225,6 +227,7 @@ static gboolean settings_update_fontconfig       (GtkSettings           *setting
 #endif
 static void    settings_update_color_scheme      (GtkSettings *settings);
 static void    settings_update_theme             (GtkSettings *settings);
+static void    settings_update_key_theme         (GtkSettings *settings);
 
 static void    merge_color_scheme                (GtkSettings           *settings,
                                                   const GValue          *value,
@@ -392,7 +395,7 @@ gtk_settings_class_init (GtkSettingsClass *class)
   result = settings_install_property_parser (class,
                                              g_param_spec_string ("gtk-theme-name",
                                                                    P_("Theme Name"),
-                                                                   P_("Name of theme RC file to load"),
+                                                                   P_("Name of theme to load"),
                                                                   "Raleigh",
                                                                   GTK_PARAM_READWRITE),
                                              NULL);
@@ -419,7 +422,7 @@ gtk_settings_class_init (GtkSettingsClass *class)
   result = settings_install_property_parser (class,
                                              g_param_spec_string ("gtk-key-theme-name",
                                                                   P_("Key Theme Name"),
-                                                                  P_("Name of key theme RC file to load"),
+                                                                  P_("Name of key theme to load"),
                                                                   DEFAULT_KEY_THEME,
                                                                   GTK_PARAM_READWRITE),
                                              NULL);
@@ -1383,6 +1386,12 @@ gtk_settings_finalize (GObject *object)
 
   g_datalist_clear (&priv->queued_settings);
 
+  if (priv->theme_provider)
+    g_object_unref (priv->theme_provider);
+
+  if (priv->key_theme_provider)
+    g_object_unref (priv->key_theme_provider);
+
   G_OBJECT_CLASS (gtk_settings_parent_class)->finalize (object);
 }
 
@@ -1426,6 +1435,7 @@ settings_init_style (GtkSettings *settings)
                                              GTK_STYLE_PROVIDER_PRIORITY_SETTINGS);
 
   settings_update_theme (settings);
+  settings_update_key_theme (settings);
 }
 
 /**
@@ -1608,7 +1618,11 @@ gtk_settings_notify (GObject    *object,
       settings_update_color_scheme (settings);
       gtk_style_context_reset_widgets (priv->screen);
       break;
+    case PROP_KEY_THEME_NAME:
+      settings_update_key_theme (settings);
+      break;
     case PROP_THEME_NAME:
+    case PROP_APPLICATION_PREFER_DARK_THEME:
       settings_update_theme (settings);
       break;
 #ifdef GDK_WINDOWING_X11
@@ -2666,19 +2680,37 @@ settings_update_color_scheme (GtkSettings *settings)
 }
 
 static void
+settings_update_provider (GdkScreen       *screen,
+                          GtkCssProvider **old,
+                          GtkCssProvider  *new)
+{
+  if (*old != new)
+    {
+      if (*old)
+        {
+          gtk_style_context_remove_provider_for_screen (screen,
+                                                        GTK_STYLE_PROVIDER (*old));
+          g_object_unref (*old);
+          *old = NULL;
+        }
+
+      if (new)
+        {
+          gtk_style_context_add_provider_for_screen (screen,
+                                                     GTK_STYLE_PROVIDER (new),
+                                                     GTK_STYLE_PROVIDER_PRIORITY_THEME);
+          *old = g_object_ref (new);
+        }
+    }
+}
+
+static void
 settings_update_theme (GtkSettings *settings)
 {
-  static GQuark quark_theme_name = 0;
-
   GtkSettingsPrivate *priv = settings->priv;
-  GtkCssProvider *provider, *new_provider = NULL;
+  GtkCssProvider *provider = NULL;
   gboolean prefer_dark_theme;
   gchar *theme_name;
-
-  if (G_UNLIKELY (!quark_theme_name))
-    quark_theme_name = g_quark_from_static_string ("gtk-settings-theme-name");
-
-  provider = g_object_get_qdata (G_OBJECT (settings), quark_theme_name);
 
   g_object_get (settings,
                 "gtk-theme-name", &theme_name,
@@ -2687,31 +2719,14 @@ settings_update_theme (GtkSettings *settings)
 
   if (theme_name && *theme_name)
     {
-      gchar *variant = NULL;
-
       if (prefer_dark_theme)
-        variant = "dark";
+        provider = gtk_css_provider_get_named (theme_name, "dark");
 
-      new_provider = gtk_css_provider_get_named (theme_name, variant);
+      if (!provider)
+        provider = gtk_css_provider_get_named (theme_name, NULL);
     }
 
-  if (new_provider != provider)
-    {
-      if (provider)
-        gtk_style_context_remove_provider_for_screen (priv->screen,
-                                                      GTK_STYLE_PROVIDER (provider));
-
-      if (new_provider)
-        {
-          gtk_style_context_add_provider_for_screen (priv->screen,
-                                                     GTK_STYLE_PROVIDER (new_provider),
-                                                     GTK_STYLE_PROVIDER_PRIORITY_THEME);
-          g_object_ref (new_provider);
-        }
-
-      g_object_set_qdata_full (G_OBJECT (settings), quark_theme_name,
-                               new_provider, (GDestroyNotify) g_object_unref);
-    }
+  settings_update_provider (priv->screen, &priv->theme_provider, provider);
 
   if (theme_name && *theme_name)
     {
@@ -2730,6 +2745,24 @@ settings_update_theme (GtkSettings *settings)
     }
 
   g_free (theme_name);
+}
+
+static void
+settings_update_key_theme (GtkSettings *settings)
+{
+  GtkSettingsPrivate *priv = settings->priv;
+  GtkCssProvider *provider = NULL;
+  gchar *key_theme_name;
+
+  g_object_get (settings,
+                "gtk-key-theme-name", &key_theme_name,
+                NULL);
+
+  if (key_theme_name && *key_theme_name)
+    provider = gtk_css_provider_get_named (key_theme_name, "keys");
+
+  settings_update_provider (priv->screen, &priv->key_theme_provider, provider);
+  g_free (key_theme_name);
 }
 
 static gboolean

@@ -146,12 +146,14 @@ static const struct {
   const char *atom_name;
   GdkFilterFunc func;
 } xdnd_filters[] = {
-  { "XdndEnter",    xdnd_enter_filter },
-  { "XdndLeave",    xdnd_leave_filter },
-  { "XdndPosition", xdnd_position_filter },
-  { "XdndStatus",   xdnd_status_filter },
-  { "XdndFinished", xdnd_finished_filter },
-  { "XdndDrop",     xdnd_drop_filter },
+  { "_MOTIF_DRAG_AND_DROP_MESSAGE", motif_dnd_filter },
+
+  { "XdndEnter",                    xdnd_enter_filter },
+  { "XdndLeave",                    xdnd_leave_filter },
+  { "XdndPosition",                 xdnd_position_filter },
+  { "XdndStatus",                   xdnd_status_filter },
+  { "XdndFinished",                 xdnd_finished_filter },
+  { "XdndDrop",                     xdnd_drop_filter },
 };
 
 
@@ -844,7 +846,11 @@ enum {
 /* Byte swapping routines. The motif specification leaves it
  * up to us to save a few bytes in the client messages
  */
-static gchar local_byte_order = '\0';
+#if G_BYTE_ORDER == G_BIG_ENDIAN
+static gchar local_byte_order = 'B';
+#else
+static gchar local_byte_order = 'l';
+#endif
 
 #ifdef G_ENABLE_DEBUG
 static void
@@ -859,13 +865,6 @@ print_target_list (GList *targets)
     }
 }
 #endif /* G_ENABLE_DEBUG */
-
-static void
-init_byte_order (void)
-{
-  guint32 myint = 0x01020304;
-  local_byte_order = (*(gchar *)&myint == 1) ? 'B' : 'l';
-}
 
 static guint16
 card16_to_host (guint16 x, gchar byte_order)
@@ -3126,24 +3125,32 @@ xdnd_drop_filter (GdkXEvent *xev,
   return GDK_FILTER_REMOVE;
 }
 
-void
-_gdk_x11_display_init_dnd (GdkDisplay *display)
+GdkFilterReturn
+_gdk_x11_dnd_filter (GdkXEvent *xev,
+                     GdkEvent  *event,
+                     gpointer   data)
 {
+  XEvent *xevent = (XEvent *) xev;
+  GdkDisplay *display;
   int i;
-  init_byte_order ();
 
-  gdk_display_add_client_message_filter (
-        display,
-        gdk_atom_intern_static_string ("_MOTIF_DRAG_AND_DROP_MESSAGE"),
-        motif_dnd_filter, NULL);
+  if (!GDK_IS_X11_WINDOW (event->any.window))
+    return GDK_FILTER_CONTINUE;
+
+  if (xevent->type != ClientMessage)
+    return GDK_FILTER_CONTINUE;
+
+  display = GDK_WINDOW_DISPLAY (event->any.window);
 
   for (i = 0; i < G_N_ELEMENTS (xdnd_filters); i++)
     {
-      gdk_display_add_client_message_filter (
-        display,
-        gdk_atom_intern_static_string (xdnd_filters[i].atom_name),
-        xdnd_filters[i].func, NULL);
+      if (xevent->xclient.message_type != gdk_x11_get_xatom_by_name_for_display (display, xdnd_filters[i].atom_name))
+        continue;
+
+      return xdnd_filters[i].func (xev, event, data);
     }
+
+  return GDK_FILTER_CONTINUE;
 }
 
 /* Source side */

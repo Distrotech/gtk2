@@ -33,6 +33,7 @@
 #include "gtkthemingengine.h"
 #include "gtkstyleprovider.h"
 #include "gtkstylecontextprivate.h"
+#include "gtkbindings.h"
 #include "gtkprivate.h"
 
 /**
@@ -287,6 +288,38 @@
  * <title>Using the &commat;import rule</title>
  * <programlisting language="text">
  * &commat;import url ("path/to/common.css");
+ * </programlisting>
+ * </example>
+ * <para id="css-binding-set">
+ * In order to extend key bindings affecting different widgets, GTK+
+ * supports the &commat;binding-set rule to parse a set of bind/unbind
+ * directives, see #GtkBindingSet for the supported syntax. Note that
+ * the binding sets defined in this way must be associated with rule sets
+ * by setting the gtk-key-bindings style property.
+ * </para>
+ * <para>
+ * Customized key bindings are typically defined in a separate
+ * <filename>gtk-keys.css</filename> CSS file and GTK+ loads this file
+ * according to the current key theme, which is defined by the
+ * #GtkSettings:gtk-key-theme-name setting.
+ * </para>
+ * <example>
+ * <title>Using the &commat;binding rule</title>
+ * <programlisting language="text">
+ * &commat;binding-set binding-set1 {
+ *   bind "&lt;alt&gt;Left" { "move-cursor" (visual-positions, -3, 0) };
+ *   unbind "End";
+ * };
+ *
+ * &commat;binding-set binding-set2 {
+ *   bind "&lt;alt&gt;Right" { "move-cursor" (visual-positions, 3, 0) };
+ *   bind "&lt;alt&gt;KP_space" { "delete-from-cursor" (whitespace, 1)
+ *                          "insert-at-cursor" (" ") };
+ * };
+ *
+ * GtkEntry {
+ *   gtk-key-bindings: binding-set1, binding-set2;
+ * }
  * </programlisting>
  * </example>
  * <para>
@@ -665,6 +698,13 @@
  * transition: 1s linear loop;</literallayout>
  *         </entry>
  *       </row>
+ *       <row>
+ *         <entry>gtk-key-bindings</entry>
+ *         <entry>binding set name list</entry>
+ *         <entry>internal use only</entry>
+ *         <entry><literallayout>gtk-bindings: binding1, binding2, ...;</literallayout>
+ *         </entry>
+ *       </row>
  *     </tbody>
  *   </tgroup>
  * </informaltable>
@@ -769,7 +809,8 @@ enum ParserScope {
   SCOPE_PSEUDO_CLASS,
   SCOPE_NTH_CHILD,
   SCOPE_DECLARATION,
-  SCOPE_VALUE
+  SCOPE_VALUE,
+  SCOPE_BINDING_SET
 };
 
 /* Extend GtkStateType, since these
@@ -1476,6 +1517,12 @@ scanner_apply_scope (GScanner    *scanner,
     {
       scanner->config->cset_identifier_first = G_CSET_a_2_z G_CSET_A_2_Z G_CSET_DIGITS "@#-_";
       scanner->config->cset_identifier_nth = G_CSET_a_2_z G_CSET_A_2_Z G_CSET_DIGITS "@#-_ +(),.%\t\n'/\"";
+      scanner->config->scan_identifier_1char = TRUE;
+    }
+  else if (scope == SCOPE_BINDING_SET)
+    {
+      scanner->config->cset_identifier_first = G_CSET_a_2_z G_CSET_A_2_Z G_CSET_DIGITS "@#-_";
+      scanner->config->cset_identifier_nth = G_CSET_a_2_z G_CSET_A_2_Z G_CSET_DIGITS "@#-_ +(){}<>,.%\t\n'/\"";
       scanner->config->scan_identifier_1char = TRUE;
     }
   else if (scope == SCOPE_SELECTOR)
@@ -2761,6 +2808,32 @@ border_parse_str (const gchar  *str,
   return border;
 }
 
+static void
+resolve_binding_sets (const gchar *value_str,
+                      GValue      *value)
+{
+  GPtrArray *array;
+  gchar **bindings, **str;
+
+  bindings = g_strsplit (value_str, ",", -1);
+  array = g_ptr_array_new ();
+
+  for (str = bindings; *str; str++)
+    {
+      GtkBindingSet *binding_set;
+
+      binding_set = gtk_binding_set_find (g_strstrip (*str));
+
+      if (!binding_set)
+        continue;
+
+      g_ptr_array_add (array, binding_set);
+    }
+
+  g_value_take_boxed (value, array);
+  g_strfreev (bindings);
+}
+
 static gboolean
 css_provider_parse_value (GtkCssProvider  *css_provider,
                           const gchar     *value_str,
@@ -3233,6 +3306,68 @@ parse_rule (GtkCssProvider  *css_provider,
           else
             return G_TOKEN_NONE;
         }
+      else if (strcmp (directive, "binding-set") == 0)
+        {
+          GtkBindingSet *binding_set;
+          gchar *binding_set_name;
+
+          g_scanner_get_next_token (scanner);
+
+          if (scanner->token != G_TOKEN_IDENTIFIER)
+            {
+              scanner->user_data = "Binding name";
+              return G_TOKEN_IDENTIFIER;
+            }
+
+          binding_set_name = scanner->value.v_identifier;
+          binding_set = gtk_binding_set_find (binding_set_name);
+
+          if (!binding_set)
+            {
+              binding_set = gtk_binding_set_new (binding_set_name);
+              binding_set->parsed = TRUE;
+            }
+
+          g_scanner_get_next_token (scanner);
+
+          if (scanner->token != G_TOKEN_LEFT_CURLY)
+            return G_TOKEN_LEFT_CURLY;
+
+          css_provider_push_scope (css_provider, SCOPE_BINDING_SET);
+          g_scanner_get_next_token (scanner);
+
+          do
+            {
+              GTokenType ret;
+
+              if (scanner->token != G_TOKEN_IDENTIFIER)
+                {
+                  scanner->user_data = "Binding definition";
+                  return G_TOKEN_IDENTIFIER;
+                }
+
+              ret = gtk_binding_entry_add_signal_from_string (binding_set,
+                                                              scanner->value.v_identifier);
+              if (ret != G_TOKEN_NONE)
+                {
+                  scanner->user_data = "Binding definition";
+                  return ret;
+                }
+
+              g_scanner_get_next_token (scanner);
+
+              if (scanner->token != ';')
+                return ';';
+
+              g_scanner_get_next_token (scanner);
+            }
+          while (scanner->token != G_TOKEN_RIGHT_CURLY);
+
+          css_provider_pop_scope (css_provider);
+          g_scanner_get_next_token (scanner);
+
+          return G_TOKEN_NONE;
+        }
       else
         {
           scanner->user_data = "Directive";
@@ -3321,6 +3456,12 @@ parse_rule (GtkCssProvider  *css_provider,
                * to override other style providers when merged
                */
               g_param_value_set_default (pspec, val);
+              g_hash_table_insert (priv->cur_properties, prop, val);
+            }
+          else if (strcmp (prop, "gtk-key-bindings") == 0)
+            {
+              /* Private property holding the binding sets */
+              resolve_binding_sets (value_str, val);
               g_hash_table_insert (priv->cur_properties, prop, val);
             }
           else if (pspec->value_type == G_TYPE_STRING)
@@ -3657,7 +3798,7 @@ gtk_css_provider_get_default (void)
         "}\n"
         "\n"
         ".expander:active {\n"
-        "  transition: 300ms linear;\n"
+        "  transition: 200ms linear;\n"
         "}\n"
         "\n"
         "*:insensitive {\n"
@@ -3881,6 +4022,11 @@ gtk_css_provider_get_default (void)
         "  border-color: shade (@bg_color, 0.8);\n"
         "}\n"
         "\n"
+        "GtkSwitch.trough:active {\n"
+        "  background-color: @selected_bg_color;\n"
+        "  color: @selected_fg_color;\n"
+        "}\n"
+        "\n"
         "GtkToggleButton.button:inconsistent {\n"
         "  border-style: outset;\n"
         "  border-width: 1px;\n"
@@ -4003,24 +4149,31 @@ _gtk_css_provider_get_theme_dir (void)
 /**
  * gtk_css_provider_get_named:
  * @name: A theme name
- * @variant: variant to load, for example, "dark", or %NULL for the default
+ * @variant: (allow-none): variant to load, for example, "dark", or
+ *     %NULL for the default
  *
  * Loads a theme from the usual theme paths
  *
  * Returns: (transfer none): a #GtkCssProvider with the theme loaded.
- *          This memory is owned by GTK+, and you must not free it.
- **/
+ *     This memory is owned by GTK+, and you must not free it.
+ */
 GtkCssProvider *
 gtk_css_provider_get_named (const gchar *name,
                             const gchar *variant)
 {
   static GHashTable *themes = NULL;
   GtkCssProvider *provider;
+  gchar *key;
 
   if (G_UNLIKELY (!themes))
     themes = g_hash_table_new (g_str_hash, g_str_equal);
 
-  provider = g_hash_table_lookup (themes, name);
+  if (variant == NULL)
+    key = (gchar *)name;
+  else
+    key = g_strconcat (name, "-", variant, NULL);
+
+  provider = g_hash_table_lookup (themes, key);
 
   if (!provider)
     {
@@ -4048,7 +4201,9 @@ gtk_css_provider_get_named (const gchar *name,
 
       if (!path)
         {
-          gchar *theme_dir = _gtk_css_provider_get_theme_dir ();
+          gchar *theme_dir;
+
+          theme_dir = _gtk_css_provider_get_theme_dir ();
           path = g_build_filename (theme_dir, name, subpath, NULL);
           g_free (theme_dir);
 
@@ -4063,12 +4218,11 @@ gtk_css_provider_get_named (const gchar *name,
 
       if (path)
         {
-          GError *error = NULL;
+          GError *error;
 
           provider = gtk_css_provider_new ();
-          gtk_css_provider_load_from_path (provider, path, &error);
-
-          if (error)
+          error = NULL;
+          if (!gtk_css_provider_load_from_path (provider, path, &error))
             {
               g_warning ("Could not load named theme \"%s\": %s", name, error->message);
               g_error_free (error);
@@ -4077,9 +4231,12 @@ gtk_css_provider_get_named (const gchar *name,
               provider = NULL;
             }
           else
-            g_hash_table_insert (themes, g_strdup (name), provider);
+            g_hash_table_insert (themes, g_strdup (key), provider);
         }
     }
+
+  if (key != name)
+    g_free (key);
 
   return provider;
 }

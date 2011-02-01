@@ -16,8 +16,7 @@ else
 GTK_PRINT_PREVIEW_COMMAND="evince --unlink-tempfile --preview --print-settings %s %f"
 endif
 
-SUBDIRS = theme-bits . tests
-DIST_SUBDIRS = theme-bits tests
+SUBDIRS = . tests
 
 if HAVE_PAPI_CUPS
 GTK_PRINT_BACKENDS=file,papi,cups
@@ -380,6 +379,7 @@ gtk_private_h_sources =		\
 	gtkappchooserprivate.h	\
 	gtkappchoosermodule.h	\
 	gtkappchooseronline.h	\
+	gtkbindingsprivate.h	\
 	gtkbuilderprivate.h	\
 	gtkbuttonprivate.h	\
 	gtkcellareaboxcontextprivate.h	\
@@ -406,6 +406,7 @@ gtk_private_h_sources =		\
 	gtkmodifierstyle.h	\
 	gtkmountoperationprivate.h \
 	gtknumerableiconprivate.h \
+	gtkorientableprivate.h	\
 	gtkpango.h		\
 	gtkpathbar.h		\
 	gtkprintoperation-private.h \
@@ -416,6 +417,7 @@ gtk_private_h_sources =		\
 	gtkrecentchooserdefault.h \
 	gtkrecentchooserprivate.h \
 	gtkrecentchooserutils.h	\
+	gtkscaleprivate.h	\
 	gtksearchengine.h	\
 	gtksearchenginesimple.h	\
 	gtkselectionprivate.h	\
@@ -901,10 +903,10 @@ endif
 
 if USE_QUARTZ
 install-mac-key-theme:
-	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0-key
-	$(INSTALL_DATA) $(srcdir)/gtkrc.key.mac $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0-key/gtkrc
+	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0
+	$(INSTALL_DATA) $(srcdir)/gtk-keys.css.mac $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0/gtk-keys.css
 uninstall-mac-key-theme:
-	rm -f $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0-key/gtkrc
+	rm -f $(DESTDIR)$(datadir)/themes/Mac/gtk-3.0/gtk-keys.css
 else
 install-mac-key-theme:
 uninstall-mac-key-theme:
@@ -925,16 +927,16 @@ dist-hook: ../build/win32/vs9/gtk.vcproj
 # Install a RC file for the default GTK+ theme, and key themes
 install-data-local: install-ms-lib install-def-file install-mac-key-theme
 	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Raleigh/gtk-3.0
-	$(INSTALL_DATA) $(srcdir)/gtkrc.default $(DESTDIR)$(datadir)/themes/Raleigh/gtk-3.0/gtkrc
-	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Default/gtk-3.0-key
-	$(INSTALL_DATA) $(srcdir)/gtkrc.key.default $(DESTDIR)$(datadir)/themes/Default/gtk-3.0-key/gtkrc
-	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0-key
-	$(INSTALL_DATA) $(srcdir)/gtkrc.key.emacs $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0-key/gtkrc
+	$(INSTALL_DATA) $(srcdir)/gtk.css.raleigh $(DESTDIR)$(datadir)/themes/Raleigh/gtk-3.0/gtk.css
+	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Default/gtk-3.0
+	$(INSTALL_DATA) $(srcdir)/gtk-keys.css.default $(DESTDIR)$(datadir)/themes/Default/gtk-3.0/gtk-keys.css
+	$(mkdir_p) $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0
+	$(INSTALL_DATA) $(srcdir)/gtk-keys.css.emacs $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0/gtk-keys.css
 
 uninstall-local: uninstall-ms-lib uninstall-def-file uninstall-mac-key-theme
-	rm -f $(DESTDIR)$(datadir)/themes/Raleigh/gtk-3.0/gtkrc
-	rm -f $(DESTDIR)$(datadir)/themes/Default/gtk-3.0-key/gtkrc
-	rm -f $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0-key/gtkrc
+	rm -f $(DESTDIR)$(datadir)/themes/Raleigh/gtk-3.0/gtk.css
+	rm -f $(DESTDIR)$(datadir)/themes/Default/gtk-3.0/gtk-keys.css
+	rm -f $(DESTDIR)$(datadir)/themes/Emacs/gtk-3.0/gtk-keys.css
 
 # if srcdir!=builddir, clean out maintainer-clean files from builddir
 # this allows dist to pass.
@@ -1345,12 +1347,6 @@ gtkbuiltincache.h: @REBUILD@ stamp-icons
 EXTRA_DIST +=                   \
 	$(STOCK_ICONS)		\
 	$(GENERATED_ICONS)	\
-	line-arrow.xbm 		\
-	line-wrap.xbm 		\
-	tree_plus.xbm		\
-	tree_minus.xbm		\
-	tree_minus.xpm		\
-	tree_plus.xpm		\
 	gtk.def			\
 	gtk-win32.rc		\
 	gtk-win32.rc.in		\
@@ -1360,10 +1356,10 @@ EXTRA_DIST +=                   \
 	gtkprint-win32.h	\
 	gtkprint-win32.c	\
 	gtksearchenginequartz.h \
-	gtkrc.default		\
-	gtkrc.key.default	\
-	gtkrc.key.emacs		\
-	gtkrc.key.mac		\
+	gtk.css.raleigh		\
+	gtk-keys.css.default	\
+	gtk-keys.css.emacs	\
+	gtk-keys.css.mac	\
 	makefile.msc		\
 	makefile.msc.in		\
 	abicheck.sh		\

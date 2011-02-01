@@ -429,7 +429,6 @@ enum {
   SELECTION_RECEIVED,
   PROXIMITY_IN_EVENT,
   PROXIMITY_OUT_EVENT,
-  CLIENT_EVENT,
   VISIBILITY_NOTIFY_EVENT,
   WINDOW_STATE_EVENT,
   DAMAGE_EVENT,
@@ -1966,7 +1965,8 @@ gtk_widget_class_init (GtkWidgetClass *klass)
    * @widget: the object which received the signal
    * @event: (type Gdk.EventKey): the #GdkEventKey which triggered this signal.
    *
-   * The ::key-press-event signal is emitted when a key is pressed.
+   * The ::key-press-event signal is emitted when a key is pressed. The signal
+   * emission will reoccur at the key-repeat rate when the key is kept pressed.
    *
    * To receive this signal, the #GdkWindow associated to the widget needs
    * to enable the #GDK_KEY_PRESS_MASK mask.
@@ -1991,7 +1991,7 @@ gtk_widget_class_init (GtkWidgetClass *klass)
    * @widget: the object which received the signal
    * @event: (type Gdk.EventKey): the #GdkEventKey which triggered this signal.
    *
-   * The ::key-release-event signal is emitted when a key is pressed.
+   * The ::key-release-event signal is emitted when a key is released.
    *
    * To receive this signal, the #GdkWindow associated to the widget needs
    * to enable the #GDK_KEY_RELEASE_MASK mask.
@@ -2739,29 +2739,6 @@ gtk_widget_class_init (GtkWidgetClass *klass)
 		  G_TYPE_FROM_CLASS (klass),
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GtkWidgetClass, visibility_notify_event),
-		  _gtk_boolean_handled_accumulator, NULL,
-		  _gtk_marshal_BOOLEAN__BOXED,
-		  G_TYPE_BOOLEAN, 1,
-		  GDK_TYPE_EVENT | G_SIGNAL_TYPE_STATIC_SCOPE);
-
-  /**
-   * GtkWidget::client-event:
-   * @widget: the object which received the signal
-   * @event: (type Gdk.EventClient): the #GdkEventClient which triggered
-   *   this signal.
-   *
-   * The ::client-event will be emitted when the @widget's window
-   * receives a message (via a ClientMessage event) from another
-   * application.
-   *
-   * Returns: %TRUE to stop other handlers from being invoked for
-   *   the event. %FALSE to propagate the event further.
-   */
-  widget_signals[CLIENT_EVENT] =
-    g_signal_new (I_("client-event"),
-		  G_TYPE_FROM_CLASS (klass),
-		  G_SIGNAL_RUN_LAST,
-		  G_STRUCT_OFFSET (GtkWidgetClass, client_event),
 		  _gtk_boolean_handled_accumulator, NULL,
 		  _gtk_marshal_BOOLEAN__BOXED,
 		  G_TYPE_BOOLEAN, 1,
@@ -6059,9 +6036,6 @@ gtk_widget_event_internal (GtkWidget *widget,
 	case GDK_PROXIMITY_OUT:
 	  signal_num = PROXIMITY_OUT_EVENT;
 	  break;
-	case GDK_CLIENT_EVENT:
-	  signal_num = CLIENT_EVENT;
-	  break;
 	case GDK_EXPOSE:
 	  signal_num = EXPOSE_EVENT;
 	  break;
@@ -8761,8 +8735,7 @@ gtk_widget_reset_style (GtkWidget *widget)
  *
  * This function is not useful for applications.
  *
- * Deprecated:3.0: Use #GtkStyleContext instead, and
- *     gtk_widget_reset_style()
+ * Deprecated:3.0: Use #GtkStyleContext instead, and gtk_widget_reset_style()
  */
 void
 gtk_widget_reset_rc_styles (GtkWidget *widget)
@@ -9193,17 +9166,17 @@ gtk_widget_render_icon_pixbuf (GtkWidget   *widget,
  *     multiple source sizes, GTK+ picks one of the available sizes).
  * @detail: (allow-none): render detail to pass to theme engine
  *
- * A convenience function that uses the theme engine and RC file
- * settings for @widget to look up @stock_id and render it to
- * a pixbuf. @stock_id should be a stock icon ID such as
- * #GTK_STOCK_OPEN or #GTK_STOCK_OK. @size should be a size
- * such as #GTK_ICON_SIZE_MENU. @detail should be a string that
- * identifies the widget or code doing the rendering, so that
- * theme engines can special-case rendering for that widget or code.
+ * A convenience function that uses the theme settings for @widget
+ * to look up @stock_id and render it to a pixbuf. @stock_id should
+ * be a stock icon ID such as #GTK_STOCK_OPEN or #GTK_STOCK_OK. @size
+ * should be a size such as #GTK_ICON_SIZE_MENU. @detail should be a
+ * string that identifies the widget or code doing the rendering, so
+ * that theme engines can special-case rendering for that widget or
+ * code.
  *
  * The pixels in the returned #GdkPixbuf are shared with the rest of
- * the application and should not be modified. The pixbuf should be freed
- * after use with g_object_unref().
+ * the application and should not be modified. The pixbuf should be
+ * freed after use with g_object_unref().
  *
  * Return value: (transfer full): a new pixbuf, or %NULL if the
  *     stock ID wasn't known
@@ -9226,7 +9199,7 @@ gtk_widget_render_icon (GtkWidget      *widget,
  *
  * Sets a non default parent window for @widget.
  *
- * For GtkWindow classes, setting a @parent_window effects whether 
+ * For GtkWindow classes, setting a @parent_window effects whether
  * the window is a toplevel window or can be embedded into other
  * widgets.
  *
@@ -9249,6 +9222,8 @@ gtk_widget_set_parent_window   (GtkWidget           *widget,
 
   if (parent_window != old_parent_window)
     {
+      gboolean is_plug;
+
       g_object_set_qdata (G_OBJECT (widget), quark_parent_window,
 			  parent_window);
       if (old_parent_window)
@@ -9260,7 +9235,12 @@ gtk_widget_set_parent_window   (GtkWidget           *widget,
        * this is the primary entry point to allow toplevels to be
        * embeddable.
        */
-      if (GTK_IS_WINDOW (widget) && !GTK_IS_PLUG (widget))
+#ifdef GDK_WINDOWING_X11
+      is_plug = GTK_IS_PLUG (widget);
+#else
+      is_plug = FALSE;
+#endif
+      if (GTK_IS_WINDOW (widget) && !is_plug)
 	_gtk_window_set_is_toplevel (GTK_WINDOW (widget), parent_window == NULL);
     }
 }
@@ -10213,15 +10193,14 @@ gtk_widget_get_visual (GtkWidget *widget)
  * gtk_widget_get_settings:
  * @widget: a #GtkWidget
  *
- * Gets the settings object holding the settings (global property
- * settings, RC file information, etc) used for this widget.
+ * Gets the settings object holding the settings used for this widget.
  *
  * Note that this function can only be called when the #GtkWidget
  * is attached to a toplevel, since the settings object is specific
  * to a particular #GdkScreen.
  *
  * Return value: (transfer none): the relevant #GtkSettings object
- **/
+ */
 GtkSettings*
 gtk_widget_get_settings (GtkWidget *widget)
 {
