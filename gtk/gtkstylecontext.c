@@ -716,7 +716,7 @@ gtk_style_context_init (GtkStyleContext *style_context)
                                             (GDestroyNotify) style_data_free);
   priv->theming_engine = g_object_ref ((gpointer) gtk_theming_engine_load (NULL));
 
-  priv->direction = GTK_TEXT_DIR_RTL;
+  priv->direction = GTK_TEXT_DIR_LTR;
 
   priv->screen = gdk_screen_get_default ();
 
@@ -1280,6 +1280,10 @@ gtk_style_context_new (void)
  *
  * Adds a style provider to @context, to be used in style construction.
  *
+ * <note><para>If both priorities are the same, A #GtkStyleProvider
+ * added through this function takes precedence over another added
+ * through gtk_style_context_add_provider_for_screen().</para></note>
+ *
  * Since: 3.0
  **/
 void
@@ -1377,6 +1381,10 @@ gtk_style_context_reset_widgets (GdkScreen *screen)
  *
  * GTK+ uses this to make styling information from #GtkSettings
  * available.
+ *
+ * <note><para>If both priorities are the same, A #GtkStyleProvider
+ * added through gtk_style_context_add_provider() takes precedence
+ * over another added through this function.</para></note>
  *
  * Since: 3.0
  **/
@@ -2343,17 +2351,19 @@ _gtk_style_context_peek_style_property (GtkStyleContext *context,
                   GtkSymbolicColor *color;
                   GdkRGBA rgba;
 
-                  color = g_value_get_boxed (&pcache->value);
+                  color = g_value_dup_boxed (&pcache->value);
+
+                  g_value_unset (&pcache->value);
+
+                  if (G_PARAM_SPEC_VALUE_TYPE (pspec) == GDK_TYPE_RGBA)
+                    g_value_init (&pcache->value, GDK_TYPE_RGBA);
+                  else
+                    g_value_init (&pcache->value, GDK_TYPE_COLOR);
 
                   if (gtk_symbolic_color_resolve (color, data->store, &rgba))
                     {
-                      g_value_unset (&pcache->value);
-
                       if (G_PARAM_SPEC_VALUE_TYPE (pspec) == GDK_TYPE_RGBA)
-                        {
-                          g_value_init (&pcache->value, GDK_TYPE_RGBA);
-                          g_value_set_boxed (&pcache->value, &rgba);
-                        }
+                        g_value_set_boxed (&pcache->value, &rgba);
                       else
                         {
                           GdkColor rgb;
@@ -2362,12 +2372,13 @@ _gtk_style_context_peek_style_property (GtkStyleContext *context,
                           rgb.green = rgba.green * 65535. + 0.5;
                           rgb.blue = rgba.blue * 65535. + 0.5;
 
-                          g_value_init (&pcache->value, GDK_TYPE_COLOR);
                           g_value_set_boxed (&pcache->value, &rgb);
                         }
                     }
                   else
                     g_param_value_set_default (pspec, &pcache->value);
+
+                  gtk_symbolic_color_unref (color);
                 }
 
               return &pcache->value;
