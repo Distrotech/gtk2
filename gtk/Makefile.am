@@ -395,6 +395,7 @@ gtk_private_h_sources =		\
 	gtkfilesystem.h		\
 	gtkfilesystemmodel.h	\
 	gtkiconcache.h		\
+	gtkimageprivate.h	\
 	gtkimcontextsimpleseqs.h \
 	gtkintl.h		\
 	gtkkeyhash.h		\
@@ -970,7 +971,7 @@ if USE_X11
 Gtk_3_0_gir_SCANNERFLAGS += --add-include-path=$(top_builddir)/gdk/x11
 endif
 Gtk_3_0_gir_SCANNERFLAGS += --c-include="gtk/gtkx.h"
-Gtk_3_0_gir_INCLUDES = Atk-1.0 Gdk-3.0
+Gtk_3_0_gir_INCLUDES = Atk-1.0
 Gtk_3_0_gir_CFLAGS = \
 		$(INCLUDES) \
 		-UGDK_DISABLE_DEPRECATED \

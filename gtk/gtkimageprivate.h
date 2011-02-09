@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -24,45 +24,59 @@
  * GTK+ at ftp://ftp.gtk.org/pub/gtk/.
  */
 
-#if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
-#error "Only <gtk/gtk.h> can be included directly."
-#endif
+#ifndef __GTK_IMAGE_PRIVATE_H__
+#define __GTK_IMAGE_PRIVATE_H__
 
-#ifndef __GTK_BORDER_H__
-#define __GTK_BORDER_H__
 
-#include <glib-object.h>
+#include "gtkimage.h"
+
 
 G_BEGIN_DECLS
 
-typedef struct _GtkBorder GtkBorder;
+typedef struct _GtkImagePixbufData  GtkImagePixbufData;
+typedef struct _GtkImageStockData   GtkImageStockData;
+typedef struct _GtkImageIconSetData GtkImageIconSetData;
+typedef struct _GtkImageAnimationData GtkImageAnimationData;
+typedef struct _GtkImageIconNameData  GtkImageIconNameData;
+typedef struct _GtkImageGIconData     GtkImageGIconData;
 
-#define GTK_TYPE_BORDER (gtk_border_get_type ())
-
-/**
- * GtkBorder:
- * @left: The width of the left border
- * @right: The width of the right border
- * @top: The width of the top border
- * @bottom: The width of the bottom border
- *
- * A struct that specifies a border around a rectangular area
- * that can be of different width on each side.
- */
-struct _GtkBorder
+struct _GtkImagePixbufData
 {
-  gint16 left;
-  gint16 right;
-  gint16 top;
-  gint16 bottom;
+  GdkPixbuf *pixbuf;
 };
 
-GType      gtk_border_get_type (void) G_GNUC_CONST;
-GtkBorder *gtk_border_new      (void) G_GNUC_MALLOC;
-GtkBorder *gtk_border_copy     (const GtkBorder *border_);
-void       gtk_border_free     (GtkBorder       *border_);
+struct _GtkImageStockData
+{
+  gchar *stock_id;
+};
+
+struct _GtkImageIconSetData
+{
+  GtkIconSet *icon_set;
+};
+
+struct _GtkImageAnimationData
+{
+  GdkPixbufAnimation *anim;
+  GdkPixbufAnimationIter *iter;
+  guint frame_timeout;
+};
+
+struct _GtkImageIconNameData
+{
+  gchar *icon_name;
+  GdkPixbuf *pixbuf;
+  guint theme_change_id;
+};
+
+struct _GtkImageGIconData
+{
+  GIcon *icon;
+  GdkPixbuf *pixbuf;
+  guint theme_change_id;
+};
 
 
 G_END_DECLS
 
-#endif /* __GTK_BORDER_H__ */
+#endif /* __GTK_IMAGE_H__ */
