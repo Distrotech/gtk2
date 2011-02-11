@@ -758,7 +758,7 @@ if USE_QUARTZ
 gtk_private_h_sources += 	\
 	gtksearchenginequartz.h
 gtk_c_sources += $(gtk_use_quartz_c_sources)
-libgtk_3_0_la_CFLAGS = "-xobjective-c"
+libgtk_3_la_CFLAGS = "-xobjective-c"
 else
 gtk_c_sources += $(gtk_use_stub_c_sources)
 endif
