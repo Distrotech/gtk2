@@ -418,7 +418,6 @@ enum {
   MOTION_NOTIFY_EVENT,
   DELETE_EVENT,
   DESTROY_EVENT,
-  EXPOSE_EVENT,
   KEY_PRESS_EVENT,
   KEY_RELEASE_EVENT,
   ENTER_NOTIFY_EVENT,
@@ -4339,7 +4338,7 @@ gtk_widget_update_devices_mask (GtkWidget *widget,
  * isn't very useful otherwise. Many times when you think you might
  * need it, a better approach is to connect to a signal that will be
  * called after the widget is realized automatically, such as
- * #GtkWidget::expose-event. Or simply g_signal_connect () to the
+ * #GtkWidget::draw. Or simply g_signal_connect () to the
  * #GtkWidget::realize signal.
  **/
 void
@@ -4559,7 +4558,7 @@ gtk_widget_queue_draw (GtkWidget *widget)
  * queues a resize to ensure there's enough space for the new text.
  *
  * <note><para>You cannot call gtk_widget_queue_resize() on a widget
- * from inside it's implementation of the GtkWidgetClass::size_allocate 
+ * from inside its implementation of the GtkWidgetClass::size_allocate 
  * virtual method. Calls to gtk_widget_queue_resize() from inside
  * GtkWidgetClass::size_allocate will be silently ignored.</para></note>
  **/
@@ -5972,6 +5971,7 @@ gtk_widget_event_internal (GtkWidget *widget,
 
       switch (event->type)
 	{
+	case GDK_EXPOSE:
 	case GDK_NOTHING:
 	  signal_num = -1;
 	  break;
@@ -6044,9 +6044,6 @@ gtk_widget_event_internal (GtkWidget *widget,
 	  break;
 	case GDK_PROXIMITY_OUT:
 	  signal_num = PROXIMITY_OUT_EVENT;
-	  break;
-	case GDK_EXPOSE:
-	  signal_num = EXPOSE_EVENT;
 	  break;
 	case GDK_VISIBILITY_NOTIFY:
 	  signal_num = VISIBILITY_NOTIFY_EVENT;
