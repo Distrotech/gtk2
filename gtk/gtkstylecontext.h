@@ -235,6 +235,13 @@ struct _GtkStyleContextClass
 #define GTK_STYLE_CLASS_TOOLBAR "toolbar"
 
 /**
+ * GTK_STYLE_CLASS_PRIMARY_TOOLBAR:
+ *
+ * A CSS class to match primary toolbars.
+ */
+#define GTK_STYLE_CLASS_PRIMARY_TOOLBAR "primary-toolbar"
+
+/**
  * GTK_STYLE_CLASS_RADIO:
  *
  * A CSS class to match radio buttons.
@@ -275,6 +282,24 @@ struct _GtkStyleContextClass
  * A CSS class to match scale widgets.
  */
 #define GTK_STYLE_CLASS_SCALE "scale"
+
+/**
+ * GTK_STYLE_CLASS_SCALE_HAS_MARKS_ABOVE:
+ *
+ * A CSS class to match scale widgets with marks attached,
+ * all the marks are above for horizontal #GtkScale.
+ * left for vertical #GtkScale.
+ */
+#define GTK_STYLE_CLASS_SCALE_HAS_MARKS_ABOVE "scale-has-marks-above"
+
+/**
+ * GTK_STYLE_CLASS_SCALE_HAS_MARKS_BELOW:
+ *
+ * A CSS class to match scale widgets with marks attached,
+ * all the marks are below for horizontal #GtkScale,
+ * right for vertical #GtkScale.
+ */
+#define GTK_STYLE_CLASS_SCALE_HAS_MARKS_BELOW "scale-has-marks-below"
 
 /**
  * GTK_STYLE_CLASS_HEADER:
@@ -382,6 +407,13 @@ struct _GtkStyleContextClass
  * A CSS class for a pane separator, such as those in #GtkPaned.
  */
 #define GTK_STYLE_CLASS_PANE_SEPARATOR "pane-separator"
+
+/**
+ * GTK_STYLE_CLASS_SEPARATOR:
+ *
+ * A CSS class for a separator.
+ */
+#define GTK_STYLE_CLASS_SEPARATOR "separator"
 
 /**
  * GTK_STYLE_CLASS_INFO:
