@@ -477,7 +477,6 @@ gtk_settings_class_init (GtkSettingsClass *class)
                                              NULL);
   g_assert (result == PROP_MODULES);
 
-#ifdef GDK_WINDOWING_X11
   result = settings_install_property_parser (class,
                                              g_param_spec_int ("gtk-xft-antialias",
                                                                P_("Xft Antialias"),
@@ -547,7 +546,6 @@ gtk_settings_class_init (GtkSettingsClass *class)
 
   g_assert (result == PROP_CURSOR_THEME_SIZE);
 
-#endif  /* GDK_WINDOWING_X11 */
   result = settings_install_property_parser (class,
                                              g_param_spec_boolean ("gtk-alternative-button-order",
                                                                    P_("Alternative button order"),
@@ -3091,7 +3089,7 @@ gtk_settings_load_from_key_file (GtkSettings       *settings,
             g_value_init (&svalue.value, G_TYPE_GSTRING);
             s_val = g_key_file_get_string (keyfile, "Settings", key, &error);
             if (!error)
-              g_value_set_boxed (&svalue.value, g_string_new (s_val));
+              g_value_take_boxed (&svalue.value, g_string_new (s_val));
             g_free (s_val);
             break;
           }
