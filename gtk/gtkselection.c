@@ -188,8 +188,8 @@ static const char gtk_selection_handler_key[] = "gtk-selection-handlers";
 
 /**
  * gtk_target_list_new:
- * @targets: Pointer to an array of #GtkTargetEntry
- * @ntargets:  number of entries in @targets.
+ * @targets: (array length=ntargets): Pointer to an array of #GtkTargetEntry
+ * @ntargets: number of entries in @targets.
  * 
  * Creates a new #GtkTargetList from an array of #GtkTargetEntry.
  * 
@@ -471,7 +471,7 @@ gtk_target_list_add_uri_targets (GtkTargetList *list,
 /**
  * gtk_target_list_add_table:
  * @list: a #GtkTargetList
- * @targets: the table of #GtkTargetEntry
+ * @targets: (array length=ntargets): the table of #GtkTargetEntry
  * @ntargets: number of targets in the table
  * 
  * Prepends a table of #GtkTargetEntry to a target list.
@@ -904,7 +904,7 @@ gtk_selection_add_target (GtkWidget	    *widget,
  * gtk_selection_add_targets:
  * @widget: a #GtkWidget
  * @selection: the selection
- * @targets: a table of targets to add
+ * @targets: (array length=ntargets): a table of targets to add
  * @ntargets:  number of entries in @targets
  * 
  * Prepends a table of targets to the list of supported targets
@@ -1700,7 +1700,8 @@ gtk_selection_data_get_pixbuf (GtkSelectionData *selection_data)
 /**
  * gtk_selection_data_set_uris:
  * @selection_data: a #GtkSelectionData
- * @uris: a %NULL-terminated array of strings holding URIs
+ * @uris: (array zero-terminated=1): a %NULL-terminated array of
+ *     strings holding URIs
  * 
  * Sets the contents of the selection from a list of URIs.
  * The string is converted to the form determined by
@@ -1844,7 +1845,7 @@ gtk_selection_data_get_targets (GtkSelectionData  *selection_data,
 
 /**
  * gtk_targets_include_text:
- * @targets: an array of #GdkAtom<!-- -->s
+ * @targets: (array length=n_targets): an array of #GdkAtom<!-- -->s
  * @n_targets: the length of @targets
  * 
  * Determines if any of the targets in @targets can be used to
@@ -1889,7 +1890,7 @@ gtk_targets_include_text (GdkAtom *targets,
 
 /**
  * gtk_targets_include_rich_text:
- * @targets: an array of #GdkAtom<!-- -->s
+ * @targets: (array length=n_targets): an array of #GdkAtom<!-- -->s
  * @n_targets: the length of @targets
  * @buffer: a #GtkTextBuffer
  *
@@ -2007,7 +2008,7 @@ gtk_selection_data_targets_include_rich_text (GtkSelectionData *selection_data,
 
 /**
  * gtk_targets_include_image:
- * @targets: an array of #GdkAtom<!-- -->s
+ * @targets: (array length=n_targets): an array of #GdkAtom<!-- -->s
  * @n_targets: the length of @targets
  * @writable: whether to accept only targets for which GTK+ knows
  *   how to convert a pixbuf into the format
@@ -2089,7 +2090,7 @@ gtk_selection_data_targets_include_image (GtkSelectionData *selection_data,
 
 /**
  * gtk_targets_include_uri:
- * @targets: an array of #GdkAtom<!-- -->s
+ * @targets: (array length=n_targets): an array of #GdkAtom<!-- -->s
  * @n_targets: the length of @targets
  * 
  * Determines if any of the targets in @targets can be used to
