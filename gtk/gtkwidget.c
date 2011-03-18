@@ -7600,8 +7600,7 @@ gtk_widget_set_sensitive (GtkWidget *widget,
 
   gtk_widget_propagate_state (widget, &data);
 
-  if (gtk_widget_is_drawable (widget))
-    gtk_widget_queue_draw (widget);
+  gtk_widget_queue_resize (widget);
 
   g_object_notify (G_OBJECT (widget), "sensitive");
 }
@@ -7633,7 +7632,7 @@ gtk_widget_get_sensitive (GtkWidget *widget)
  * @widget: a #GtkWidget
  *
  * Returns the widget's effective sensitivity, which means
- * it is sensitive itself and also its parent widget is sensntive
+ * it is sensitive itself and also its parent widget is sensitive
  *
  * Returns: %TRUE if the widget is effectively sensitive
  *
@@ -11268,19 +11267,21 @@ gtk_widget_propagate_state (GtkWidget    *widget,
 
       if (GTK_IS_CONTAINER (widget))
         {
-          data->parent_sensitive = gtk_widget_is_sensitive (widget);
+          GtkStateData child_data = *data;
+
+          child_data.parent_sensitive = gtk_widget_is_sensitive (widget);
 
           /* Do not propagate focused state further */
-          data->flags &= ~GTK_STATE_FLAG_FOCUSED;
+          child_data.flags &= ~GTK_STATE_FLAG_FOCUSED;
 
-          if (data->use_forall)
+          if (child_data.use_forall)
             gtk_container_forall (GTK_CONTAINER (widget),
                                   (GtkCallback) gtk_widget_propagate_state,
-                                  data);
+                                  &child_data);
           else
             gtk_container_foreach (GTK_CONTAINER (widget),
                                    (GtkCallback) gtk_widget_propagate_state,
-                                   data);
+                                   &child_data);
         }
 
       /* Trigger state change transitions for the widget */

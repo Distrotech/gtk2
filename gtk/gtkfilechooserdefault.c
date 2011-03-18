@@ -3603,6 +3603,7 @@ shortcuts_list_create (GtkFileChooserDefault *impl)
   GtkTreeSelection *selection;
   GtkTreeViewColumn *column;
   GtkCellRenderer *renderer;
+  GtkStyleContext *style;
 
   /* Target types for dragging a row to/from the shortcuts list */
   const GtkTargetEntry tree_model_row_targets[] = {
@@ -3619,8 +3620,9 @@ shortcuts_list_create (GtkFileChooserDefault *impl)
   gtk_widget_show (swin);
 
   /* Tree */
-
   impl->browse_shortcuts_tree_view = gtk_tree_view_new ();
+  gtk_style_context_add_class (gtk_widget_get_style_context (impl->browse_shortcuts_tree_view),
+                               GTK_STYLE_CLASS_SIDEBAR);
   gtk_tree_view_set_enable_search (GTK_TREE_VIEW (impl->browse_shortcuts_tree_view), FALSE);
 #ifdef PROFILE_FILE_CHOOSER
   g_object_set_data (G_OBJECT (impl->browse_shortcuts_tree_view), "fmq-name", "shortcuts");
@@ -3766,11 +3768,12 @@ shortcuts_pane_create (GtkFileChooserDefault *impl,
   toolbar = gtk_toolbar_new ();
   gtk_toolbar_set_icon_size (GTK_TOOLBAR (toolbar), GTK_ICON_SIZE_MENU);
 
-  gtk_box_pack_start (GTK_BOX (vbox), toolbar, FALSE, FALSE, 0);
-  gtk_widget_show (toolbar);
-
   context = gtk_widget_get_style_context (toolbar);
   gtk_style_context_set_junction_sides (context, GTK_JUNCTION_TOP);
+  gtk_style_context_add_class (context, GTK_STYLE_CLASS_INLINE_TOOLBAR);
+  
+  gtk_box_pack_start (GTK_BOX (vbox), toolbar, FALSE, FALSE, 0);
+  gtk_widget_show (toolbar);
 
   /* Add bookmark button */
   icon = g_themed_icon_new_with_default_fallbacks ("list-add-symbolic");
@@ -5071,7 +5074,7 @@ browse_widgets_create (GtkFileChooserDefault *impl)
   gtk_paned_pack1 (GTK_PANED (hpaned), widget, FALSE, FALSE);
   widget = file_pane_create (impl, size_group);
   gtk_paned_pack2 (GTK_PANED (hpaned), widget, TRUE, FALSE);
-
+  gtk_paned_set_position (GTK_PANED (hpaned), 148);
   g_object_unref (size_group);
 
   return vbox;

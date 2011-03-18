@@ -242,6 +242,13 @@ struct _GtkStyleContextClass
 #define GTK_STYLE_CLASS_PRIMARY_TOOLBAR "primary-toolbar"
 
 /**
+ * GTK_STYLE_CLASS_INLINE_TOOLBAR:
+ *
+ * A CSS class to match inline toolbars.
+ */
+#define GTK_STYLE_CLASS_INLINE_TOOLBAR "inline-toolbar"
+
+/**
  * GTK_STYLE_CLASS_RADIO:
  *
  * A CSS class to match radio buttons.
@@ -385,6 +392,13 @@ struct _GtkStyleContextClass
  * A widget class defining a view, such as iconviews or treeviews
  */
 #define GTK_STYLE_CLASS_VIEW "view"
+
+/**
+ * GTK_STYLE_CLASS_SIDEBAR:
+ *
+ * A widget class defining a sidebar
+ */
+#define GTK_STYLE_CLASS_SIDEBAR "sidebar"
 
 /**
  * GTK_STYLE_CLASS_HIGHLIGHT:
