@@ -800,6 +800,10 @@ gtk_radio_button_clicked (GtkButton *button)
 
   g_object_ref (GTK_WIDGET (button));
 
+  new_state = gtk_widget_get_state_flags (GTK_WIDGET (button)) &
+    ~(GTK_STATE_FLAG_PRELIGHT |
+      GTK_STATE_FLAG_ACTIVE);
+
   if (gtk_toggle_button_get_active (toggle_button))
     {
       tmp_button = NULL;
