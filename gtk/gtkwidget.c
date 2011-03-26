@@ -4389,7 +4389,10 @@ gtk_widget_realize (GtkWidget *widget)
       gtk_widget_ensure_style (widget);
 
       if (priv->style_update_pending)
-        g_signal_emit (widget, widget_signals[STYLE_UPDATED], 0);
+        {
+          g_signal_emit (widget, widget_signals[STYLE_UPDATED], 0);
+          priv->style_update_pending = FALSE;
+        }
 
       g_signal_emit (widget, widget_signals[REALIZE], 0);
 
@@ -6468,16 +6471,13 @@ gtk_widget_real_query_tooltip (GtkWidget  *widget,
 static void
 gtk_widget_real_style_updated (GtkWidget *widget)
 {
-  if (gtk_widget_get_realized (widget))
-    {
-      /* Trigger ::style-set for old
-       * widgets not listening to this
-       */
-      g_signal_emit (widget,
-                     widget_signals[STYLE_SET],
-                     0,
-                     widget->priv->style);
-    }
+  /* Trigger ::style-set for old
+   * widgets not listening to this
+   */
+  g_signal_emit (widget,
+                 widget_signals[STYLE_SET],
+                 0,
+                 widget->priv->style);
 
   if (widget->priv->context)
     {
@@ -7702,6 +7702,12 @@ gtk_widget_set_parent (GtkWidget *widget,
 
   gtk_widget_push_verify_invariants (widget);
 
+  if (!widget->priv->context)
+    {
+      /* Ensure the style context is there */
+      gtk_widget_get_style_context (widget);
+    }
+
   priv->parent = parent;
 
   parent_flags = gtk_widget_get_state_flags (parent);
@@ -7717,7 +7723,7 @@ gtk_widget_set_parent (GtkWidget *widget,
   data.use_forall = gtk_widget_is_sensitive (parent) != gtk_widget_is_sensitive (widget);
   gtk_widget_propagate_state (widget, &data);
 
-  gtk_widget_reset_rc_styles (widget);
+  gtk_widget_reset_style (widget);
 
   g_signal_emit (widget, widget_signals[PARENT_SET], 0, NULL);
   if (priv->parent->priv->anchored)
@@ -7755,19 +7761,6 @@ gtk_widget_set_parent (GtkWidget *widget,
        priv->computed_vexpand))
     {
       gtk_widget_queue_compute_expand (parent);
-    }
-
-  if (widget->priv->context)
-    {
-      GdkScreen *screen;
-
-      _gtk_widget_update_path (widget);
-      gtk_style_context_set_path (widget->priv->context, widget->priv->path);
-
-      screen = gtk_widget_get_screen (widget);
-
-      if (screen)
-        gtk_style_context_set_screen (widget->priv->context, screen);
     }
 
   gtk_widget_pop_verify_invariants (widget);
@@ -8720,9 +8713,16 @@ reset_style_recurse (GtkWidget *widget, gpointer data)
 {
   if (widget->priv->context)
     {
+      GdkScreen *screen;
+
       _gtk_widget_update_path (widget);
       gtk_style_context_set_path (widget->priv->context,
                                   widget->priv->path);
+
+      screen = gtk_widget_get_screen_unchecked (widget);
+
+      if (screen)
+        gtk_style_context_set_screen (widget->priv->context, screen);
     }
 
   if (GTK_IS_CONTAINER (widget))
@@ -10668,6 +10668,8 @@ gtk_widget_finalize (GObject *object)
 
   if (priv->context)
     g_object_unref (priv->context);
+
+  _gtk_widget_free_cached_sizes (widget);
 
   if (g_object_is_floating (object))
     g_warning ("A floating object was finalized. This means that someone\n"
@@ -13007,8 +13009,8 @@ gtk_widget_buildable_custom_finished (GtkBuildable *buildable,
 static GtkSizeRequestMode 
 gtk_widget_real_get_request_mode (GtkWidget *widget)
 { 
-  /* By default widgets are height-for-width. */
-  return GTK_SIZE_REQUEST_HEIGHT_FOR_WIDTH;
+  /* By default widgets dont trade size at all. */
+  return GTK_SIZE_REQUEST_CONSTANT_SIZE;
 }
 
 static void
@@ -14312,12 +14314,13 @@ style_context_changed (GtkStyleContext *context,
 
   gtk_widget_update_pango_context (widget);
 
-  if (gtk_widget_get_realized (widget))
+  if (widget->priv->parent &&
+      gtk_widget_get_screen_unchecked (widget))
     g_signal_emit (widget, widget_signals[STYLE_UPDATED], 0);
-  else
+  else if (!gtk_widget_get_realized (widget))
     {
       /* Compress all style updates so it
-       * is only emitted once pre-realize.
+       * is emitted at least once pre-realize
        */
       widget->priv->style_update_pending = TRUE;
     }
