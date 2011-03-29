@@ -225,6 +225,92 @@ gtk_widget_path_length (const GtkWidgetPath *path)
 }
 
 /**
+ * gtk_widget_path_to_string:
+ * @path: the path
+ *
+ * Dumps the widget path into a string representation. It tries to match
+ * the CSS style as closely as possible (Note that there might be paths
+ * that cannot be represented in CSS).
+ *
+ * The main use of this code is for debugging purposes, so that you can
+ * g_print() the path or dump it in a gdb session.
+ *
+ * Returns: A new string describing @path.
+ *
+ * Since: 3.2
+ **/
+char *
+gtk_widget_path_to_string (const GtkWidgetPath *path)
+{
+  GString *string;
+  guint i, j;
+
+  g_return_val_if_fail (path != NULL, NULL);
+
+  string = g_string_new ("");
+
+  for (i = 0; i < path->elems->len; i++)
+    {
+      GtkPathElement *elem;
+
+      elem = &g_array_index (path->elems, GtkPathElement, i);
+
+      if (i > 0)
+        g_string_append_c (string, ' ');
+
+      g_string_append (string, g_type_name (elem->type));
+
+      if (elem->name)
+        {
+          g_string_append_c (string, '(');
+          g_string_append (string, g_quark_to_string (elem->name));
+          g_string_append_c (string, ')');
+        }
+
+      if (elem->classes)
+        {
+          for (j = 0; j < elem->classes->len; j++)
+            {
+              g_string_append_c (string, '.');
+              g_string_append (string, g_quark_to_string (g_array_index (elem->classes, GQuark, j)));
+            }
+        }
+
+      if (elem->regions)
+        {
+          GHashTableIter iter;
+          gpointer key, value;
+
+          g_hash_table_iter_init (&iter, elem->regions);
+          while (g_hash_table_iter_next (&iter, &key, &value))
+            {
+              GtkRegionFlags flags = GPOINTER_TO_UINT (value);
+              static const char *flag_names[] = {
+                "even",
+                "odd",
+                "first",
+                "last",
+                "sorted"
+              };
+
+              g_string_append_c (string, ' ');
+              g_string_append (string, g_quark_to_string (GPOINTER_TO_UINT (key)));
+              for (j = 0; j < G_N_ELEMENTS(flag_names); j++)
+                {
+                  if (flags & (1 << j))
+                    {
+                      g_string_append_c (string, ':');
+                      g_string_append (string, flag_names[j]);
+                    }
+                }
+            }
+        }
+    }
+
+  return g_string_free (string, FALSE);
+}
+
+/**
  * gtk_widget_path_prepend_type:
  * @path: a #GtkWidgetPath
  * @type: widget type to prepend
@@ -291,7 +377,7 @@ gtk_widget_path_iter_get_object_type (const GtkWidgetPath *path,
   g_return_val_if_fail (path != NULL, G_TYPE_INVALID);
   g_return_val_if_fail (path->elems->len != 0, G_TYPE_INVALID);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -319,7 +405,7 @@ gtk_widget_path_iter_set_object_type (GtkWidgetPath *path,
   g_return_if_fail (path != NULL);
   g_return_if_fail (path->elems->len != 0);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -346,7 +432,7 @@ gtk_widget_path_iter_get_name (const GtkWidgetPath *path,
   g_return_val_if_fail (path != NULL, NULL);
   g_return_val_if_fail (path->elems->len != 0, NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -375,7 +461,7 @@ gtk_widget_path_iter_set_name (GtkWidgetPath *path,
   g_return_if_fail (path->elems->len != 0);
   g_return_if_fail (name != NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -407,7 +493,7 @@ gtk_widget_path_iter_has_qname (const GtkWidgetPath *path,
   g_return_val_if_fail (path->elems->len != 0, FALSE);
   g_return_val_if_fail (qname != 0, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -438,7 +524,7 @@ gtk_widget_path_iter_has_name (const GtkWidgetPath *path,
   g_return_val_if_fail (path != NULL, FALSE);
   g_return_val_if_fail (path->elems->len != 0, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   qname = g_quark_try_string (name);
@@ -475,7 +561,7 @@ gtk_widget_path_iter_add_class (GtkWidgetPath *path,
   g_return_if_fail (path->elems->len != 0);
   g_return_if_fail (name != NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -532,7 +618,7 @@ gtk_widget_path_iter_remove_class (GtkWidgetPath *path,
   g_return_if_fail (path->elems->len != 0);
   g_return_if_fail (name != NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   qname = g_quark_try_string (name);
@@ -580,7 +666,7 @@ gtk_widget_path_iter_clear_classes (GtkWidgetPath *path,
   g_return_if_fail (path != NULL);
   g_return_if_fail (path->elems->len != 0);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -618,7 +704,7 @@ gtk_widget_path_iter_list_classes (const GtkWidgetPath *path,
   g_return_val_if_fail (path != NULL, NULL);
   g_return_val_if_fail (path->elems->len != 0, NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -662,7 +748,7 @@ gtk_widget_path_iter_has_qclass (const GtkWidgetPath *path,
   g_return_val_if_fail (path->elems->len != 0, FALSE);
   g_return_val_if_fail (qname != 0, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -709,7 +795,7 @@ gtk_widget_path_iter_has_class (const GtkWidgetPath *path,
   g_return_val_if_fail (path->elems->len != 0, FALSE);
   g_return_val_if_fail (name != NULL, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   qname = g_quark_try_string (name);
@@ -750,7 +836,7 @@ gtk_widget_path_iter_add_region (GtkWidgetPath  *path,
   g_return_if_fail (name != NULL);
   g_return_if_fail (_gtk_style_context_check_region_name (name));
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -787,7 +873,7 @@ gtk_widget_path_iter_remove_region (GtkWidgetPath *path,
   g_return_if_fail (path->elems->len != 0);
   g_return_if_fail (name != NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   qname = g_quark_try_string (name);
@@ -820,7 +906,7 @@ gtk_widget_path_iter_clear_regions (GtkWidgetPath *path,
   g_return_if_fail (path != NULL);
   g_return_if_fail (path->elems->len != 0);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -856,7 +942,7 @@ gtk_widget_path_iter_list_regions (const GtkWidgetPath *path,
   g_return_val_if_fail (path != NULL, NULL);
   g_return_val_if_fail (path->elems->len != 0, NULL);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -904,7 +990,7 @@ gtk_widget_path_iter_has_qregion (const GtkWidgetPath *path,
   g_return_val_if_fail (path->elems->len != 0, FALSE);
   g_return_val_if_fail (qname != 0, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   elem = &g_array_index (path->elems, GtkPathElement, pos);
@@ -949,7 +1035,7 @@ gtk_widget_path_iter_has_region (const GtkWidgetPath *path,
   g_return_val_if_fail (path->elems->len != 0, FALSE);
   g_return_val_if_fail (name != NULL, FALSE);
 
-  if (pos < 0 || pos > path->elems->len)
+  if (pos < 0 || pos >= path->elems->len)
     pos = path->elems->len - 1;
 
   qname = g_quark_try_string (name);
