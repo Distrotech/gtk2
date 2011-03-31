@@ -299,6 +299,13 @@
  * </refsect2>
  */
 
+/* Add flags here that should not be propagated to children. By default,
+ * all flags will be set on children (think prelight or active), but we
+ * might want to not do this for some.
+ */
+#define GTK_STATE_FLAGS_DONT_PROPAGATE (GTK_STATE_FLAG_FOCUSED)
+#define GTK_STATE_FLAGS_DO_PROPAGATE (~GTK_STATE_FLAGS_DONT_PROPAGATE)
+
 #define WIDGET_CLASS(w)	 GTK_WIDGET_GET_CLASS (w)
 #define	INIT_PATH_SIZE	(512)
 
@@ -321,7 +328,6 @@ struct _GtkWidgetPrivate
   guint mapped                : 1;
   guint visible               : 1;
   guint sensitive             : 1;
-  guint parent_sensitive      : 1;
   guint can_focus             : 1;
   guint has_focus             : 1;
   guint can_default           : 1;
@@ -524,7 +530,6 @@ struct _GtkStateData
 {
   guint         flags : 6;
   guint         operation : 2;
-  guint         parent_sensitive : 1;
   guint		use_forall : 1;
 };
 
@@ -3514,7 +3519,6 @@ gtk_widget_init (GtkWidget *widget)
   priv->parent = NULL;
 
   priv->sensitive = TRUE;
-  priv->parent_sensitive = TRUE;
   priv->composite_child = composite_child_stack != 0;
   priv->double_buffered = TRUE;
   priv->redraw_on_alloc = TRUE;
@@ -5115,11 +5119,27 @@ gtk_widget_real_size_allocate (GtkWidget     *widget,
      }
 }
 
+/* translate initial/final into start/end */
+static GtkAlign
+effective_align (GtkAlign         align,
+                 GtkTextDirection direction)
+{
+  switch (align)
+    {
+    case GTK_ALIGN_START:
+      return direction == GTK_TEXT_DIR_RTL ? GTK_ALIGN_END : GTK_ALIGN_START;
+    case GTK_ALIGN_END:
+      return direction == GTK_TEXT_DIR_RTL ? GTK_ALIGN_START : GTK_ALIGN_END;
+    default:
+      return align;
+    }
+}
+
 static void
-adjust_for_align(GtkAlign           align,
-                 gint              *natural_size,
-                 gint              *allocated_pos,
-                 gint              *allocated_size)
+adjust_for_align (GtkAlign  align,
+                  gint     *natural_size,
+                  gint     *allocated_pos,
+                  gint     *allocated_size)
 {
   switch (align)
     {
@@ -5177,18 +5197,18 @@ gtk_widget_real_adjust_size_allocation (GtkWidget         *widget,
     {
       adjust_for_margin (aux_info->margin.left,
                          aux_info->margin.right,
-                         minimum_size, natural_size, 
-			 allocated_pos, allocated_size);
-      adjust_for_align (aux_info->halign,
+                         minimum_size, natural_size,
+                         allocated_pos, allocated_size);
+      adjust_for_align (effective_align (aux_info->halign, gtk_widget_get_direction (widget)),
                         natural_size, allocated_pos, allocated_size);
     }
   else
     {
       adjust_for_margin (aux_info->margin.top,
                          aux_info->margin.bottom,
-                         minimum_size, natural_size, 
-			 allocated_pos, allocated_size);
-      adjust_for_align (aux_info->valign,
+                         minimum_size, natural_size,
+                         allocated_pos, allocated_size);
+      adjust_for_align (effective_align (aux_info->valign, GTK_TEXT_DIR_NONE),
                         natural_size, allocated_pos, allocated_size);
     }
 }
@@ -6981,11 +7001,6 @@ _gtk_widget_update_state_flags (GtkWidget     *widget,
       data.operation = operation;
       data.use_forall = FALSE;
 
-      if (priv->parent)
-	data.parent_sensitive = (gtk_widget_is_sensitive (priv->parent) != FALSE);
-      else
-	data.parent_sensitive = TRUE;
-
       gtk_widget_propagate_state (widget, &data);
 
       gtk_widget_queue_resize (widget);
@@ -7071,9 +7086,6 @@ gtk_widget_get_state_flags (GtkWidget *widget)
   g_return_val_if_fail (GTK_IS_WIDGET (widget), 0);
 
   flags = widget->priv->state_flags;
-
-  if (!gtk_widget_is_sensitive (widget))
-    flags |= GTK_STATE_FLAG_INSENSITIVE;
 
   if (gtk_widget_has_focus (widget))
     flags |= GTK_STATE_FLAG_FOCUSED;
@@ -7584,11 +7596,6 @@ gtk_widget_set_sensitive (GtkWidget *widget,
 
   data.use_forall = TRUE;
 
-  if (priv->parent)
-    data.parent_sensitive = gtk_widget_is_sensitive (priv->parent);
-  else
-    data.parent_sensitive = TRUE;
-
   gtk_widget_propagate_state (widget, &data);
 
   gtk_widget_queue_resize (widget);
@@ -7634,7 +7641,7 @@ gtk_widget_is_sensitive (GtkWidget *widget)
 {
   g_return_val_if_fail (GTK_IS_WIDGET (widget), FALSE);
 
-  return widget->priv->sensitive && widget->priv->parent_sensitive;
+  return !(widget->priv->state_flags & GTK_STATE_FLAG_INSENSITIVE);
 }
 
 static void
@@ -7698,13 +7705,11 @@ gtk_widget_set_parent (GtkWidget *widget,
   parent_flags = gtk_widget_get_state_flags (parent);
 
   /* Merge both old state and current parent state,
-   * We don't want the insensitive flag to propagate
-   * to the new child though */
-  data.flags = parent_flags & ~GTK_STATE_FLAG_INSENSITIVE;
+   * making sure to only propagate the right states */
+  data.flags = parent_flags & GTK_STATE_FLAGS_DO_PROPAGATE;
   data.flags |= priv->state_flags;
 
   data.operation = STATE_CHANGE_REPLACE;
-  data.parent_sensitive = (gtk_widget_is_sensitive (parent) != FALSE);
   data.use_forall = gtk_widget_is_sensitive (parent) != gtk_widget_is_sensitive (widget);
   gtk_widget_propagate_state (widget, &data);
 
@@ -11162,11 +11167,6 @@ gtk_widget_propagate_state (GtkWidget    *widget,
 
   old_state = gtk_widget_get_state (widget);
 
-  if (!priv->parent_sensitive)
-    old_flags |= GTK_STATE_FLAG_INSENSITIVE;
-
-  priv->parent_sensitive = data->parent_sensitive;
-
   switch (data->operation)
     {
     case STATE_CHANGE_REPLACE:
@@ -11180,6 +11180,10 @@ gtk_widget_propagate_state (GtkWidget    *widget,
       break;
     }
 
+  /* make insensitivity unoverridable */
+  if (!priv->sensitive)
+    priv->state_flags |= GTK_STATE_FLAG_INSENSITIVE;
+
   if (gtk_widget_is_focus (widget) && !gtk_widget_is_sensitive (widget))
     {
       GtkWidget *window;
@@ -11190,7 +11194,7 @@ gtk_widget_propagate_state (GtkWidget    *widget,
         gtk_window_set_focus (GTK_WINDOW (window), NULL);
     }
 
-  new_flags = gtk_widget_get_state_flags (widget);
+  new_flags = priv->state_flags;
 
   if (old_flags != new_flags)
     {
@@ -11242,10 +11246,8 @@ gtk_widget_propagate_state (GtkWidget    *widget,
         {
           GtkStateData child_data = *data;
 
-          child_data.parent_sensitive = gtk_widget_is_sensitive (widget);
-
-          /* Do not propagate focused state further */
-          child_data.flags &= ~GTK_STATE_FLAG_FOCUSED;
+          /* Make sure to only propate the right states further */
+          child_data.flags &= GTK_STATE_FLAGS_DO_PROPAGATE;
 
           if (child_data.use_forall)
             gtk_container_forall (GTK_CONTAINER (widget),
