@@ -763,7 +763,10 @@ shortcuts_free_row_data (GtkFileChooserDefault *impl,
 		      -1);
 
   if (cancellable)
-    g_cancellable_cancel (cancellable);
+    {
+      g_cancellable_cancel (cancellable);
+      g_object_unref (cancellable);
+    }
 
   if (!(shortcut_type == SHORTCUT_TYPE_FILE || 
 	shortcut_type == SHORTCUT_TYPE_VOLUME) ||
@@ -1457,7 +1460,7 @@ get_file_info_finished (GCancellable *cancellable,
   GdkPixbuf *pixbuf;
   GtkTreePath *path;
   GtkTreeIter iter;
-  GCancellable *model_cancellable;
+  GCancellable *model_cancellable = NULL;
   struct ShortcutsInsertRequest *request = data;
 
   path = gtk_tree_row_reference_get_path (request->row_ref);
@@ -1560,7 +1563,8 @@ out:
   g_free (request->label_copy);
   g_free (request);
 
-  g_object_unref (cancellable);
+  if (model_cancellable)
+    g_object_unref (model_cancellable);
 }
 
 /* FIXME: GtkFileSystem needs a function to split a remote path
@@ -3191,7 +3195,7 @@ shortcuts_reorder (GtkFileChooserDefault *impl,
   int bookmarks_index;
   GFile *file;
   GError *error;
-  gchar *name;
+  gchar *name = NULL;
 
   /* Get the selected path */
 
@@ -3237,6 +3241,7 @@ shortcuts_reorder (GtkFileChooserDefault *impl,
  out:
 
   g_object_unref (file);
+  g_free (name);
 }
 
 /* Callback used when we get the drag data for the bookmarks list.  We add the
@@ -8732,7 +8737,7 @@ search_selected_foreach_get_file_cb (GtkTreeModel *model,
   list = data;
 
   gtk_tree_model_get (model, iter, MODEL_COL_FILE, &file, -1);
-  *list = g_slist_prepend (*list, g_object_ref (file));
+  *list = g_slist_prepend (*list, file); /* The file already has a new ref courtesy of gtk_tree_model_get(); this will be unreffed by the caller */
 }
 
 /* Constructs a list of the selected paths in search mode */
@@ -10031,12 +10036,15 @@ list_row_activated (GtkTreeView           *tree_view,
   if (is_folder && file)
     {
       change_folder_and_display_error (impl, file, FALSE);
-      return;
+      g_object_unref (file);
+      goto out;
     }
 
   if (impl->action == GTK_FILE_CHOOSER_ACTION_OPEN ||
       impl->action == GTK_FILE_CHOOSER_ACTION_SAVE)
     g_signal_emit_by_name (impl, "file-activated");
+
+ out:
 
   if (file)
     g_object_unref (file);
