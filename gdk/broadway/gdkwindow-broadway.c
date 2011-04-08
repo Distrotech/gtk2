@@ -225,11 +225,16 @@ _gdk_broadway_resync_windows (void)
 				   window->x,
 				   window->y,
 				   window->width,
-				   window->height);
+				   window->height,
+				   window->window_type == GDK_WINDOW_TEMP);
       if (GDK_WINDOW_IS_MAPPED (window))
 	{
 	  broadway_output_show_surface (display->output, impl->id);
 	  window_data_send (display->output, impl);
+	}
+      if (impl->transient_for)
+	{
+	  broadway_output_set_transient_for (display->output, impl->id, impl->transient_for);
 	}
     }
 
@@ -324,12 +329,10 @@ _gdk_broadway_display_create_window_impl (GdkDisplay    *display,
 					  gint           attributes_mask)
 {
   GdkWindowImplBroadway *impl;
-  GdkBroadwayScreen *broadway_screen;
   GdkBroadwayDisplay *broadway_display;
   static int current_id = 1; /* 0 is the root window */
 
   broadway_display = GDK_BROADWAY_DISPLAY (display);
-  broadway_screen = GDK_BROADWAY_SCREEN (screen);
 
   impl = g_object_new (GDK_TYPE_WINDOW_IMPL_BROADWAY, NULL);
   window->impl = (GdkWindowImpl *)impl;
@@ -359,11 +362,12 @@ _gdk_broadway_display_create_window_impl (GdkDisplay    *display,
 				 window->x,
 				 window->y,
 				 window->width,
-				 window->height);
+				 window->height,
+				 window->window_type == GDK_WINDOW_TEMP);
 }
 
-static void
-resize_surface (GdkWindow *window)
+void
+_gdk_broadway_window_resize_surface (GdkWindow *window)
 {
   GdkWindowImplBroadway *impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
   cairo_surface_t *old, *last_old;
@@ -390,6 +394,8 @@ resize_surface (GdkWindow *window)
 				   NULL, NULL);
       impl->ref_surface = NULL;
     }
+
+  gdk_window_invalidate_rect (window, NULL, TRUE);
 }
 
 static void
@@ -507,10 +513,6 @@ gdk_broadway_window_destroy_foreign (GdkWindow *window)
 static void
 gdk_broadway_window_destroy_notify (GdkWindow *window)
 {
-  GdkWindowImplBroadway *window_impl;
-
-  window_impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
-
   if (!GDK_WINDOW_DESTROYED (window))
     {
       if (GDK_WINDOW_TYPE(window) != GDK_WINDOW_FOREIGN)
@@ -635,8 +637,7 @@ gdk_window_broadway_move_resize (GdkWindow *window,
 
 	  window->width = width;
 	  window->height = height;
-	  resize_surface (window);
-	  gdk_window_invalidate_rect (window, NULL, TRUE);
+	  _gdk_broadway_window_resize_surface (window);
 	}
     }
 
@@ -764,6 +765,24 @@ static void
 gdk_broadway_window_set_transient_for (GdkWindow *window,
 				       GdkWindow *parent)
 {
+  GdkBroadwayDisplay *display;
+  GdkWindowImplBroadway *impl;
+  int parent_id;
+
+  impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
+
+  parent_id = 0;
+  if (parent)
+    parent_id = GDK_WINDOW_IMPL_BROADWAY (parent->impl)->id;
+
+  impl->transient_for = parent_id;
+
+  display = GDK_BROADWAY_DISPLAY (gdk_window_get_display (impl->wrapper));
+  if (display->output)
+    {
+      broadway_output_set_transient_for (display->output, impl->id, impl->transient_for);
+      gdk_display_flush (GDK_DISPLAY (display));
+    }
 }
 
 static void
@@ -984,13 +1003,9 @@ static void
 gdk_broadway_window_set_icon_name (GdkWindow   *window,
 				   const gchar *name)
 {
-  GdkDisplay *display;
-
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL_OR_FOREIGN (window))
     return;
-
-  display = gdk_window_get_display (window);
 
   g_object_set_qdata (G_OBJECT (window), g_quark_from_static_string ("gdk-icon-name-set"),
 		      GUINT_TO_POINTER (name != NULL));
@@ -1210,21 +1225,16 @@ static void
 gdk_broadway_window_set_opacity (GdkWindow *window,
 				 gdouble    opacity)
 {
-  GdkDisplay *display;
-
   g_return_if_fail (GDK_IS_WINDOW (window));
 
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
     return;
 
-  display = gdk_window_get_display (window);
-
   if (opacity < 0)
     opacity = 0;
   else if (opacity > 1)
     opacity = 1;
-
 }
 
 static void
@@ -1329,6 +1339,16 @@ _gdk_broadway_window_translate (GdkWindow      *window,
 	  g_free (rects);
 	}
     }
+}
+
+guint32
+gdk_broadway_get_last_seen_time (GdkWindow  *window)
+{
+  GdkDisplay *display;
+
+  display = gdk_window_get_display (window);
+  _gdk_broadway_display_consume_all_input (display);
+  return (guint32) GDK_BROADWAY_DISPLAY (display)->last_seen_time;
 }
 
 static void

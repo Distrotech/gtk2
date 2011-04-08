@@ -119,9 +119,11 @@ void _gdk_broadway_screen_query_visual_types (GdkScreen * screen,
 					      GdkVisualType **visual_types,
 					      gint           *count);
 GList *_gdk_broadway_screen_list_visuals (GdkScreen *screen);
+void _gdk_broadway_screen_size_changed (GdkScreen *screen, 
+					BroadwayInputScreenResizeNotify *msg);
 
 void _gdk_broadway_events_got_input      (GdkDisplay *display,
-					  const char *message);
+					  BroadwayInputMsg *message);
 
 void _gdk_broadway_screen_init_root_window (GdkScreen *screen);
 void _gdk_broadway_screen_init_visuals (GdkScreen *screen);
@@ -187,10 +189,11 @@ gint _gdk_broadway_display_text_property_to_utf8_list (GdkDisplay    *display,
 gchar *_gdk_broadway_display_utf8_to_string_target (GdkDisplay  *display,
 						    const gchar *str);
 GdkKeymap* _gdk_broadway_display_get_keymap (GdkDisplay *display);
-char * _gdk_broadway_display_block_for_input (GdkDisplay *display,
-					      char op,
-					      guint32 serial,
-					      gboolean remove);
+void _gdk_broadway_display_consume_all_input (GdkDisplay *display);
+BroadwayInputMsg * _gdk_broadway_display_block_for_input (GdkDisplay *display,
+							  char op,
+							  guint32 serial,
+							  gboolean remove);
 
 /* Window methods - testing */
 void     _gdk_broadway_window_sync_rendering    (GdkWindow       *window);
@@ -206,6 +209,7 @@ gboolean _gdk_broadway_window_simulate_button   (GdkWindow       *window,
 						 guint            button,
 						 GdkModifierType  modifiers,
 						 GdkEventType     button_pressrelease);
+void _gdk_broadway_window_resize_surface        (GdkWindow *window);
 
 void _gdk_broadway_cursor_update_theme (GdkCursor *cursor);
 void _gdk_broadway_cursor_display_finalize (GdkDisplay *display);

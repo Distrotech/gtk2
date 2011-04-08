@@ -18,7 +18,7 @@
 static const char base64_alphabet[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-#if 0
+#if 0 /* Unused for now */
 static void
 base64_uint8 (guint8 v, char *c)
 {
@@ -650,58 +650,32 @@ broadway_output_copy_rectangles (BroadwayOutput *output,  int id,
   free (buf);
 }
 
-guint32
-broadway_output_query_pointer (BroadwayOutput *output, int id)
-{
-  char buf[HEADER_LEN + 3];
-  guint32 serial;
-  int p;
-
-  serial = output->serial;
-  p = write_header (output, buf, 'q');
-  append_uint16 (id, buf, &p);
-
-  assert (p == sizeof (buf));
-
-  broadway_output_write (output, buf, sizeof (buf));
-
-  return serial;
-}
-
-guint32
+void
 broadway_output_grab_pointer (BroadwayOutput *output,
 			      int id,
-			      gboolean owner_event,
-			      guint32 time_)
+			      gboolean owner_event)
 {
-  char buf[HEADER_LEN + 3 + 1 + 6];
-  guint32 serial;
+  char buf[HEADER_LEN + 3 + 1];
   int p;
 
-  serial = output->serial;
   p = write_header (output, buf, 'g');
   append_uint16 (id, buf, &p);
   buf[p++] = owner_event ? '1': '0';
-  append_uint32 (time_, buf, &p);
 
   assert (p == sizeof (buf));
 
   broadway_output_write (output, buf, sizeof (buf));
-
-  return serial;
 }
 
 guint32
-broadway_output_ungrab_pointer (BroadwayOutput *output,
-				guint32 time_)
+broadway_output_ungrab_pointer (BroadwayOutput *output)
 {
-  char buf[HEADER_LEN + 6];
+  char buf[HEADER_LEN];
   guint32 serial;
   int p;
 
   serial = output->serial;
   p = write_header (output, buf, 'u');
-  append_uint32 (time_, buf, &p);
 
   assert (p == sizeof (buf));
 
@@ -711,9 +685,11 @@ broadway_output_ungrab_pointer (BroadwayOutput *output,
 }
 
 void
-broadway_output_new_surface(BroadwayOutput *output,  int id, int x, int y, int w, int h)
+broadway_output_new_surface(BroadwayOutput *output,
+			    int id, int x, int y, int w, int h,
+			    gboolean is_temp)
 {
-  char buf[HEADER_LEN + 15];
+  char buf[HEADER_LEN + 16];
   int p;
 
   p = write_header (output, buf, 's');
@@ -722,6 +698,7 @@ broadway_output_new_surface(BroadwayOutput *output,  int id, int x, int y, int w
   append_uint16 (y, buf, &p);
   append_uint16 (w, buf, &p);
   append_uint16 (h, buf, &p);
+  buf[p++] = is_temp ? '1' : '0';
 
   assert (p == sizeof (buf));
 
@@ -803,6 +780,25 @@ broadway_output_resize_surface(BroadwayOutput *output,  int id, int w, int h)
 
   broadway_output_write (output, buf, sizeof (buf));
 }
+
+void
+broadway_output_set_transient_for (BroadwayOutput *output,
+				   int             id,
+				   int             parent_id)
+{
+  char buf[HEADER_LEN + 6];
+  int p;
+
+  p = write_header (output, buf, 'p');
+
+  append_uint16 (id, buf, &p);
+  append_uint16 (parent_id, buf, &p);
+
+  assert (p == sizeof (buf));
+
+  broadway_output_write (output, buf, sizeof (buf));
+}
+
 
 void
 broadway_output_put_rgb (BroadwayOutput *output,  int id, int x, int y,

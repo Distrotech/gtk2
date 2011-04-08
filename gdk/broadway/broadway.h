@@ -18,7 +18,8 @@ void            broadway_output_new_surface     (BroadwayOutput *output,
 						 int             x,
 						 int             y,
 						 int             w,
-						 int             h);
+						 int             h,
+						 gboolean        is_temp);
 void            broadway_output_show_surface    (BroadwayOutput *output,
 						 int             id);
 void            broadway_output_hide_surface    (BroadwayOutput *output,
@@ -33,6 +34,9 @@ void            broadway_output_resize_surface  (BroadwayOutput *output,
 						 int             id,
 						 int             w,
 						 int             h);
+void            broadway_output_set_transient_for (BroadwayOutput *output,
+						   int             id,
+						   int             parent_id);
 void            broadway_output_put_rgb         (BroadwayOutput *output,
 						 int             id,
 						 int             x,
@@ -57,11 +61,7 @@ void            broadway_output_copy_rectangles (BroadwayOutput *output,
 						 int             n_rects,
 						 int             dx,
 						 int             dy);
-guint32         broadway_output_query_pointer   (BroadwayOutput *output,
-						 int id);
-guint32         broadway_output_grab_pointer    (BroadwayOutput *output,
+void            broadway_output_grab_pointer    (BroadwayOutput *output,
 						 int id,
-						 gboolean owner_event,
-						 guint32 time_);
-guint32         broadway_output_ungrab_pointer  (BroadwayOutput *output,
-						 guint32 time_);
+						 gboolean owner_event);
+guint32         broadway_output_ungrab_pointer  (BroadwayOutput *output);

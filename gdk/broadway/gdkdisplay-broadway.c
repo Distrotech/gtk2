@@ -62,6 +62,7 @@ gdk_event_init (GdkDisplay *display)
   broadway_display = GDK_BROADWAY_DISPLAY (display);
   broadway_display->event_source = _gdk_broadway_event_source_new (display);
   broadway_display->saved_serial = 1;
+  broadway_display->last_seen_time = 1;
 }
 
 static void
@@ -137,6 +138,8 @@ struct BroadwayInput {
   GSocketConnection *connection;
   GByteArray *buffer;
   GSource *source;
+  gboolean seen_time;
+  gint64 time_base;
 };
 
 static void
@@ -151,7 +154,7 @@ broadway_input_free (BroadwayInput *input)
 static void
 process_input_messages (GdkBroadwayDisplay *broadway_display)
 {
-  char *message;
+  BroadwayInputMsg *message;
 
   while (broadway_display->input_messages)
     {
@@ -165,11 +168,144 @@ process_input_messages (GdkBroadwayDisplay *broadway_display)
     }
 }
 
+static char *
+parse_pointer_data (char *p, BroadwayInputPointerMsg *data)
+{
+  data->mouse_window_id = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->event_window_id = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->root_x = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->root_y = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->win_x = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->win_y = strtol (p, &p, 10);
+  p++; /* Skip , */
+  data->state = strtol (p, &p, 10);
+
+  return p;
+}
+
+static void
+update_future_pointer_info (GdkBroadwayDisplay *broadway_display, BroadwayInputPointerMsg *data)
+{
+  broadway_display->future_root_x = data->root_x;
+  broadway_display->future_root_y = data->root_y;
+  broadway_display->future_state = data->state;
+  broadway_display->future_mouse_in_toplevel = data->mouse_window_id;
+}
+
+static void
+parse_input_message (BroadwayInput *input, const char *message)
+{
+  GdkBroadwayDisplay *broadway_display;
+  BroadwayInputMsg msg;
+  char *p;
+  gint64 time_;
+
+  broadway_display = GDK_BROADWAY_DISPLAY (input->display);
+
+  p = (char *)message;
+  msg.base.type = *p++;
+  msg.base.serial = (guint32)strtol (p, &p, 10);
+  p++; /* Skip , */
+  time_ = strtol(p, &p, 10);
+  p++; /* Skip , */
+
+  if (time_ == 0) {
+    time_ = broadway_display->last_seen_time;
+  } else {
+    if (!input->seen_time) {
+      input->seen_time = TRUE;
+      /* Calculate time base so that any following times are normalized to start
+	 5 seconds after last_seen_time, to avoid issues that could appear when
+	 a long hiatus due to a reconnect seems to be instant */
+      input->time_base = time_ - (broadway_display->last_seen_time + 5000);
+    } 
+    time_ = time_ - input->time_base;
+  }
+
+  broadway_display->last_seen_time = time_;
+
+  msg.base.time = time_;
+
+  switch (msg.base.type) {
+  case 'e': /* Enter */
+  case 'l': /* Leave */
+    p = parse_pointer_data (p, &msg.pointer);
+    update_future_pointer_info (broadway_display, &msg.pointer);
+    p++; /* Skip , */
+    msg.crossing.mode = strtol(p, &p, 10);
+    break;
+
+  case 'm': /* Mouse move */
+    p = parse_pointer_data (p, &msg.pointer);
+    update_future_pointer_info (broadway_display, &msg.pointer);
+    break;
+
+  case 'b':
+  case 'B':
+    p = parse_pointer_data (p, &msg.pointer);
+    update_future_pointer_info (broadway_display, &msg.pointer);
+    p++; /* Skip , */
+    msg.button.button = strtol(p, &p, 10);
+    break;
+
+  case 's':
+    p = parse_pointer_data (p, &msg.pointer);
+    update_future_pointer_info (broadway_display, &msg.pointer);
+    p++; /* Skip , */
+    msg.scroll.dir = strtol(p, &p, 10);
+    break;
+
+  case 'k':
+  case 'K':
+    msg.key.key = strtol(p, &p, 10);
+    break;
+
+  case 'g':
+  case 'u':
+    msg.grab_reply.res = strtol(p, &p, 10);
+    break;
+
+  case 'w':
+    msg.configure_notify.id = strtol(p, &p, 10);
+    p++; /* Skip , */
+    msg.configure_notify.x = strtol (p, &p, 10);
+    p++; /* Skip , */
+    msg.configure_notify.y = strtol (p, &p, 10);
+    p++; /* Skip , */
+    msg.configure_notify.width = strtol (p, &p, 10);
+    p++; /* Skip , */
+    msg.configure_notify.height = strtol (p, &p, 10);
+    break;
+
+  case 'W':
+    msg.delete_notify.id = strtol(p, &p, 10);
+    break;
+
+  case 'd':
+    msg.screen_resize_notify.width = strtol (p, &p, 10);
+    p++; /* Skip , */
+    msg.screen_resize_notify.height = strtol (p, &p, 10);
+    break;
+
+  default:
+    g_printerr ("Unknown input command %s\n", message);
+    break;
+  }
+
+  broadway_display->input_messages = g_list_append (broadway_display->input_messages, g_memdup (&msg, sizeof (msg)));
+
+}
+
 static void
 parse_input (BroadwayInput *input)
 {
   GdkBroadwayDisplay *broadway_display;
-  char *buf, *ptr, *message;
+  char *buf, *ptr;
   gsize len;
 
   broadway_display = GDK_BROADWAY_DISPLAY (input->display);
@@ -189,10 +325,10 @@ parse_input (BroadwayInput *input)
 
   while ((ptr = memchr (buf, 0xff, len)) != NULL)
     {
+      *ptr = 0;
       ptr++;
 
-      message = g_strndup (buf+1, (ptr-1) - (buf + 1));
-      broadway_display->input_messages = g_list_append (broadway_display->input_messages, message);
+      parse_input_message (input, buf + 1);
 
       len -= ptr - buf;
       buf = ptr;
@@ -208,17 +344,39 @@ parse_input (BroadwayInput *input)
   g_byte_array_remove_range (input->buffer, 0, buf - (char *)input->buffer->data);
 }
 
+
 static gboolean
-input_data_cb (GObject  *stream,
-	       BroadwayInput *input)
+process_input_idle_cb (GdkBroadwayDisplay *display)
+{
+  display->process_input_idle = 0;
+  process_input_messages (display);
+  return FALSE;
+}
+
+static void
+queue_process_input_at_idle (GdkBroadwayDisplay *broadway_display)
+{
+  if (broadway_display->process_input_idle == 0)
+    broadway_display->process_input_idle =
+      g_idle_add_full (GDK_PRIORITY_EVENTS, (GSourceFunc)process_input_idle_cb, broadway_display, NULL);
+}
+
+static void
+_gdk_broadway_display_read_all_input_nonblocking (GdkDisplay *display)
 {
   GdkBroadwayDisplay *broadway_display;
   GInputStream *in;
   gssize res;
   guint8 buffer[1024];
   GError *error;
+  BroadwayInput *input;
 
-  broadway_display = GDK_BROADWAY_DISPLAY (input->display);
+  broadway_display = GDK_BROADWAY_DISPLAY (display);
+  if (broadway_display->input == NULL)
+    return;
+
+  input = broadway_display->input;
+
   in = g_io_stream_get_input_stream (G_IO_STREAM (input->connection));
 
   error = NULL;
@@ -231,7 +389,7 @@ input_data_cb (GObject  *stream,
 	  g_error_matches (error, G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK))
 	{
 	  g_error_free (error);
-	  return TRUE;
+	  return;
 	}
 
       broadway_display->input = NULL;
@@ -241,40 +399,55 @@ input_data_cb (GObject  *stream,
 	  g_print ("input error %s", error->message);
 	  g_error_free (error);
 	}
-      return FALSE;
+      return;
     }
 
   g_byte_array_append (input->buffer, buffer, res);
 
   parse_input (input);
+}
+
+void
+_gdk_broadway_display_consume_all_input (GdkDisplay *display)
+{
+  GdkBroadwayDisplay *broadway_display;
+
+  broadway_display = GDK_BROADWAY_DISPLAY (display);
+  _gdk_broadway_display_read_all_input_nonblocking (display);
+
+  /* Since we're parsing input but not processing the resulting messages
+     we might not get a readable callback on the stream, so queue an idle to
+     process the messages */
+  queue_process_input_at_idle (broadway_display);
+}
+
+
+static gboolean
+input_data_cb (GObject  *stream,
+	       BroadwayInput *input)
+{
+  GdkBroadwayDisplay *broadway_display;
+
+  broadway_display = GDK_BROADWAY_DISPLAY (input->display);
+  _gdk_broadway_display_read_all_input_nonblocking (input->display);
+
   process_input_messages (broadway_display);
 
   return TRUE;
 }
 
-static gboolean
-process_input_idle_cb (GdkBroadwayDisplay *display)
-{
-  process_input_messages (display);
-  return FALSE;
-}
-
 /* Note: This may be called while handling a message (i.e. sorta recursively) */
-char *
+BroadwayInputMsg *
 _gdk_broadway_display_block_for_input (GdkDisplay *display, char op,
 				       guint32 serial, gboolean remove_message)
 {
   GdkBroadwayDisplay *broadway_display;
-  char *message;
-  guint32 msg_serial;
-  gboolean queued_idle;
+  BroadwayInputMsg *message;
   gssize res;
   guint8 buffer[1024];
   BroadwayInput *input;
   GInputStream *in;
   GList *l;
-
-  queued_idle = FALSE;
 
   gdk_display_flush (display);
 
@@ -291,10 +464,9 @@ _gdk_broadway_display_block_for_input (GdkDisplay *display, char op,
       {
 	message = l->data;
 
-	if (message[0] == op)
+	if (message->base.type == op)
 	  {
-	    msg_serial = (guint32)strtol(message+1, NULL, 10);
-	    if (msg_serial == serial)
+	    if (message->base.serial == serial)
 	      {
 		if (remove_message)
 		  broadway_display->input_messages =
@@ -317,11 +489,7 @@ _gdk_broadway_display_block_for_input (GdkDisplay *display, char op,
     /* Since we're parsing input but not processing the resulting messages
        we might not get a readable callback on the stream, so queue an idle to
        process the messages */
-    if (!queued_idle)
-      {
-	queued_idle = TRUE;
-	g_idle_add_full (G_PRIORITY_DEFAULT, (GSourceFunc)process_input_idle_cb, display, NULL);
-      }
+    queue_process_input_at_idle (broadway_display);
   }
 }
 
@@ -546,6 +714,12 @@ start_output (HttpRequest *request)
 
   broadway_display->output = broadway_output_new (dup(fd), broadway_display->saved_serial);
   _gdk_broadway_resync_windows ();
+
+  if (broadway_display->pointer_grab_window)
+    broadway_output_grab_pointer (broadway_display->output,
+				  GDK_WINDOW_IMPL_BROADWAY (broadway_display->pointer_grab_window->impl)->id,
+				  broadway_display->pointer_grab_owner_events);
+
   http_request_free (request);
 }
 
@@ -613,6 +787,9 @@ got_request (HttpRequest *request)
     start_input (request);
   else
     send_error (request, 404, "File not found");
+
+  g_free (escaped);
+  g_free (version);
 }
 
 static void
@@ -844,10 +1021,6 @@ gdk_broadway_display_finalize (GObject *object)
     g_object_unref (broadway_display->keymap);
 
   _gdk_broadway_cursor_display_finalize (GDK_DISPLAY_OBJECT(broadway_display));
-
-  /* Atom Hashtable */
-  g_hash_table_destroy (broadway_display->atom_from_virtual);
-  g_hash_table_destroy (broadway_display->atom_to_virtual);
 
   /* input GdkDevice list */
   g_list_foreach (broadway_display->input_devices, (GFunc) g_object_unref, NULL);
