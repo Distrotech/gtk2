@@ -227,14 +227,14 @@ _gdk_broadway_resync_windows (void)
 				   window->width,
 				   window->height,
 				   window->window_type == GDK_WINDOW_TEMP);
-      if (GDK_WINDOW_IS_MAPPED (window))
+      if (impl->transient_for)
+	broadway_output_set_transient_for (display->output, impl->id, impl->transient_for);
+      /* Can't check GDK_WINDOW_IS_MAPPED here, because that doesn't correctly handle
+	 withdrawn windows like menus */
+      if (impl->visible)
 	{
 	  broadway_output_show_surface (display->output, impl->id);
 	  window_data_send (display->output, impl);
-	}
-      if (impl->transient_for)
-	{
-	  broadway_output_set_transient_for (display->output, impl->id, impl->transient_for);
 	}
     }
 
@@ -523,6 +523,7 @@ gdk_window_broadway_show (GdkWindow *window, gboolean already_mapped)
   GdkBroadwayDisplay *broadway_display;
 
   impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
+  impl->visible = TRUE;
 
   if (window->event_mask & GDK_STRUCTURE_MASK)
     _gdk_make_event (GDK_WINDOW (window), GDK_MAP, NULL, FALSE);
@@ -545,6 +546,7 @@ gdk_window_broadway_hide (GdkWindow *window)
   GdkBroadwayDisplay *broadway_display;
 
   impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
+  impl->visible = FALSE;
 
   if (window->event_mask & GDK_STRUCTURE_MASK)
     _gdk_make_event (GDK_WINDOW (window), GDK_UNMAP, NULL, FALSE);

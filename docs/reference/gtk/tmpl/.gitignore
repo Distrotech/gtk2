@@ -12,7 +12,10 @@ gtkcelleditable.sgml
 gtkcelllayout.sgml
 gtkcellrenderer.sgml
 gtkcellrendereraccel.sgml
+gtkcellrenderercombo.sgml
+gtkcellrendererpixbuf.sgml
 gtkcellrendererprogress.sgml
+gtkcellrendererspin.sgml
 gtkcellrenderertext.sgml
 gtkcellrenderertoggle.sgml
 gtkcellview.sgml
@@ -38,6 +41,7 @@ gtkhbox.sgml
 gtkhpaned.sgml
 gtkhscale.sgml
 gtkhscrollbar.sgml
+gtkhseparator.sgml
 gtkiconview.sgml
 gtkimagemenuitem.sgml
 gtkimcontext.sgml
@@ -84,6 +88,7 @@ gtkseparatortoolitem.sgml
 gtksettings.sgml
 gtkstatusbar.sgml
 gtkstyle.sgml
+gtktearoffmenuitem.sgml
 gtktesting.sgml
 gtktextiter.sgml
 gtktexttag.sgml

@@ -169,7 +169,8 @@ function flushSurface(surface)
 {
     var commands = surface.drawQueue;
     surface.queue = [];
-    var context = surface.context;
+    var context = surface.canvas.getContext("2d");
+    context.globalCompositeOperation = "source-over";
     var i = 0;
     for (i = 0; i < commands.length; i++) {
 	var cmd = commands[i];
@@ -230,11 +231,9 @@ function ensureSurfaceInDocument(surface, doc)
 	oldCanvas.parentNode.removeChild(oldCanvas);
 
 	surface.canvas = canvas;
+	if (surface.toplevelElement == oldCanvas)
+	    surface.toplevelElement = canvas;
 	surface.document = doc;
-
-	var context = canvas.getContext("2d");
-	context.globalCompositeOperation = "source-over";
-	surface.context = context;
     }
 }
 
@@ -322,15 +321,44 @@ function getTransientToplevel(surface)
     return null;
 }
 
+function getStyle(el, styleProp)
+{
+    if (el.currentStyle) {
+	return el.currentStyle[styleProp];
+    }  else if (window.getComputedStyle) {
+	var win = el.ownerDocument.defaultView;
+	return win.getComputedStyle(el, null).getPropertyValue(styleProp);
+    }
+    return undefined;
+}
+
+function parseOffset(value)
+{
+    var px = value.indexOf("px");
+    if (px > 0)
+	return parseInt(value.slice(0,px));
+    return 0;
+}
+
 function getFrameOffset(surface) {
-    var x = 1;
-    var y = 1;
+    var x = 0;
+    var y = 0;
     var el = surface.canvas;
     while (el != null && el != surface.frame) {
 	x += el.offsetLeft;
 	y += el.offsetTop;
+
+	/* For some reason the border is not includes in the offsets.. */
+	x += parseOffset(getStyle(el, "border-left-width"));
+	y += parseOffset(getStyle(el, "border-top-width"));
+
 	el = el.offsetParent;
     }
+
+    /* Also include frame border as per above */
+    x += parseOffset(getStyle(el, "border-left-width"));
+    y += parseOffset(getStyle(el, "border-top-width"));
+
     return {x: x, y: y};
 }
 
@@ -346,31 +374,22 @@ function cmdCreateSurface(id, x, y, width, height, isTemp)
     surface.document = document;
     surface.transientToplevel = null;
     surface.frame = null;
-    stackingOrder.push(id);
 
     var canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     canvas.surface = surface;
     surface.canvas = canvas;
+    var toplevelElement;
 
     if (useToplevelWindows || isTemp) {
-	canvas.style["position"] = "absolute";
-	canvas.style["left"] = "0px";
-	canvas.style["top"] = "0px";
-	canvas.style["display"] = "none";
+	toplevelElement = canvas;
 	document.body.appendChild(canvas);
     } else {
 	var frame = document.createElement("div");
 	frame.frameFor = surface;
-	frame.style["position"] = "absolute";
-	frame.style["left"] = "0px";
-	frame.style["top"] = "0px";
-	frame.style["display"] = "inline";
-	// We hide the frame with visibility rather than display none
-	// so getFrameOffset still works with hidden windows
-	frame.style["visibility"] = "hidden";
 	frame.className = "frame-window";
+	surface.frame = frame;
 
 	var button = document.createElement("center");
 	var X = document.createTextNode("X");
@@ -382,11 +401,11 @@ function cmdCreateSurface(id, x, y, width, height, isTemp)
 	contents.className = "frame-contents";
 	frame.appendChild(contents);
 
-	document.body.appendChild(frame);
-	contents.appendChild(canvas);
 	canvas.style["display"] = "block";
+	contents.appendChild(canvas);
 
-	surface.frame = frame;
+	toplevelElement = frame;
+	document.body.appendChild(frame);
 
 	surface.x = 100 + positionIndex * 10;
 	surface.y = 100 + positionIndex * 10;
@@ -394,11 +413,20 @@ function cmdCreateSurface(id, x, y, width, height, isTemp)
 	sendInput ("w", [surface.id, surface.x, surface.y, surface.width, surface.height]);
     }
 
-    var context = canvas.getContext("2d");
-    context.globalCompositeOperation = "source-over";
-    surface.context = context;
+    surface.toplevelElement = toplevelElement;
+    toplevelElement.style["position"] = "absolute";
+    /* This positioning isn't strictly right for apps in another topwindow,
+     * but that will be fixed up when showing. */
+    toplevelElement.style["left"] = surface.x + "px";
+    toplevelElement.style["top"] = surface.y + "px";
+    toplevelElement.style["display"] = "inline";
+
+    /* We hide the frame with visibility rather than display none
+     * so getFrameOffset still works with hidden windows. */
+    toplevelElement.style["visibility"] = "hidden";
 
     surfaces[id] = surface;
+    stackingOrder.push(surface);
 }
 
 function cmdShowSurface(id)
@@ -409,7 +437,6 @@ function cmdShowSurface(id)
 	return;
     surface.visible = true;
 
-    var element = surface.canvas;
     var xOffset = surface.x;
     var yOffset = surface.y;
 
@@ -443,22 +470,19 @@ function cmdShowSurface(id)
 	}
 
 	ensureSurfaceInDocument(surface, doc);
-	element = surface.canvas;
     } else {
 	if (surface.frame) {
-	    element = surface.frame;
 	    var offset = getFrameOffset(surface);
 	    xOffset -= offset.x;
 	    yOffset -= offset.y;
 	}
     }
 
-    element.style["position"] = "absolute";
-    element.style["left"] = xOffset + "px";
-    element.style["top"] = yOffset + "px";
-    element.style["display"] = "inline";
-    if (surface.frame)
-	surface.frame.style["visibility"] = "visible";
+    surface.toplevelElement.style["left"] = xOffset + "px";
+    surface.toplevelElement.style["top"] = yOffset + "px";
+    surface.toplevelElement.style["visibility"] = "visible";
+
+    restackWindows();
 }
 
 function cmdHideSurface(id)
@@ -469,14 +493,9 @@ function cmdHideSurface(id)
 	return;
     surface.visible = false;
 
-    var element = surface.canvas;
-    if (surface.frame)
-	element = surface.frame;
+    var element = surface.toplevelElement;
 
-    if (surface.frame)
-	surface.frame.style["visibility"] = "hidden";
-    else
-	element.style["display"] = "none";
+    element.style["visibility"] = "hidden";
 
     // Import the canvas into the main document
     ensureSurfaceInDocument(surface, document);
@@ -502,23 +521,16 @@ function cmdSetTransientFor(id, parentId)
 }
 
 function restackWindows() {
-    if (useToplevelWindows)
-	return;
-
     for (var i = 0; i < stackingOrder.length; i++) {
-	var id = stackingOrder[i];
-	var surface = surfaces[id];
-	if (surface.frame)
-	    surface.frame.style.zIndex = i;
-	else
-	    surface.canvas.style.zIndex = i;
+	var surface = stackingOrder[i];
+	surface.toplevelElement.style.zIndex = i;
     }
 }
 
 function moveToTopHelper(surface) {
-    var i = stackingOrder.indexOf(surface.id);
+    var i = stackingOrder.indexOf(surface);
     stackingOrder.splice(i, 1);
-    stackingOrder.push(surface.id);
+    stackingOrder.push(surface);
 
     for (var cid in surfaces) {
 	var child = surfaces[cid];
@@ -536,7 +548,7 @@ function moveToTop(surface) {
 function cmdDeleteSurface(id)
 {
     var surface = surfaces[id];
-    var i = stackingOrder.indexOf(id);
+    var i = stackingOrder.indexOf(surface);
     if (i >= 0)
 	stackingOrder.splice(i, 1);
     var canvas = surface.canvas;
@@ -1104,7 +1116,6 @@ function connect()
 	var ws = new WebSocket(loc, "broadway");
 	ws.onopen = function() {
 	    inputSocket = ws;
-	    
 	    var w, h;
 	    if (useToplevelWindows) {
 		w = window.screen.width;
@@ -1112,7 +1123,7 @@ function connect()
 	    } else {
 		w = window.innerWidth;
 		h = window.innerHeight;
-		window.onresize = function(ev) { 
+		window.onresize = function(ev) {
 		    var w, h;
 		    w = window.innerWidth;
 		    h = window.innerHeight;
