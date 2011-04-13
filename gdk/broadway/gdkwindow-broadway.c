@@ -208,6 +208,7 @@ _gdk_broadway_resync_windows (void)
 
   display = GDK_BROADWAY_DISPLAY (gdk_display_get_default ());
 
+  /* First create all windows */
   for (l = display->toplevels; l != NULL; l = l->next)
     {
       GdkWindowImplBroadway *impl = l->data;
@@ -227,6 +228,16 @@ _gdk_broadway_resync_windows (void)
 				   window->width,
 				   window->height,
 				   window->window_type == GDK_WINDOW_TEMP);
+    }
+
+  /* Then do everything that may reference other windows */
+  for (l = display->toplevels; l != NULL; l = l->next)
+    {
+      GdkWindowImplBroadway *impl = l->data;
+
+      if (impl->id == 0)
+	continue; /* Skip root */
+
       if (impl->transient_for)
 	broadway_output_set_transient_for (display->output, impl->id, impl->transient_for);
       /* Can't check GDK_WINDOW_IS_MAPPED here, because that doesn't correctly handle
@@ -587,6 +598,7 @@ gdk_window_broadway_move_resize (GdkWindow *window,
   GdkWindowImplBroadway *impl = GDK_WINDOW_IMPL_BROADWAY (window->impl);
   GdkBroadwayDisplay *broadway_display;
   gboolean changed;
+  gboolean with_resize;
 
   changed = FALSE;
 
@@ -596,17 +608,12 @@ gdk_window_broadway_move_resize (GdkWindow *window,
       changed = TRUE;
       window->x = x;
       window->y = y;
-      if (broadway_display->output != NULL)
-	{
-	  broadway_output_move_surface (broadway_display->output,
-					impl->id, x, y);
-	  queue_dirty_flush (broadway_display);
-	}
     }
 
-
+  with_resize = FALSE;
   if (width > 0 || height > 0)
     {
+      with_resize = TRUE;
       if (width < 1)
 	width = 1;
 
@@ -622,13 +629,6 @@ gdk_window_broadway_move_resize (GdkWindow *window,
 	  impl->dirty = TRUE;
 	  impl->last_synced = FALSE;
 
-	  if (broadway_display->output != NULL)
-	    {
-	      broadway_output_resize_surface (broadway_display->output,
-					      impl->id, width, height);
-	      queue_dirty_flush (broadway_display);
-	    }
-
 	  window->width = width;
 	  window->height = height;
 	  _gdk_broadway_window_resize_surface (window);
@@ -639,6 +639,15 @@ gdk_window_broadway_move_resize (GdkWindow *window,
     {
       GdkEvent *event;
       GList *node;
+
+      if (broadway_display->output != NULL)
+	{
+	  broadway_output_move_resize_surface (broadway_display->output,
+					       impl->id,
+					       with_move, window->x, window->y,
+					       with_resize, window->width, window->height);
+	  queue_dirty_flush (broadway_display);
+	}
 
       event = gdk_event_new (GDK_CONFIGURE);
       event->configure.window = g_object_ref (window);

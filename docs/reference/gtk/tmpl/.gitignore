@@ -37,6 +37,8 @@ gtkfixed.sgml
 gtkfilechooserwidget.sgml
 gtkfilefilter.sgml
 gtkfontbutton.sgml
+gtkframe.sgml
+gtkhbbox.sgml
 gtkhbox.sgml
 gtkhpaned.sgml
 gtkhscale.sgml
@@ -87,7 +89,9 @@ gtkseparatormenuitem.sgml
 gtkseparatortoolitem.sgml
 gtksettings.sgml
 gtkstatusbar.sgml
+gtkstatusicon.sgml
 gtkstyle.sgml
+gtktable.sgml
 gtktearoffmenuitem.sgml
 gtktesting.sgml
 gtktextiter.sgml
