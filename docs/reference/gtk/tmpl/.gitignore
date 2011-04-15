@@ -52,7 +52,9 @@ gtkhpaned.sgml
 gtkhscale.sgml
 gtkhscrollbar.sgml
 gtkhseparator.sgml
+gtkhsv.c
 gtkiconfactory.sgml
+gtkicontheme.sgml
 gtkiconview.sgml
 gtkimagemenuitem.sgml
 gtkimcontext.sgml
@@ -60,12 +62,15 @@ gtkimcontextsimple.sgml
 gtkimmulticontext.sgml
 gtkinvisible.sgml
 gtkitemfactory.sgml
+gtklabel.sgml
 gtklayout.sgml
 gtklinkbutton.sgml
+gtkliststore.sgml
 gtkmain.sgml
 gtkmenu.sgml
 gtkmenubar.sgml
 gtkmenushell.sgml
+gtkmenutoolbutton.sgml
 gtkmessagedialog.sgml
 gtkmisc.sgml
 gtknotebook.sgml
@@ -110,6 +115,7 @@ gtktextview.sgml
 gtktoggleaction.sgml
 gtktoggletoolbutton.sgml
 gtktoolbar.sgml
+gtktoolbutton.sgml
 gtktoolitem.sgml
 gtktooltip.sgml
 gtktreednd.sgml
