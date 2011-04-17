@@ -7304,7 +7304,7 @@ gtk_window_draw (GtkWidget *widget,
   if (GTK_WIDGET_CLASS (gtk_window_parent_class)->draw)
     ret = GTK_WIDGET_CLASS (gtk_window_parent_class)->draw (widget, cr);
 
-  if (priv->grip_window != NULL &&
+  if (priv->resize_grip_visible &&
       gtk_cairo_should_draw_window (cr, priv->grip_window))
     {
       GdkRectangle rect;
@@ -7395,7 +7395,7 @@ gtk_window_present_with_time (GtkWindow *window,
 	    {
 	      GdkDisplay *display;
 
-	      display = gtk_widget_get_display (window);
+	      display = gtk_widget_get_display (GTK_WIDGET (window));
 	      timestamp = gdk_x11_display_get_user_time (display);
 	    }
 	  else
