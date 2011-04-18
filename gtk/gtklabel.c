@@ -3660,6 +3660,23 @@ get_size_for_allocation (GtkLabel        *label,
   g_object_unref (layout);
 }
 
+static gint
+get_char_pixels (GtkWidget   *label,
+                 PangoLayout *layout)
+{
+  PangoContext *context;
+  PangoFontMetrics *metrics;
+  gint char_width, digit_width;
+
+  context = pango_layout_get_context (layout);
+  metrics = get_font_metrics (context, GTK_WIDGET (label));
+  char_width = pango_font_metrics_get_approximate_char_width (metrics);
+  digit_width = pango_font_metrics_get_approximate_digit_width (metrics);
+  pango_font_metrics_unref (metrics);
+
+  return MAX (char_width, digit_width);;
+}
+
 static void
 gtk_label_get_preferred_layout_size (GtkLabel *label,
                                      PangoRectangle *required,
@@ -3668,7 +3685,7 @@ gtk_label_get_preferred_layout_size (GtkLabel *label,
   GtkLabelPrivate *priv = label->priv;
   PangoLayout *layout;
   PangoRectangle rect;
-  gint text_width, ellipsize_chars, guess_width;
+  gint text_width, guess_width;
 
   /* "width-chars" Hard-coded minimum width:
    *    - minimum size should be MAX (width-chars, strlen ("..."));
@@ -3701,12 +3718,6 @@ gtk_label_get_preferred_layout_size (GtkLabel *label,
   pango_layout_get_extents (layout, NULL, &rect);
   text_width = rect.width;
 
-  /* enforce minimum width for ellipsized labels at ~3 chars */
-  if (priv->ellipsize)
-    ellipsize_chars = 3;
-  else
-    ellipsize_chars = 0;
-
   /* "width-chars" Hard-coded minimum width: 
    *    - minimum size should be MAX (width-chars, strlen ("..."));
    *    - natural size should be MAX (width-chars, strlen (priv->text));
@@ -3728,16 +3739,12 @@ gtk_label_get_preferred_layout_size (GtkLabel *label,
 
   if (priv->ellipsize || priv->wrap)
     {
-      PangoContext     *context;
-      PangoFontMetrics *metrics;
-      gint              char_width, digit_width, char_pixels;
+      gint char_pixels, ellipsize_chars;
 
-      context = pango_layout_get_context (layout);
-      metrics = get_font_metrics (context, GTK_WIDGET (label));
-      char_width = pango_font_metrics_get_approximate_char_width (metrics);
-      digit_width = pango_font_metrics_get_approximate_digit_width (metrics);
-      char_pixels = MAX (char_width, digit_width);
-      pango_font_metrics_unref (metrics);
+      char_pixels = get_char_pixels (GTK_WIDGET (label), layout);
+
+      /* enforce minimum width for ellipsized labels at ~3 chars */
+      ellipsize_chars = priv->ellipsize ? 3 : 0;
 
       required->width = char_pixels * MAX (priv->width_chars, ellipsize_chars);
 
