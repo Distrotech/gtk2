@@ -461,6 +461,7 @@ function cmdCreateSurface(id, x, y, width, height, isTemp)
 	surface.frame = frame;
 
 	var button = document.createElement("center");
+	button.closeFor = surface;
 	var X = document.createTextNode("X");
 	button.appendChild(X);
 	button.className = "frame-close";
@@ -887,10 +888,10 @@ function handleOutstanding()
     }
 }
 
-function handleLoad(event)
+function handleMessage(message)
 {
     var cmdObj = {};
-    cmdObj.data = event.target.responseText;
+    cmdObj.data = message;
     cmdObj.pos = 0;
 
     outstandingCommands.push(cmdObj);
@@ -975,17 +976,19 @@ function updateForEvent(ev) {
 function onMouseMove (ev) {
     updateForEvent(ev);
     if (localGrab) {
-	var dx = ev.pageX - localGrab.lastX;
-	var dy = ev.pageY - localGrab.lastY;
-	var surface = localGrab.frame.frameFor;
-	surface.x += dx;
-	surface.y += dy;
-	var offset = getFrameOffset(surface);
-	localGrab.frame.style["left"] = (surface.x - offset.x) + "px";
-	localGrab.frame.style["top"] = (surface.y - offset.y) + "px";
-	sendConfigureNotify(surface);
-	localGrab.lastX = ev.pageX;
-	localGrab.lastY = ev.pageY;
+	if (localGrab.type == "move") {
+	    var dx = ev.pageX - localGrab.lastX;
+	    var dy = ev.pageY - localGrab.lastY;
+	    var surface = localGrab.surface;
+	    surface.x += dx;
+	    surface.y += dy;
+	    var offset = getFrameOffset(surface);
+	    localGrab.frame.style["left"] = (surface.x - offset.x) + "px";
+	    localGrab.frame.style["top"] = (surface.y - offset.y) + "px";
+	    sendConfigureNotify(surface);
+	    localGrab.lastX = ev.pageX;
+	    localGrab.lastY = ev.pageY;
+	}
 	return;
     }
     var id = getSurfaceId(ev);
@@ -996,6 +999,13 @@ function onMouseMove (ev) {
 
 function onMouseOver (ev) {
     updateForEvent(ev);
+
+    if (!grab.window && ev.target.closeFor) {
+	ev.target.className = ev.target.className + " frame-hover";
+	if (ev.target.isDown)
+	    ev.target.className = ev.target.className + " frame-active";
+    }
+
     if (localGrab)
 	return;
     var id = getSurfaceId(ev);
@@ -1010,6 +1020,11 @@ function onMouseOver (ev) {
 
 function onMouseOut (ev) {
     updateForEvent(ev);
+    if (ev.target.closeFor) {
+	ev.target.className = ev.target.className.replace(" frame-hover", "");
+	if (ev.target.isDown)
+	    ev.target.className = ev.target.className.replace(" frame-active", "");
+    }
     if (localGrab)
 	return;
     var id = getSurfaceId(ev);
@@ -1067,10 +1082,24 @@ function onMouseDown (ev) {
 
     if (id == 0 && ev.target.frameFor) { /* mouse click on frame */
 	localGrab = new Object();
+	localGrab.surface = ev.target.frameFor;
+	localGrab.type = "move";
 	localGrab.frame = ev.target;
 	localGrab.lastX = ev.pageX;
 	localGrab.lastY = ev.pageY;
 	moveToTop(localGrab.frame.frameFor);
+	return;
+    }
+
+    if (id == 0 && ev.target.closeFor) { /* mouse click on frame */
+	ev.target.isDown = true;
+	ev.target.className = ev.target.className + " frame-active";
+	localGrab = new Object();
+	localGrab.surface = ev.target.closeFor;
+	localGrab.type = "close";
+	localGrab.button = ev.target;
+	localGrab.lastX = ev.pageX;
+	localGrab.lastY = ev.pageY;
 	return;
     }
 
@@ -1089,7 +1118,6 @@ function onMouseUp (ev) {
     var pos = getPositionsFromEvent(ev, id);
 
     if (localGrab) {
-	localGrab = null;
 	realWindowWithMouse = evId;
 	if (windowWithMouse != id) {
 	    if (windowWithMouse != 0) {
@@ -1100,6 +1128,14 @@ function onMouseUp (ev) {
 		sendInput ("e", [realWindowWithMouse, id, pos.rootX, pos.rootY, pos.winX, pos.winY, lastState, GDK_CROSSING_NORMAL]);
 	    }
 	}
+
+	if (localGrab.type == "close") {
+	    localGrab.button.isDown = false;
+	    localGrab.button.className = localGrab.button.className.replace( " frame-active", "");
+	    if (ev.target == localGrab.button)
+		sendInput ("W", [localGrab.surface.id]);
+	}
+	localGrab = null;
 	return;
     }
 
@@ -2376,10 +2412,17 @@ var unicodeTable = {
     0x28ff: 0x10028ff
 };
 
+var ON_KEYDOWN = 1 << 0; /* Report on keydown, otherwise wait until keypress  */
+
+
 var specialKeyTable = {
-    8: 0xFF08, // BACKSPACE
-    13: 0xFF0D, // ENTER
-    9: 0xFF09, // TAB
+    // These generate a keyDown and keyPress in Firefox and Opera
+    8: [0xFF08, ON_KEYDOWN], // BACKSPACE
+    13: [0xFF0D, ON_KEYDOWN], // ENTER
+
+    // This generates a keyDown and keyPress in Opera
+    9: [0xFF09, ON_KEYDOWN], // TAB
+
     27: 0xFF1B, // ESCAPE
     46: 0xFFFF, // DELETE
     36: 0xFF50, // HOME
@@ -2420,10 +2463,16 @@ function getEventKeySym(ev) {
 // with the key. The rest we pass on to keypress so we can get the
 // translated keysym.
 function getKeysymSpecial(ev) {
-    // These are simple and risky to pass on to browser, handle directly
-   if ((ev.keyCode in specialKeyTable))
-       return specialKeyTable[ev.keyCode];
-
+    if (ev.keyCode in specialKeyTable) {
+	var r = specialKeyTable[ev.keyCode];
+	var flags = 0;
+	if (typeof r != 'number') {
+	    flags = r[1];
+	    r = r[0];
+	}
+	if (ev.type === 'keydown' || flags & ON_KEYDOWN)
+	    return r;
+    }
     // If we don't hold alt or ctrl, then we should be safe to pass
     // on to keypressed and look at the translated data
     if (!ev.ctrlKey && !ev.altKey)
@@ -2609,7 +2658,7 @@ function handleKeyPress(e) {
     if (kdlen > 0) {
 	keyDownList[kdlen-1].keysym = keysym;
     } else {
-	log("keyDownList empty when keyPress triggered");
+	//log("keyDownList empty when keyPress triggered");
     }
 
     // Send the translated keysym
@@ -2628,7 +2677,7 @@ function handleKeyUp(e) {
     if (fev)
 	keysym = fev.keysym;
     else {
-	log("Key event (keyCode = " + ev.keyCode + ") not found on keyDownList");
+	//log("Key event (keyCode = " + ev.keyCode + ") not found on keyDownList");
 	keysym = 0;
     }
 
@@ -2719,22 +2768,10 @@ function connect()
 	if (params[0].indexOf("toplevel") != -1)
 	    useToplevelWindows = true;
     }
-    var xhr = createXHR();
-    if (xhr) {
-	if (typeof xhr.multipart == 'undefined') {
-	    alert("Sorry, this example only works in browsers that support multipart.");
-	    return;
-	}
-
-	xhr.multipart = true;
-	xhr.open("GET", "/output", true);
-	xhr.onload = handleLoad;
-	xhr.send(null);
-    }
 
     if ("WebSocket" in window) {
 	var loc = window.location.toString().replace("http:", "ws:");
-	loc = loc.substr(0, loc.lastIndexOf('/')) + "/input";
+	loc = loc.substr(0, loc.lastIndexOf('/')) + "/socket";
 	var ws = new WebSocket(loc, "broadway");
 	ws.onopen = function() {
 	    inputSocket = ws;
@@ -2756,6 +2793,9 @@ function connect()
 	};
 	ws.onclose = function() {
 	    inputSocket = null;
+	};
+	ws.onmessage = function(event) {
+	    handleMessage(event.data);
 	};
     } else {
 	alert("WebSocket not supported, input will not work!");

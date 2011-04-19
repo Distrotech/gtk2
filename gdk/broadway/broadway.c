@@ -3,11 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
-#include <zlib.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
+#include <cairo.h>
 
 #include "broadway.h"
 
@@ -57,391 +53,117 @@ base64_uint32 (guint32 v, char *c)
   c[5] = base64_alphabet[(v >> 30) & 0x2];
 }
 
-/************************************************************************
- *  conversion of raw image data to uncompressed png data: uris         *
- ************************************************************************/
+/***********************************************************
+ *  conversion of raw image data to png data: uris         *
+ ***********************************************************/
 
-/* Table of CRCs of all 8-bit messages. */
-static unsigned long crc_table[256];
+struct PngTarget {
+  GString *url;
+  int state;
+  int save;
+};
 
-/* Flag: has the table been computed? Initially false. */
-static int crc_table_computed = 0;
-
-/* Make the table for a fast CRC. */
-static void
-make_crc_table(void)
+static cairo_status_t
+write_png_url (void		  *closure,
+	       const unsigned char *data,
+	       unsigned int	   data_len)
 {
-  unsigned long c;
-  int n, k;
+  struct PngTarget *target = closure;
+  gsize res, old_len;
 
-  for (n = 0; n < 256; n++) {
-    c = (unsigned long) n;
-    for (k = 0; k < 8; k++) {
-      if (c & 1)
-	c = 0xedb88320L ^ (c >> 1);
-      else
-	c = c >> 1;
-    }
-    crc_table[n] = c;
-  }
-  crc_table_computed = 1;
-}
+  old_len = target->url->len;
+  g_string_set_size (target->url,
+		     old_len + (data_len / 3 + 1) * 4 + 4);
 
-static unsigned long
-update_crc(unsigned long crc, unsigned char *buf, int len)
-{
-  unsigned long c = crc;
-  int n;
+  res = g_base64_encode_step (data, data_len, FALSE,
+			      target->url->str + old_len,
+			      &target->state, &target->save);
 
-  if (!crc_table_computed)
-    make_crc_table();
-  for (n = 0; n < len; n++) {
-    c = crc_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
-  }
-  return c;
-}
+  g_string_set_size (target->url,  old_len + res);
 
-static unsigned long
-crc(unsigned char *buf, int len)
-{
-  return update_crc(0xffffffffL, buf, len) ^ 0xffffffffL;
-}
-
-#define BASE 65521 /* largest prime smaller than 65536 */
-static unsigned long
-update_adler32(unsigned long adler, unsigned char *buf, int len)
-{
-  unsigned long s1 = adler & 0xffff;
-  unsigned long s2 = (adler >> 16) & 0xffff;
-  int n;
-
-  for (n = 0; n < len; n++) {
-    s1 = (s1 + buf[n]) % BASE;
-    s2 = (s2 + s1)     % BASE;
-  }
-  return (s2 << 16) + s1;
+  return CAIRO_STATUS_SUCCESS;
 }
 
 static char *
 to_png_rgb (int w, int h, int byte_stride, guint32 *data)
 {
-  guchar header[] = {137, 80, 78, 71, 13, 10, 26, 10};
-  guchar ihdr[13+12] = {0, 0, 0, 13, 'I', 'H', 'D', 'R',
-			/* w: */ 0, 0, 0, 0, /* h: */ 0,0,0,0,
-			/* bpp: */ 8, /* color type: */ 2,
-			0, 0, 0};
-  guchar idat_start[8] = { /* len: */0, 0, 0, 0,   'I', 'D', 'A', 'T' };
-  guchar iend[12] = {0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82};
-  gsize data_size, row_size;
-  char row_header[6];
-  guint8 *png, *p, *p_row, *p_idat;
-  guint32 *row;
-  unsigned long adler;
-  guint32 pixel;
-  gsize png_size;
-  int x, y;
-  char *url, *url_base64;
-  int state = 0, outlen;
-  int save = 0;
+  cairo_surface_t *surface;
+  struct PngTarget target;
+  gsize res, old_len;
 
-  *(guint32 *)&ihdr[8] = GUINT32_TO_BE(w);
-  *(guint32 *)&ihdr[12] = GUINT32_TO_BE(h);
-  *(guint32 *)&ihdr[21] = GUINT32_TO_BE(crc(&ihdr[4], 13 + 4));
+  target.url = g_string_new ("data:image/png;base64,");
+  target.state = 0;
+  target.save = 0;
 
-  row_size = 1 + w * 3;
-  row_header[0] = 0;
-  row_header[1] = row_size & 0xff;
-  row_header[2] = (row_size >> 8) & 0xff;
-  row_header[3] = ~row_header[1];
-  row_header[4] = ~row_header[2];
-  row_header[5] = 0;
+  surface = cairo_image_surface_create_for_data ((guchar *)data,
+						 CAIRO_FORMAT_RGB24, w, h, byte_stride);
 
-  data_size = 2 + (6 + w * 3) * h + 4;
+  cairo_surface_write_to_png_stream (surface, write_png_url, &target);
 
-  *(guint32 *)&idat_start[0] = GUINT32_TO_BE(data_size);
+  old_len = target.url->len;
 
-  png_size = sizeof(header) + sizeof(ihdr) + 12 + data_size + sizeof(iend);
-  png = g_malloc (png_size);
+  g_string_set_size (target.url, old_len + 4);
+  res = g_base64_encode_close (FALSE,
+			       target.url->str + old_len,
+			       &target.state, &target.save);
+  g_string_set_size (target.url, old_len + res);
 
-  p = png;
-  memcpy (p, header, sizeof(header));
-  p += sizeof(header);
-  memcpy (p, ihdr, sizeof(ihdr));
-  p += sizeof(ihdr);
-  memcpy (p, idat_start, sizeof(idat_start));
-  p += sizeof(idat_start);
-
-  /* IDAT data:
-
-     zlib header:  0x78, 0x01 ,
-     h * scanline: row_header[] + width * r,g,b
-     checksum: adler32
-  */
-
-  p_idat = p - 4;
-
-  /* zlib header */
-  *p++ = 0x78;
-  *p++ = 0x01;
-
-  adler = 1;
-
-  /* scanline data */
-  for (y = 0; y < h; y++) {
-    if (y == h - 1)
-      row_header[0] = 1; /* final block */
-    memcpy (p, row_header, sizeof(row_header));
-    p += sizeof(row_header);
-    p_row = p - 1;
-    row = data;
-    data += byte_stride / 4;
-    for (x = 0; x < w; x++) {
-      pixel = *row++;
-      *p++ = (pixel >> 16) & 0xff; /* red */
-      *p++ = (pixel >> 8) & 0xff; /* green */
-      *p++ = (pixel >> 0) & 0xff; /* blue */
-    }
-    adler = update_adler32(adler, p_row, p - p_row);
-  }
-
-  /* adler32 */
-  *(guint32 *)p = GUINT32_TO_BE(adler);
-  p += 4;
-  *(guint32 *)p = GUINT32_TO_BE(crc(p_idat, p - p_idat));
-  p += 4;
-
-  memcpy (p, iend, sizeof(iend));
-  p += sizeof(iend);
-
-  assert(p - png == png_size);
-
-  url = g_malloc (strlen("data:image/png;base64,") +
-		   ((png_size / 3 + 1) * 4 + 4) + 1);
-  strcpy (url, "data:image/png;base64,");
-
-  url_base64 = url + strlen("data:image/png;base64,");
-  outlen = g_base64_encode_step (png, png_size, FALSE, url_base64, &state, &save);
-  outlen += g_base64_encode_close (FALSE, url_base64 + outlen, &state, &save);
-  url_base64[outlen] = 0;
-
-  free (png);
-
-  return url;
+  return g_string_free (target.url, FALSE);
 }
 
 static char *
 to_png_rgba (int w, int h, int byte_stride, guint32 *data)
 {
-  guchar header[] = {137, 80, 78, 71, 13, 10, 26, 10};
-  guchar ihdr[13+12] = {0, 0, 0, 13, 'I', 'H', 'D', 'R',
-			/* w: */ 0, 0, 0, 0, /* h: */ 0,0,0,0,
-			/* bpp: */ 8, /* color type: */ 6,
-			0, 0, 0};
-  guchar idat_start[8] = { /* len: */0, 0, 0, 0,   'I', 'D', 'A', 'T' };
-  guchar iend[12] = {0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82};
-  gsize data_size, row_size;
-  char row_header[6];
-  guint8 *png, *p, *p_row, *p_idat;
-  guint32 *row;
-  unsigned long adler;
-  guint32 pixel;
-  gsize png_size;
-  int x, y;
-  char *url, *url_base64;
-  int state = 0, outlen;
-  int save = 0;
+  cairo_surface_t *surface;
+  struct PngTarget target;
+  gsize res, old_len;
 
-  *(guint32 *)&ihdr[8] = GUINT32_TO_BE(w);
-  *(guint32 *)&ihdr[12] = GUINT32_TO_BE(h);
-  *(guint32 *)&ihdr[21] = GUINT32_TO_BE(crc(&ihdr[4], 13 + 4));
+  target.url = g_string_new ("data:image/png;base64,");
+  target.state = 0;
+  target.save = 0;
 
-  row_size = 1 + w * 4;
-  row_header[0] = 0;
-  row_header[1] = row_size & 0xff;
-  row_header[2] = (row_size >> 8) & 0xff;
-  row_header[3] = ~row_header[1];
-  row_header[4] = ~row_header[2];
-  row_header[5] = 0;
+  surface = cairo_image_surface_create_for_data ((guchar *)data,
+						 CAIRO_FORMAT_ARGB32, w, h, byte_stride);
 
-  data_size = 2 + (6 + w * 4) * h + 4;
+  cairo_surface_write_to_png_stream (surface, write_png_url, &target);
 
-  *(guint32 *)&idat_start[0] = GUINT32_TO_BE(data_size);
+  old_len = target.url->len;
 
-  png_size = sizeof(header) + sizeof(ihdr) + 12 + data_size + sizeof(iend);
-  png = g_malloc (png_size);
+  g_string_set_size (target.url, old_len + 4);
+  res = g_base64_encode_close (FALSE,
+			       target.url->str + old_len,
+			       &target.state, &target.save);
+  g_string_set_size (target.url, old_len + res);
 
-  p = png;
-  memcpy (p, header, sizeof(header));
-  p += sizeof(header);
-  memcpy (p, ihdr, sizeof(ihdr));
-  p += sizeof(ihdr);
-  memcpy (p, idat_start, sizeof(idat_start));
-  p += sizeof(idat_start);
-
-  /* IDAT data:
-
-     zlib header:  0x78, 0x01 ,
-     h * scanline: row_header[] + width * r,g,b,a
-     checksum: adler32
-  */
-
-  p_idat = p - 4;
-
-  /* zlib header */
-  *p++ = 0x78;
-  *p++ = 0x01;
-
-  adler = 1;
-
-  /* scanline data */
-  for (y = 0; y < h; y++) {
-    if (y == h - 1)
-      row_header[0] = 1; /* final block */
-    memcpy (p, row_header, sizeof(row_header));
-    p += sizeof(row_header);
-    p_row = p - 1;
-    row = data;
-    data += byte_stride / 4;
-    for (x = 0; x < w; x++) {
-      pixel = *row++;
-      *p++ = (pixel >> 16) & 0xff; /* red */
-      *p++ = (pixel >> 8) & 0xff; /* green */
-      *p++ = (pixel >> 0) & 0xff; /* blue */
-      *p++ = (pixel >> 24) & 0xff; /* alpha */
-    }
-    adler = update_adler32(adler, p_row, p - p_row);
-  }
-
-  /* adler32 */
-  *(guint32 *)p = GUINT32_TO_BE(adler);
-  p += 4;
-  *(guint32 *)p = GUINT32_TO_BE(crc(p_idat, p - p_idat));
-  p += 4;
-
-  memcpy (p, iend, sizeof(iend));
-  p += sizeof(iend);
-
-  assert(p - png == png_size);
-
-  url = g_malloc (strlen("data:image/png;base64,") +
-		   ((png_size / 3 + 1) * 4 + 4) + 1);
-  strcpy (url, "data:image/png;base64,");
-
-  url_base64 = url + strlen("data:image/png;base64,");
-  outlen = g_base64_encode_step (png, png_size, FALSE, url_base64, &state, &save);
-  outlen += g_base64_encode_close (FALSE, url_base64 + outlen, &state, &save);
-  url_base64[outlen] = 0;
-
-  free (png);
-
-  return url;
+  return g_string_free (target.url, FALSE);
 }
 
 #if 0
 static char *
 to_png_a (int w, int h, int byte_stride, guint8 *data)
 {
-  guchar header[] = {137, 80, 78, 71, 13, 10, 26, 10};
-  guchar ihdr[13+12] = {0, 0, 0, 13, 'I', 'H', 'D', 'R',
-			/* w: */ 0, 0, 0, 0, /* h: */ 0,0,0,0,
-			/* bpp: */ 8, /* color type: */ 4,
-			0, 0, 0};
-  guchar idat_start[8] = { /* len: */0, 0, 0, 0,   'I', 'D', 'A', 'T' };
-  guchar iend[12] = {0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82};
-  gsize data_size, row_size;
-  char row_header[6];
-  guint8 *png, *p, *p_row, *p_idat;
-  guint8 *row;
-  unsigned long adler;
-  guint32 pixel;
-  gsize png_size;
-  int x, y;
-  char *url, *url_base64;
-  int state = 0, outlen;
-  int save = 0;
+  cairo_surface_t *surface;
+  struct PngTarget target;
+  gsize res, old_len;
 
-  *(guint32 *)&ihdr[8] = GUINT32_TO_BE(w);
-  *(guint32 *)&ihdr[12] = GUINT32_TO_BE(h);
-  *(guint32 *)&ihdr[21] = GUINT32_TO_BE(crc(&ihdr[4], 13 + 4));
+  target.url = g_string_new ("data:image/png;base64,");
+  target.state = 0;
+  target.save = 0;
 
-  row_size = 1 + w * 2;
-  row_header[0] = 0;
-  row_header[1] = row_size & 0xff;
-  row_header[2] = (row_size >> 8) & 0xff;
-  row_header[3] = ~row_header[1];
-  row_header[4] = ~row_header[2];
-  row_header[5] = 0;
+  surface = cairo_image_surface_create_for_data (data,
+						 CAIRO_FORMAT_A8, w, h, byte_stride);
 
-  data_size = 2 + (6 + w * 2) * h + 4;
+  cairo_surface_write_to_png_stream (surface, write_png_url, &target);
 
-  *(guint32 *)&idat_start[0] = GUINT32_TO_BE(data_size);
+  old_len = target.url->len;
 
-  png_size = sizeof(header) + sizeof(ihdr) + 12 + data_size + sizeof(iend);
-  png = g_malloc (png_size);
+  g_string_set_size (target.url, old_len + 4);
+  res = g_base64_encode_close (FALSE,
+			       target.url->str + old_len,
+			       &target.state, &target.save);
+  g_string_set_size (target.url, old_len + res);
 
-  p = png;
-  memcpy (p, header, sizeof(header));
-  p += sizeof(header);
-  memcpy (p, ihdr, sizeof(ihdr));
-  p += sizeof(ihdr);
-  memcpy (p, idat_start, sizeof(idat_start));
-  p += sizeof(idat_start);
-
-  /* IDAT data:
-
-     zlib header:  0x78, 0x01 ,
-     h * scanline: row_header[] + width * r,g,b,a
-     checksum: adler32
-  */
-
-  p_idat = p - 4;
-
-  /* zlib header */
-  *p++ = 0x78;
-  *p++ = 0x01;
-
-  adler = 1;
-
-  /* scanline data */
-  for (y = 0; y < h; y++) {
-    if (y == h - 1)
-      row_header[0] = 1; /* final block */
-    memcpy (p, row_header, sizeof(row_header));
-    p += sizeof(row_header);
-    p_row = p - 1;
-    row = data;
-    data += byte_stride / 4;
-    for (x = 0; x < w; x++) {
-      pixel = *row++;
-      *p++ = 0x00; /* gray */
-      *p++ = pixel; /* alpha */
-    }
-    adler = update_adler32(adler, p_row, p - p_row);
-  }
-
-  /* adler32 */
-  *(guint32 *)p = GUINT32_TO_BE(adler);
-  p += 4;
-  *(guint32 *)p = GUINT32_TO_BE(crc(p_idat, p - p_idat));
-  p += 4;
-
-  memcpy (p, iend, sizeof(iend));
-  p += sizeof(iend);
-
-  assert(p - png == png_size);
-
-  url = g_malloc (strlen("data:image/png;base64,") +
-		  ((png_size / 3 + 1) * 4 + 4) + 1);
-  strcpy (url, "data:image/png;base64,");
-
-  url_base64 = url + strlen("data:image/png;base64,");
-  outlen = g_base64_encode_step (png, png_size, FALSE, url_base64, &state, &save);
-  outlen += g_base64_encode_close (FALSE, url_base64 + outlen, &state, &save);
-  url_base64[outlen] = 0;
-
-  free (png);
-
-  return url;
+  return g_string_free (target.url, FALSE);
 }
 #endif
 
@@ -450,115 +172,42 @@ to_png_a (int w, int h, int byte_stride, guint8 *data)
  ************************************************************************/
 
 struct BroadwayOutput {
-  int fd;
-  gzFile *zfd;
+  GOutputStream *out;
   int error;
   guint32 serial;
 };
 
 static void
-broadway_output_write_raw (BroadwayOutput *output,
-			   const void *buf, gsize count)
+broadway_output_write_header (BroadwayOutput *output)
 {
-  gssize res;
-  int errsave;
-  const char *ptr = (const char *)buf;
-
-  if (output->error)
-    return;
-
-  while (count > 0)
-    {
-      res = write(output->fd, ptr, count);
-      if (res == -1)
-	{
-	  errsave = errno;
-	  if (errsave == EINTR)
-	    continue;
-	  output->error = TRUE;
-	  return;
-	}
-      if (res == 0)
-	{
-	  output->error = TRUE;
-	  return;
-	}
-      count -= res;
-      ptr += res;
-    }
+  g_output_stream_write (output->out, "\0", 1, NULL, NULL);
 }
 
 static void
 broadway_output_write (BroadwayOutput *output,
 		       const void *buf, gsize count)
 {
-  gssize res;
-  const char *ptr = (const char *)buf;
-
-  if (output->error)
-    return;
-
-  while (count > 0)
-    {
-      res = gzwrite(output->zfd, ptr, count);
-      if (res == -1)
-	{
-	  output->error = TRUE;
-	  return;
-	}
-      if (res == 0)
-	{
-	  output->error = TRUE;
-	  return;
-	}
-      count -= res;
-      ptr += res;
-    }
-}
-
-static void
-broadway_output_write_header (BroadwayOutput *output)
-{
-  char *header;
-
-  header =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-type: multipart/x-mixed-replace;boundary=x\r\n"
-    "Content-Encoding: gzip\r\n"
-    "\r\n";
-  broadway_output_write_raw (output,
-			     header, strlen (header));
+  g_output_stream_write_all (output->out, buf, count, NULL, NULL, NULL);
 }
 
 static void
 send_boundary (BroadwayOutput *output)
 {
-  char *boundary =
-    "--x\r\n"
-    "\r\n";
-
-  broadway_output_write (output, boundary, strlen (boundary));
+  broadway_output_write (output, "\xff", 1);
+  broadway_output_write (output, "\0", 1);
 }
 
 BroadwayOutput *
-broadway_output_new(int fd, guint32 serial)
+broadway_output_new(GOutputStream *out, guint32 serial)
 {
   BroadwayOutput *output;
-  int flag = 1;
 
   output = g_new0 (BroadwayOutput, 1);
 
-  output->fd = fd;
+  output->out = g_object_ref (out);
   output->serial = serial;
 
-  setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-
   broadway_output_write_header (output);
-
-  output->zfd = gzdopen(fd, "wb");
-
-  /* Need an initial multipart boundary */
-  send_boundary (output);
 
   return output;
 }
@@ -566,10 +215,7 @@ broadway_output_new(int fd, guint32 serial)
 void
 broadway_output_free (BroadwayOutput *output)
 {
-  if (output->zfd)
-    gzclose (output->zfd);
-  else
-    close (output->fd);
+  g_object_unref (output->out);
   free (output);
 }
 
@@ -583,7 +229,6 @@ int
 broadway_output_flush (BroadwayOutput *output)
 {
   send_boundary (output);
-  gzflush (output->zfd, Z_SYNC_FLUSH);
   return !output->error;
 }
 
