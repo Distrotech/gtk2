@@ -619,6 +619,8 @@ static void             gtk_widget_real_get_width_for_height    (GtkWidget      
                                                                  gint             *minimum_width,
                                                                  gint             *natural_width);
 static const GtkWidgetAuxInfo* _gtk_widget_get_aux_info_or_defaults (GtkWidget *widget);
+static GtkWidgetAuxInfo* gtk_widget_get_aux_info                (GtkWidget        *widget,
+                                                                 gboolean          create);
 static void		gtk_widget_aux_info_destroy		(GtkWidgetAuxInfo *aux_info);
 static AtkObject*	gtk_widget_real_get_accessible		(GtkWidget	  *widget);
 static void		gtk_widget_accessible_interface_init	(AtkImplementorIface *iface);
@@ -3460,7 +3462,7 @@ gtk_widget_get_property (GObject         *object,
       break;
     case PROP_MARGIN:
       {
-        GtkWidgetAuxInfo *aux_info = _gtk_widget_get_aux_info (widget, FALSE);
+        GtkWidgetAuxInfo *aux_info = gtk_widget_get_aux_info (widget, FALSE);
         if (aux_info == NULL)
           {
             g_value_set_int (value, 0);
@@ -5626,7 +5628,8 @@ gtk_cairo_set_event (cairo_t        *cr,
 /**
  * gtk_cairo_should_draw_window:
  * @cr: a cairo context
- * @window: the window to check
+ * @window: the window to check. @window may not be an input-only
+ *          window.
  *
  * This function is supposed to be called in #GtkWidget::draw
  * implementations for widgets that support multiple windows.
@@ -9644,7 +9647,7 @@ gtk_widget_set_usize_internal (GtkWidget          *widget,
 
   g_object_freeze_notify (G_OBJECT (widget));
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (width > -2 && aux_info->width != width)
     {
@@ -10631,7 +10634,7 @@ gtk_widget_finalize (GObject *object)
 
   g_free (priv->name);
 
-  aux_info =_gtk_widget_get_aux_info (widget, FALSE);
+  aux_info = gtk_widget_get_aux_info (widget, FALSE);
   if (aux_info)
     gtk_widget_aux_info_destroy (aux_info);
 
@@ -11293,7 +11296,7 @@ static const GtkWidgetAuxInfo default_aux_info = {
 };
 
 /*
- * _gtk_widget_get_aux_info:
+ * gtk_widget_get_aux_info:
  * @widget: a #GtkWidget
  * @create: if %TRUE, create the structure if it doesn't exist
  *
@@ -11302,9 +11305,9 @@ static const GtkWidgetAuxInfo default_aux_info = {
  * Return value: the #GtkAuxInfo structure for the widget, or
  *    %NULL if @create is %FALSE and one doesn't already exist.
  */
-GtkWidgetAuxInfo*
-_gtk_widget_get_aux_info (GtkWidget *widget,
-			  gboolean   create)
+static GtkWidgetAuxInfo *
+gtk_widget_get_aux_info (GtkWidget *widget,
+			 gboolean   create)
 {
   GtkWidgetAuxInfo *aux_info;
 
@@ -11326,7 +11329,7 @@ _gtk_widget_get_aux_info_or_defaults (GtkWidget *widget)
 {
   GtkWidgetAuxInfo *aux_info;
 
-  aux_info = _gtk_widget_get_aux_info (widget, FALSE);
+  aux_info = gtk_widget_get_aux_info (widget, FALSE);
   if (aux_info == NULL)
     {
       return &default_aux_info;
@@ -13057,7 +13060,7 @@ gtk_widget_set_halign (GtkWidget *widget,
 
   g_return_if_fail (GTK_IS_WIDGET (widget));
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->halign == align)
     return;
@@ -13098,7 +13101,7 @@ gtk_widget_set_valign (GtkWidget *widget,
 
   g_return_if_fail (GTK_IS_WIDGET (widget));
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->valign == align)
     return;
@@ -13145,7 +13148,7 @@ gtk_widget_set_margin_left (GtkWidget *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (margin <= G_MAXINT16);
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->margin.left == margin)
     return;
@@ -13192,7 +13195,7 @@ gtk_widget_set_margin_right (GtkWidget *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (margin <= G_MAXINT16);
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->margin.right == margin)
     return;
@@ -13239,7 +13242,7 @@ gtk_widget_set_margin_top (GtkWidget *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (margin <= G_MAXINT16);
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->margin.top == margin)
     return;
@@ -13286,7 +13289,7 @@ gtk_widget_set_margin_bottom (GtkWidget *widget,
   g_return_if_fail (GTK_IS_WIDGET (widget));
   g_return_if_fail (margin <= G_MAXINT16);
 
-  aux_info = _gtk_widget_get_aux_info (widget, TRUE);
+  aux_info = gtk_widget_get_aux_info (widget, TRUE);
 
   if (aux_info->margin.bottom == margin)
     return;

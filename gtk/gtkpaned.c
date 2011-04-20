@@ -174,6 +174,16 @@ static void     gtk_paned_get_preferred_width   (GtkWidget        *widget,
 static void     gtk_paned_get_preferred_height  (GtkWidget        *widget,
                                                  gint             *minimum,
                                                  gint             *natural);
+static void     gtk_paned_get_preferred_width_for_height
+                                                (GtkWidget        *widget,
+                                                 gint              height,
+                                                 gint             *minimum,
+                                                 gint             *natural);
+static void     gtk_paned_get_preferred_height_for_width
+                                                (GtkWidget        *widget,
+                                                 gint              width,
+                                                 gint             *minimum,
+                                                 gint              *natural);
 
 static void     gtk_paned_size_allocate         (GtkWidget        *widget,
                                                  GtkAllocation    *allocation);
@@ -284,6 +294,8 @@ gtk_paned_class_init (GtkPanedClass *class)
 
   widget_class->get_preferred_width = gtk_paned_get_preferred_width;
   widget_class->get_preferred_height = gtk_paned_get_preferred_height;
+  widget_class->get_preferred_width_for_height = gtk_paned_get_preferred_width_for_height;
+  widget_class->get_preferred_height_for_width = gtk_paned_get_preferred_height_for_width;
   widget_class->size_allocate = gtk_paned_size_allocate;
   widget_class->realize = gtk_paned_realize;
   widget_class->unrealize = gtk_paned_unrealize;
@@ -847,8 +859,28 @@ gtk_paned_finalize (GObject *object)
 }
 
 static void
+get_preferred_size_for_size (GtkWidget      *widget,
+                             GtkOrientation  orientation,
+                             gint            size,
+                             gint           *minimum,
+                             gint           *natural)
+{
+  if (orientation == GTK_ORIENTATION_HORIZONTAL)
+    if (size < 0)
+      gtk_widget_get_preferred_width (widget, minimum, natural);
+    else
+      gtk_widget_get_preferred_width_for_height (widget, size, minimum, natural);
+  else
+    if (size < 0)
+      gtk_widget_get_preferred_height (widget, minimum, natural);
+    else
+      gtk_widget_get_preferred_height_for_width (widget, size, minimum, natural);
+}
+
+static void
 gtk_paned_get_preferred_size (GtkWidget      *widget,
                               GtkOrientation  orientation,
+                              gint            size,
                               gint           *minimum,
                               gint           *natural)
 {
@@ -860,21 +892,14 @@ gtk_paned_get_preferred_size (GtkWidget      *widget,
 
   if (priv->child1 && gtk_widget_get_visible (priv->child1))
     {
-      if (orientation == GTK_ORIENTATION_HORIZONTAL)
-        gtk_widget_get_preferred_width (priv->child1, &child_min, &child_nat);
-      else
-        gtk_widget_get_preferred_height (priv->child1, &child_min, &child_nat);
-
+      get_preferred_size_for_size (priv->child1, orientation, size, &child_min, &child_nat);
       *minimum = child_min;
       *natural = child_nat;
     }
 
   if (priv->child2 && gtk_widget_get_visible (priv->child2))
     {
-      if (orientation == GTK_ORIENTATION_HORIZONTAL)
-        gtk_widget_get_preferred_width (priv->child2, &child_min, &child_nat);
-      else
-        gtk_widget_get_preferred_height (priv->child2, &child_min, &child_nat);
+      get_preferred_size_for_size (priv->child2, orientation, size, &child_min, &child_nat);
 
       if (priv->orientation == orientation)
         {
@@ -908,7 +933,7 @@ gtk_paned_get_preferred_width (GtkWidget *widget,
                                gint      *minimum,
                                gint      *natural)
 {
-  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_HORIZONTAL, minimum, natural);
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_HORIZONTAL, -1, minimum, natural);
 }
 
 static void
@@ -916,7 +941,25 @@ gtk_paned_get_preferred_height (GtkWidget *widget,
                                 gint      *minimum,
                                 gint      *natural)
 {
-  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_VERTICAL, minimum, natural);
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_VERTICAL, -1, minimum, natural);
+}
+
+static void
+gtk_paned_get_preferred_width_for_height (GtkWidget *widget,
+                                          gint       height,
+                                          gint      *minimum,
+                                          gint      *natural)
+{
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_HORIZONTAL, height, minimum, natural);
+}
+
+static void
+gtk_paned_get_preferred_height_for_width (GtkWidget *widget,
+                                          gint       width,
+                                          gint      *minimum,
+                                          gint      *natural)
+{
+  gtk_paned_get_preferred_size (widget, GTK_ORIENTATION_VERTICAL, width, minimum, natural);
 }
 
 static void
@@ -939,15 +982,12 @@ gtk_paned_size_allocate (GtkWidget     *widget,
 {
   GtkPaned *paned = GTK_PANED (widget);
   GtkPanedPrivate *priv = paned->priv;
-  GtkAllocation widget_allocation;
 
   gtk_widget_set_allocation (widget, allocation);
 
   if (priv->child1 && gtk_widget_get_visible (priv->child1) &&
       priv->child2 && gtk_widget_get_visible (priv->child2))
     {
-      GtkRequisition child1_requisition;
-      GtkRequisition child2_requisition;
       GtkAllocation child1_allocation;
       GtkAllocation child2_allocation;
       GtkAllocation priv_child1_allocation;
@@ -956,32 +996,36 @@ gtk_paned_size_allocate (GtkWidget     *widget,
 
       gtk_widget_style_get (widget, "handle-size", &handle_size, NULL);
 
-      gtk_widget_get_preferred_size (priv->child1, &child1_requisition, NULL);
-      gtk_widget_get_preferred_size (priv->child2, &child2_requisition, NULL);
-
       old_handle_pos = priv->handle_pos;
-
-      gtk_widget_get_allocation (widget, &widget_allocation);
 
       if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
         {
-          gtk_paned_calc_position (paned,
-                                   MAX (1, widget_allocation.width - handle_size),
-                                   child1_requisition.width,
-                                   child2_requisition.width);
+          gint child1_width, child2_width;
 
-          priv->handle_pos.x = widget_allocation.x + priv->child1_size;
-          priv->handle_pos.y = widget_allocation.y;
+          gtk_widget_get_preferred_width_for_height (priv->child1,
+                                                     allocation->height,
+                                                     &child1_width, NULL);
+          gtk_widget_get_preferred_width_for_height (priv->child2,
+                                                     allocation->height,
+                                                     &child2_width, NULL);
+
+          gtk_paned_calc_position (paned,
+                                   MAX (1, allocation->width - handle_size),
+                                   child1_width,
+                                   child2_width);
+
+          priv->handle_pos.x = allocation->x + priv->child1_size;
+          priv->handle_pos.y = allocation->y;
           priv->handle_pos.width = handle_size;
-          priv->handle_pos.height = widget_allocation.height;
+          priv->handle_pos.height = allocation->height;
 
           child1_allocation.height = child2_allocation.height = allocation->height;
           child1_allocation.width = MAX (1, priv->child1_size);
-          child1_allocation.x = widget_allocation.x;
-          child1_allocation.y = child2_allocation.y = widget_allocation.y;
+          child1_allocation.x = allocation->x;
+          child1_allocation.y = child2_allocation.y = allocation->y;
 
           child2_allocation.x = child1_allocation.x + priv->child1_size + priv->handle_pos.width;
-          child2_allocation.width = MAX (1, widget_allocation.x + widget_allocation.width - child2_allocation.x);
+          child2_allocation.width = MAX (1, allocation->x + allocation->width - child2_allocation.x);
 
           if (gtk_widget_get_direction (GTK_WIDGET (widget)) == GTK_TEXT_DIR_RTL)
             {
@@ -992,23 +1036,32 @@ gtk_paned_size_allocate (GtkWidget     *widget,
         }
       else
         {
-          gtk_paned_calc_position (paned,
-                                   MAX (1, widget_allocation.height - handle_size),
-                                   child1_requisition.height,
-                                   child2_requisition.height);
+          gint child1_height, child2_height;
 
-          priv->handle_pos.x = widget_allocation.x;
-          priv->handle_pos.y = widget_allocation.y + priv->child1_size;
-          priv->handle_pos.width = widget_allocation.width;
+          gtk_widget_get_preferred_height_for_width (priv->child1,
+                                                     allocation->width,
+                                                     &child1_height, NULL);
+          gtk_widget_get_preferred_height_for_width (priv->child2,
+                                                     allocation->width,
+                                                     &child2_height, NULL);
+
+          gtk_paned_calc_position (paned,
+                                   MAX (1, allocation->height - handle_size),
+                                   child1_height,
+                                   child2_height);
+
+          priv->handle_pos.x = allocation->x;
+          priv->handle_pos.y = allocation->y + priv->child1_size;
+          priv->handle_pos.width = allocation->width;
           priv->handle_pos.height = handle_size;
 
           child1_allocation.width = child2_allocation.width = allocation->width;
           child1_allocation.height = MAX (1, priv->child1_size);
-          child1_allocation.x = child2_allocation.x = widget_allocation.x;
-          child1_allocation.y = widget_allocation.y;
+          child1_allocation.x = child2_allocation.x = allocation->x;
+          child1_allocation.y = allocation->y;
 
           child2_allocation.y = child1_allocation.y + priv->child1_size + priv->handle_pos.height;
-          child2_allocation.height = MAX (1, widget_allocation.y + widget_allocation.height - child2_allocation.y);
+          child2_allocation.height = MAX (1, allocation->y + allocation->height - child2_allocation.y);
         }
 
       if (gtk_widget_get_mapped (widget) &&
@@ -1079,10 +1132,8 @@ gtk_paned_size_allocate (GtkWidget     *widget,
       if (priv->child2)
 	gtk_widget_set_child_visible (priv->child2, TRUE);
 
-      gtk_widget_get_allocation (widget, &widget_allocation);
-
-      child_allocation.x = widget_allocation.x;
-      child_allocation.y = widget_allocation.y;
+      child_allocation.x = allocation->x;
+      child_allocation.y = allocation->y;
       child_allocation.width = allocation->width;
       child_allocation.height = allocation->height;
 
