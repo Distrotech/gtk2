@@ -1021,7 +1021,6 @@ bin_PROGRAMS = \
 
 if BUILD_ICON_CACHE
 bin_PROGRAMS += gtk-update-icon-cache
-endif
 
 if OS_WIN32
 
@@ -1053,6 +1052,7 @@ $(GTK_UPDATE_ICON_CACHE_MANIFEST):
 	 echo '  </trustInfo>' ; \
 	 echo '</assembly>' ) >$@
 
+endif
 endif
 
 gtk_query_immodules_3_0_DEPENDENCIES = $(DEPS)
