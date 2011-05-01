@@ -65,7 +65,6 @@
 #include "gtkclipboard.h"
 
 #import <Cocoa/Cocoa.h>
-#include "gtkalias.h"
 
 #undef DEBUG_SELECTION
 /*
@@ -129,7 +128,6 @@ static void gtk_selection_clear_cb          (GtkClipboard     *clipboard,
 					     gpointer 	       widget);
 static void gtk_selection_default_handler   (GtkWidget        *widget,
 					     GtkSelectionData *data);
-static int  gtk_selection_bytes_per_item    (gint              format);
 static GtkSelectionInfo *gtk_selection_info_get (GdkAtom selection);
 static void gtk_selection_info_remove		(GdkAtom selection,
 						 GtkWidget *owner);
@@ -543,7 +541,7 @@ gtk_selection_info_get (GdkAtom selection)
     }
   return NULL;
 }
-
+ 
 static void
 gtk_selection_info_remove (GdkAtom selection, GtkWidget *owner)
 {
