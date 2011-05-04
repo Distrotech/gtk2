@@ -313,6 +313,9 @@ gdk_window_init (GdkWindow *window)
   window->visibility = GDK_VISIBILITY_FULLY_OBSCURED;
   /* Default to unobscured since some backends don't send visibility events */
   window->native_visibility = GDK_VISIBILITY_UNOBSCURED;
+
+  window->device_cursor = g_hash_table_new_full (NULL, NULL,
+                                                 NULL, g_object_unref);
 }
 
 /* Stop and return on the first non-NULL parent */
@@ -1367,9 +1370,6 @@ gdk_window_new (GdkWindow     *parent,
   if (window->parent)
     window->parent->children = g_list_prepend (window->parent->children, window);
 
-  window->device_cursor = g_hash_table_new_full (NULL, NULL,
-                                                 NULL, g_object_unref);
-
   native = FALSE;
   if (window->parent->window_type == GDK_WINDOW_ROOT)
     native = TRUE; /* Always use native windows for toplevels */
@@ -1758,7 +1758,7 @@ gdk_window_ensure_native (GdkWindow *window)
 
 /**
  * _gdk_event_filter_unref:
- * @window: A #GdkWindow, or %NULL to be the global window
+ * @window: (allow-none): A #GdkWindow, or %NULL to be the global window
  * @filter: A window filter
  *
  * Release a reference to @filter.  Note this function may
@@ -2043,7 +2043,7 @@ gdk_window_destroy (GdkWindow *window)
 /**
  * gdk_window_set_user_data:
  * @window: a #GdkWindow
- * @user_data: user data
+ * @user_data: (allow-none): user data
  *
  * For most purposes this function is deprecated in favor of
  * g_object_set_data(). However, for historical reasons GTK+ stores
@@ -2398,7 +2398,7 @@ gdk_window_peek_children (GdkWindow *window)
 
 /**
  * gdk_window_add_filter: (skip)
- * @window: a #GdkWindow
+ * @window: (allow-none): a #GdkWindow
  * @function: filter callback
  * @data: data to pass to filter callback
  *
@@ -4418,8 +4418,8 @@ gdk_window_invalidate_maybe_recurse_full (GdkWindow            *window,
  * gdk_window_invalidate_maybe_recurse:
  * @window: a #GdkWindow
  * @region: a #cairo_region_t
- * @child_func: (scope call): function to use to decide if to recurse
- *     to a child, %NULL means never recurse.
+ * @child_func: (scope call) (allow-none): function to use to decide if to
+ *     recurse to a child, %NULL means never recurse.
  * @user_data: data passed to @child_func
  *
  * Adds @region to the update area for @window. The update area is the
@@ -6566,18 +6566,27 @@ gdk_window_get_background_pattern (GdkWindow *window)
 }
 
 static void
-update_cursor_foreach (GdkDisplay           *display,
-                       GdkDevice            *device,
-                       GdkPointerWindowInfo *pointer_info,
-                       gpointer              user_data)
+gdk_window_set_cursor_internal (GdkWindow *window,
+                                GdkDevice *device,
+                                GdkCursor *cursor)
 {
-  GdkWindow *window = user_data;
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
 
   if (window->window_type == GDK_WINDOW_ROOT ||
       window->window_type == GDK_WINDOW_FOREIGN)
-    GDK_WINDOW_IMPL_GET_CLASS (window->impl)->set_device_cursor (window, device, window->cursor);
-  else if (_gdk_window_event_parent_of (window, pointer_info->window_under_pointer))
-    update_cursor (display, device);
+    GDK_WINDOW_IMPL_GET_CLASS (window->impl)->set_device_cursor (window, device, cursor);
+  else
+    {
+      GdkPointerWindowInfo *pointer_info;
+      GdkDisplay *display;
+
+      display = gdk_window_get_display (window);
+      pointer_info = _gdk_display_get_pointer_info (display, device);
+
+      if (_gdk_window_event_parent_of (window, pointer_info->window_under_pointer))
+        update_cursor (display, device);
+    }
 }
 
 /**
@@ -6633,13 +6642,28 @@ gdk_window_set_cursor (GdkWindow *window,
 
   if (!GDK_WINDOW_DESTROYED (window))
     {
+      GdkDeviceManager *device_manager;
+      GList *devices, *d;
+
       if (cursor)
 	window->cursor = g_object_ref (cursor);
 
-      _gdk_display_pointer_info_foreach (display,
-                                         update_cursor_foreach,
-                                         window);
+      device_manager = gdk_display_get_device_manager (display);
+      devices = gdk_device_manager_list_devices (device_manager, GDK_DEVICE_TYPE_MASTER);
 
+      for (d = devices; d; d = d->next)
+        {
+          GdkDevice *device;
+
+          device = d->data;
+
+          if (gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
+            continue;
+
+          gdk_window_set_cursor_internal (window, device, window->cursor);
+        }
+
+      g_list_free (devices);
       g_object_notify (G_OBJECT (window), "cursor");
     }
 }
@@ -6693,29 +6717,17 @@ gdk_window_set_device_cursor (GdkWindow *window,
                               GdkDevice *device,
                               GdkCursor *cursor)
 {
-  GdkDisplay *display;
-
   g_return_if_fail (GDK_IS_WINDOW (window));
   g_return_if_fail (GDK_IS_DEVICE (device));
   g_return_if_fail (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD);
   g_return_if_fail (gdk_device_get_device_type (device) == GDK_DEVICE_TYPE_MASTER);
-
-  display = gdk_window_get_display (window);
 
   if (!cursor)
     g_hash_table_remove (window->device_cursor, device);
   else
     g_hash_table_replace (window->device_cursor, device, g_object_ref (cursor));
 
-  if (!GDK_WINDOW_DESTROYED (window))
-    {
-      GdkPointerWindowInfo *pointer_info;
-
-      pointer_info = _gdk_display_get_pointer_info (display, device);
-
-      if (_gdk_window_event_parent_of (window, pointer_info->window_under_pointer))
-        update_cursor (display, device);
-    }
+  gdk_window_set_cursor_internal (window, device, cursor);
 }
 
 /**
@@ -7048,7 +7060,7 @@ gdk_window_coords_from_parent (GdkWindow *window,
 /**
  * gdk_window_shape_combine_region:
  * @window: a #GdkWindow
- * @shape_region: region of window to be non-transparent
+ * @shape_region: (allow-none): region of window to be non-transparent
  * @offset_x: X position of @shape_region in @window coordinates
  * @offset_y: Y position of @shape_region in @window coordinates
  *
@@ -8571,11 +8583,11 @@ _gdk_display_set_window_under_pointer (GdkDisplay *display,
  * @event_mask: specifies the event mask, which is used in accordance with
  *              @owner_events. Note that only pointer events (i.e. button and motion events)
  *              may be selected.
- * @confine_to: If non-%NULL, the pointer will be confined to this
+ * @confine_to: (allow-none): If non-%NULL, the pointer will be confined to this
  *              window during the grab. If the pointer is outside @confine_to, it will
  *              automatically be moved to the closest edge of @confine_to and enter
  *              and leave events will be generated as necessary.
- * @cursor: the cursor to display while the grab is active. If this is %NULL then
+ * @cursor: (allow-none): the cursor to display while the grab is active. If this is %NULL then
  *          the normal cursors are used for @window and its descendants, and the cursor
  *          for @window is used for all other windows.
  * @time_: the timestamp of the event which led to this pointer grab. This usually
@@ -10115,7 +10127,7 @@ gdk_window_set_icon_list (GdkWindow *window,
 /**
  * gdk_window_set_icon_name:
  * @window: a toplevel #GdkWindow
- * @name: name of window while iconified (minimized)
+ * @name: (allow-none): name of window while iconified (minimized)
  *
  * Windows may have a name used while minimized, distinct from the
  * name they display in their titlebar. Most of the time this is a bad
@@ -10365,7 +10377,7 @@ gdk_window_get_group (GdkWindow *window)
 /**
  * gdk_window_set_group:
  * @window: a toplevel #GdkWindow
- * @leader: group leader window, or %NULL to restore the default group leader window
+ * @leader: (allow-none): group leader window, or %NULL to restore the default group leader window
  *
  * Sets the group leader window for @window. By default,
  * GDK sets the group leader for all toplevel windows

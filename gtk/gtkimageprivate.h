@@ -73,9 +73,9 @@ struct _GtkImageGIconData
 {
   GIcon *icon;
   GdkPixbuf *pixbuf;
-  guint theme_change_id;
 };
 
+void _gtk_image_gicon_data_clear (GtkImageGIconData *data);
 
 G_END_DECLS
 
