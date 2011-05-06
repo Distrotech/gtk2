@@ -201,6 +201,18 @@ quit_when_idle (gpointer loop)
   return FALSE;
 }
 
+static void
+check_for_draw (GdkEvent *event, gpointer loop)
+{
+  if (event->type == GDK_EXPOSE)
+    {
+      g_idle_add (quit_when_idle, loop);
+      gdk_event_handler_set ((GdkEventFunc) gtk_main_do_event, NULL, NULL);
+    }
+
+  gtk_main_do_event (event);
+}
+
 static cairo_surface_t *
 snapshot_widget (GtkWidget *widget, SnapshotMode mode)
 {
@@ -217,7 +229,12 @@ snapshot_widget (GtkWidget *widget, SnapshotMode mode)
                                                gtk_widget_get_allocated_height (widget));
 
   loop = g_main_loop_new (NULL, FALSE);
-  g_idle_add (quit_when_idle, loop);
+  /* We wait until the widget is drawn for the first time.
+   * We can not wait for a GtkWidget::draw event, because that might not
+   * happen if the window is fully obscured by windowed child widgets.
+   * Alternatively, we could wait for an expose event on widget's window.
+   * Both of these are rather hairy, not sure what's best. */
+  gdk_event_handler_set (check_for_draw, loop, NULL);
   g_main_loop_run (loop);
 
   cr = cairo_create (surface);
@@ -225,8 +242,21 @@ snapshot_widget (GtkWidget *widget, SnapshotMode mode)
   switch (mode)
     {
     case SNAPSHOT_WINDOW:
-      gdk_cairo_set_source_window (cr, gtk_widget_get_window (widget), 0, 0);
-      cairo_paint (cr);
+      {
+        GdkWindow *window = gtk_widget_get_window (widget);
+        if (gdk_window_get_window_type (window) == GDK_WINDOW_TOPLEVEL ||
+            gdk_window_get_window_type (window) == GDK_WINDOW_FOREIGN)
+          {
+            /* give the WM/server some time to sync. They need it.
+             * Also, do use popups instead of toplevls in your tests
+             * whenever you can. */
+            gdk_display_sync (gdk_window_get_display (window));
+            g_timeout_add (500, quit_when_idle, loop);
+            g_main_loop_run (loop);
+          }
+        gdk_cairo_set_source_window (cr, window, 0, 0);
+        cairo_paint (cr);
+      }
       break;
     case SNAPSHOT_DRAW:
       bg = gdk_window_get_background_pattern (gtk_widget_get_window (widget));
@@ -243,6 +273,7 @@ snapshot_widget (GtkWidget *widget, SnapshotMode mode)
     }
 
   cairo_destroy (cr);
+  g_main_loop_unref (loop);
   gtk_widget_destroy (widget);
 
   return surface;

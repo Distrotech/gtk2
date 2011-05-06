@@ -25,9 +25,15 @@ clean-local:
 	rm -rf output/ || true
 
 EXTRA_DIST += \
+	box-packing.css \
+	box-packing.ref.ui \
+	box-packing.ui \
 	entry-progress-coloring.css \
 	entry-progress-coloring.ref.ui \
 	entry-progress-coloring.ui \
+	grid-expand.css \
+	grid-expand.ref.ui \
+	grid-expand.ui \
 	grid-homogeneous.css \
 	grid-homogeneous.ref.ui \
 	grid-homogeneous.ui \
@@ -36,12 +42,13 @@ EXTRA_DIST += \
 	label-sizing.ui \
 	label-small-ellipsized.ref.ui \
 	label-small-ellipsized.ui \
+	label-wrap-justify.ref.ui \
+	label-wrap-justify.ui \
 	nonresizable-size.ref.ui \
 	nonresizable-size.ui \
 	quit-mnemonic.ref.ui \
 	quit-mnemonic.ui \
-	simpe.ref.png \
+	simple.ref.ui \
 	simple.ui \
-	box-packing.css \
-	box-packing.ref.ui \
-	box-packing.ui
+	toplevel-vs-popup.ref.ui \
+	toplevel-vs-popup.ui
