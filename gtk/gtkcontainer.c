@@ -764,6 +764,68 @@ gtk_container_child_type (GtkContainer *container)
 }
 
 /* --- GtkContainer child property mechanism --- */
+
+/**
+ * gtk_container_child_notify:
+ * @container: the #GtkContainer
+ * @widget: the child widget
+ * @child_property: the name of a chld property installed on
+ *     the class of @container
+ *
+ * Emits a #GtkWidget::child-notify signal for the
+ * <link linkend="child-properties">child property</link>
+ * @child_property on widget.
+ *
+ * This is an analogue of g_object_notify() for child properties.
+ *
+ * Also see gtk_widget_child_notify().
+ *
+ * Since: 3.2
+ */
+void
+gtk_container_child_notify (GtkContainer *container,
+                            GtkWidget    *widget,
+                            const gchar  *child_property)
+{
+  GObject *obj;
+  GParamSpec *pspec;
+
+  g_return_if_fail (GTK_IS_CONTAINER (container));
+  g_return_if_fail (GTK_IS_WIDGET (widget));
+  g_return_if_fail (child_property != NULL);
+
+  obj = G_OBJECT (widget);
+
+  if (obj->ref_count == 0)
+    return;
+
+  g_object_ref (obj);
+
+  pspec = g_param_spec_pool_lookup (_gtk_widget_child_property_pool,
+                                    child_property,
+                                    G_OBJECT_TYPE (container),
+                                    TRUE);
+
+  if (pspec == NULL)
+    {
+      g_warning ("%s: container class `%s' has no child property named `%s'",
+                 G_STRLOC,
+                 G_OBJECT_TYPE_NAME (container),
+                 child_property);
+    }
+  else
+    {
+      GObjectNotifyQueue *nqueue;
+
+      nqueue = g_object_notify_queue_freeze (obj, _gtk_widget_child_property_notify_context);
+
+      g_object_notify_queue_add (obj, nqueue, pspec);
+      g_object_notify_queue_thaw (obj, nqueue);
+    }
+
+  g_object_unref (obj);
+}
+
 static inline void
 container_get_child_property (GtkContainer *container,
                               GtkWidget    *child,
@@ -831,7 +893,6 @@ gtk_container_child_get_valist (GtkContainer *container,
 
   g_return_if_fail (GTK_IS_CONTAINER (container));
   g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
 
   g_object_ref (container);
   g_object_ref (child);
@@ -900,7 +961,6 @@ gtk_container_child_get_property (GtkContainer *container,
 
   g_return_if_fail (GTK_IS_CONTAINER (container));
   g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
   g_return_if_fail (property_name != NULL);
   g_return_if_fail (G_IS_VALUE (value));
 
@@ -976,7 +1036,6 @@ gtk_container_child_set_valist (GtkContainer *container,
 
   g_return_if_fail (GTK_IS_CONTAINER (container));
   g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
 
   g_object_ref (container);
   g_object_ref (child);
@@ -1050,7 +1109,6 @@ gtk_container_child_set_property (GtkContainer *container,
 
   g_return_if_fail (GTK_IS_CONTAINER (container));
   g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
   g_return_if_fail (property_name != NULL);
   g_return_if_fail (G_IS_VALUE (value));
 
@@ -1089,7 +1147,7 @@ gtk_container_child_set_property (GtkContainer *container,
  *
  * Adds @widget to @container, setting child properties at the same time.
  * See gtk_container_add() and gtk_container_child_set() for more details.
- **/
+ */
 void
 gtk_container_add_with_properties (GtkContainer *container,
                                    GtkWidget    *widget,
@@ -1128,7 +1186,7 @@ gtk_container_add_with_properties (GtkContainer *container,
  *           with @first_prop_name
  *
  * Sets one or more child properties for @child and @container.
- **/
+ */
 void
 gtk_container_child_set (GtkContainer      *container,
                          GtkWidget         *child,
@@ -1136,10 +1194,6 @@ gtk_container_child_set (GtkContainer      *container,
                          ...)
 {
   va_list var_args;
-
-  g_return_if_fail (GTK_IS_CONTAINER (container));
-  g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
 
   va_start (var_args, first_prop_name);
   gtk_container_child_set_valist (container, child, first_prop_name, var_args);
@@ -1163,10 +1217,6 @@ gtk_container_child_get (GtkContainer      *container,
                          ...)
 {
   va_list var_args;
-
-  g_return_if_fail (GTK_IS_CONTAINER (container));
-  g_return_if_fail (GTK_IS_WIDGET (child));
-  g_return_if_fail (gtk_widget_get_parent (child) == GTK_WIDGET (container));
 
   va_start (var_args, first_prop_name);
   gtk_container_child_get_valist (container, child, first_prop_name, var_args);

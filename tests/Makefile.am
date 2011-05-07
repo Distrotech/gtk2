@@ -59,6 +59,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testicontheme			\
 	testimage			\
 	testinput			\
+	testlockbutton			\
 	testmenubars			\
 	testmountoperation		\
 	testmultidisplay		\
@@ -108,7 +109,8 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testtoplevelembed		\
 	testnoscreen			\
 	testtreepos			\
-	testsensitive
+	testsensitive			\
+	testtextview
 
 if USE_X11
 noinst_PROGRAMS += testerrors
@@ -157,6 +159,7 @@ testgrid_DEPENDENCIES = $(TEST_DEPS)
 testgtk_DEPENDENCIES = $(TEST_DEPS)
 testinput_DEPENDENCIES = $(TEST_DEPS)
 testimage_DEPENDENCIES = $(TEST_DEPS)
+testlockbutton_DEPENDENCIES = $(TEST_DEPS)
 testmenubars_DEPENDENCIES = $(TEST_DEPS)
 testmountoperation_DEPENDENCIES = $(TEST_DEPS)
 testmultidisplay_DEPENDENCIES = $(TEST_DEPS)
@@ -207,6 +210,7 @@ testtoplevelembed_DEPENDENCIES = $(TEST_DEPS)
 testnoscreen_DEPENDENCIES = $(TEST_DEPS)
 testtreepos_DEPENDENCIES = $(TEST_DEPS)
 testsensitive_DEPENDENCIES = $(TEST_DEPS)
+testtextview_DEPENDENCIES = $(TEST_DEPS)
 
 flicker_LDADD = $(LDADDS)
 simple_LDADD = $(LDADDS)
@@ -239,6 +243,7 @@ testiconview_LDADD = $(LDADDS)
 testiconview_keynav_LDADD = $(LDADDS)
 testinput_LDADD = $(LDADDS)
 testimage_LDADD = $(LDADDS)
+testlockbutton_LDADD = $(LDADDS)
 testmenubars_LDADD = $(LDADDS)
 testmountoperation_LDADD = $(LDADDS)
 testmultidisplay_LDADD = $(LDADDS)
@@ -291,6 +296,7 @@ testtoplevelembed_LDADD = $(LDADDS)
 testnoscreen_LDADD = $(LDADDS)
 testtreepos_LDADD = $(LDADDS)
 testsensitive_LDADD = $(LDADDS)
+testtextview_LDADD = $(LDADDS)
 
 
 testentrycompletion_SOURCES = 	\
@@ -435,6 +441,9 @@ testswitch_SOURCES = testswitch.c
 styleexamples_SOURCES = styleexamples.c
 
 testtoplevelembed_SOURCES = testtoplevelembed.c
+
+testtextview_SOURCES = testtextview.c
+
 
 EXTRA_DIST += 			\
 	gradient1.png		\

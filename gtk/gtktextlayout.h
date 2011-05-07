@@ -233,6 +233,7 @@ struct _GtkTextCursorDisplay
   guint is_strong : 1;
   guint is_weak : 1;
 };
+
 struct _GtkTextLineDisplay
 {
   PangoLayout *layout;
@@ -263,7 +264,7 @@ struct _GtkTextLineDisplay
   guint cursor_at_line_end : 1;
   guint size_only : 1;
 
-  gpointer padding1;
+  GdkRGBA *pg_bg_rgba;
 };
 
 #ifdef GTK_COMPILATION

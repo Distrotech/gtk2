@@ -657,6 +657,7 @@ gtk_container_check_resize
 gtk_container_child_get G_GNUC_NULL_TERMINATED
 gtk_container_child_get_property
 gtk_container_child_get_valist
+gtk_container_child_notify
 gtk_container_child_set G_GNUC_NULL_TERMINATED
 gtk_container_child_set_property
 gtk_container_child_set_valist
@@ -1445,6 +1446,10 @@ gtk_list_store_set_valist
 gtk_list_store_set_value
 gtk_list_store_set_valuesv
 gtk_list_store_swap
+gtk_lock_button_get_type G_GNUC_CONST
+gtk_lock_button_new
+gtk_lock_button_get_permission
+gtk_lock_button_set_permission
 gtk_main
 gtk_main_do_event
 gtk_main_iteration
