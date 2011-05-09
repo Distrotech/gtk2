@@ -44,9 +44,13 @@ EXTRA_DIST += \
 	label-small-ellipsized.ui \
 	label-wrap-justify.ref.ui \
 	label-wrap-justify.ui \
+	misc-alignment.ui \
+	misc-alignment.ref.ui \
 	nonresizable-size.ref.ui \
 	nonresizable-size.ui \
 	quit-mnemonic.ref.ui \
 	quit-mnemonic.ui \
 	simple.ref.ui \
-	simple.ui
+	simple.ui \
+	toplevel-vs-popup.ref.ui \
+	toplevel-vs-popup.ui

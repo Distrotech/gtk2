@@ -330,10 +330,10 @@ gtk_arrow_draw (GtkWidget *widget,
   gtk_misc_get_padding (misc, &xpad, &ypad);
   gtk_misc_get_alignment (misc, &xalign, &yalign);
 
-  width = gtk_widget_get_allocated_width (widget);
-  height = gtk_widget_get_allocated_height (widget);
+  width = gtk_widget_get_allocated_width (widget) - 2 * xpad;
+  height = gtk_widget_get_allocated_height (widget) - 2 * ypad;
 
-  extent = MIN (width - 2 * xpad, height - 2 * ypad) * arrow_scaling;
+  extent = MIN (width, height) * arrow_scaling;
   effective_arrow_type = priv->arrow_type;
 
   if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_LTR)
@@ -345,7 +345,7 @@ gtk_arrow_draw (GtkWidget *widget,
         effective_arrow_type = GTK_ARROW_LEFT;
     }
 
-  x = xpad + ((width  - extent) * xalign);
+  x = xpad + ((width - extent) * xalign);
   y = ypad + ((height - extent) * yalign);
 
   switch (effective_arrow_type)
