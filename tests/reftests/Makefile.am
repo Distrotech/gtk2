@@ -25,6 +25,7 @@ clean-local:
 	rm -rf output/ || true
 
 EXTRA_DIST += \
+	align-expand.sh \
 	box-packing.css \
 	box-packing.ref.ui \
 	box-packing.ui \
@@ -54,6 +55,8 @@ EXTRA_DIST += \
 	paned-undersized.ui \
 	quit-mnemonic.ref.ui \
 	quit-mnemonic.ui \
+	rotated-layout.ref.ui \
+	rotated-layout.ui \
 	simple.ref.ui \
 	simple.ui \
 	toplevel-vs-popup.ref.ui \
