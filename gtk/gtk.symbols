@@ -698,6 +698,7 @@ gtk_css_provider_load_from_data
 gtk_css_provider_load_from_file
 gtk_css_provider_load_from_path
 gtk_css_provider_new
+gtk_css_provider_to_string
 #ifdef G_OS_UNIX
 gtk_custom_paper_unix_dialog_get_type G_GNUC_CONST
 #endif
@@ -712,6 +713,7 @@ gtk_gradient_new_linear
 gtk_gradient_new_radial
 gtk_gradient_ref
 gtk_gradient_resolve
+gtk_gradient_to_string
 gtk_gradient_unref
 gtk_dialog_add_action_widget
 gtk_dialog_add_button
@@ -2518,6 +2520,8 @@ gtk_style_has_context
 gtk_style_lookup_color
 gtk_style_lookup_icon_set
 gtk_style_new
+gtk_style_param_get_inherit
+gtk_style_param_set_inherit
 gtk_style_properties_clear
 gtk_style_properties_get
 gtk_style_properties_get_property
@@ -2548,6 +2552,7 @@ gtk_symbolic_color_new_name
 gtk_symbolic_color_new_shade
 gtk_symbolic_color_ref
 gtk_symbolic_color_resolve
+gtk_symbolic_color_to_string
 gtk_symbolic_color_unref
 gtk_table_attach
 gtk_table_attach_defaults

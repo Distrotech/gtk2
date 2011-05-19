@@ -35,7 +35,12 @@ G_BEGIN_DECLS
 
 typedef enum
 {
-  GTK_CSS_PROVIDER_ERROR_FAILED
+  GTK_CSS_PROVIDER_ERROR_FAILED,
+  GTK_CSS_PROVIDER_ERROR_SYNTAX,
+  GTK_CSS_PROVIDER_ERROR_IMPORT,
+  GTK_CSS_PROVIDER_ERROR_NAME,
+  GTK_CSS_PROVIDER_ERROR_DEPRECATED,
+  GTK_CSS_PROVIDER_ERROR_UNKNOWN_VALUE,
 } GtkCssProviderError;
 
 GQuark gtk_css_provider_error_quark (void);
@@ -54,8 +59,13 @@ struct _GtkCssProviderClass
 {
   GObjectClass parent_class;
 
+  void (* parsing_error)                        (GtkCssProvider  *provider,
+                                                 const gchar     *path,
+                                                 guint            line,
+                                                 guint            position,
+                                                 const GError *   error);
+
   /* Padding for future expansion */
-  void (*_gtk_reserved1) (void);
   void (*_gtk_reserved2) (void);
   void (*_gtk_reserved3) (void);
   void (*_gtk_reserved4) (void);
@@ -64,6 +74,8 @@ struct _GtkCssProviderClass
 GType gtk_css_provider_get_type (void) G_GNUC_CONST;
 
 GtkCssProvider * gtk_css_provider_new (void);
+
+char *           gtk_css_provider_to_string      (GtkCssProvider  *provider);
 
 gboolean         gtk_css_provider_load_from_data (GtkCssProvider  *css_provider,
                                                   const gchar     *data,

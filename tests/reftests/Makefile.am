@@ -29,9 +29,40 @@ EXTRA_DIST += \
 	box-packing.css \
 	box-packing.ref.ui \
 	box-packing.ui \
+	css-match-class.css \
+	css-match-class.ref.ui \
+	css-match-class.ui \
+	css-match-descendant-later.css \
+	css-match-descendant-later.ref.ui \
+	css-match-descendant-later.ui \
+	css-match-exact.css \
+	css-match-exact.ref.ui \
+	css-match-exact.ui \
+	css-match-inherit.css \
+	css-match-inherit.ref.ui \
+	css-match-inherit.ui \
+	css-match-name.css \
+	css-match-name.ref.ui \
+	css-match-name.ui \
+	css-match-region-matches-star.css \
+	css-match-region-matches-star.ref.ui \
+	css-match-region-matches-star.ui \
+	css-match-regions.css \
+	css-match-regions.ref.ui \
+	css-match-regions.ui \
+	css-match-style-property-order.css \
+	css-match-style-property-order.ref.ui \
+	css-match-style-property-order.ui \
+	css-match-subtype.css \
+	css-match-subtype.ref.ui \
+	css-match-subtype.ui \
+	css-match-type.css \
+	css-match-type.ref.ui \
+	css-match-type.ui \
 	entry-progress-coloring.css \
 	entry-progress-coloring.ref.ui \
 	entry-progress-coloring.ui \
+	green-20x20.png \
 	grid-expand.css \
 	grid-expand.ref.ui \
 	grid-expand.ui \

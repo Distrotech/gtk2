@@ -474,8 +474,9 @@ _shade_color (GdkRGBA *color,
  * if @color can't be resolved, it is due to it being defined on
  * top of a named color that doesn't exist in @props.
  *
- * @props must be non-%NULL if @color was created using
- * gtk_symbolic_color_named_new(), but can be omitted in other cases.
+ * When @props is %NULL, resolving of named colors will fail, so if
+ * your @color is or references such a color, this function will
+ * return %FALSE.
  *
  * Returns: %TRUE if the color has been resolved
  *
@@ -488,6 +489,7 @@ gtk_symbolic_color_resolve (GtkSymbolicColor   *color,
 {
   g_return_val_if_fail (color != NULL, FALSE);
   g_return_val_if_fail (resolved_color != NULL, FALSE);
+  g_return_val_if_fail (props == NULL || GTK_IS_STYLE_PROPERTIES (props), FALSE);
 
   switch (color->type)
     {
@@ -498,7 +500,8 @@ gtk_symbolic_color_resolve (GtkSymbolicColor   *color,
       {
         GtkSymbolicColor *named_color;
 
-        g_return_val_if_fail (GTK_IS_STYLE_PROPERTIES (props), FALSE);
+        if (props == NULL)
+          return FALSE;
 
         named_color = gtk_style_properties_lookup_color (props, color->name);
 
@@ -559,4 +562,71 @@ gtk_symbolic_color_resolve (GtkSymbolicColor   *color,
     }
 
   return FALSE;
+}
+
+/**
+ * gtk_symbolic_color_to_string:
+ * @color: color to convert to a string
+ *
+ * Converts the given @color to a string representation. This is useful
+ * both for debugging and for serialization of strings. The format of
+ * the string may change between different versions of GTK, but it is
+ * guaranteed that the GTK css parser is able to read the string and
+ * create the same symbolic color from it.
+ *
+ * Returns: a new string representing @color
+ **/
+char *
+gtk_symbolic_color_to_string (GtkSymbolicColor *color)
+{
+  char *s;
+
+  g_return_val_if_fail (color != NULL, NULL);
+
+  switch (color->type)
+    {
+    case COLOR_TYPE_LITERAL:
+      s = gdk_rgba_to_string (&color->color);
+      break;
+    case COLOR_TYPE_NAME:
+      s = g_strconcat ("@", color->name, NULL);
+      break;
+    case COLOR_TYPE_SHADE:
+      {
+        char *color_string = gtk_symbolic_color_to_string (color->shade.color);
+        char factor[G_ASCII_DTOSTR_BUF_SIZE];
+
+        g_ascii_dtostr (factor, sizeof (factor), color->shade.factor);
+        s = g_strdup_printf ("shade (%s, %s)", color_string, factor);
+        g_free (color_string);
+      }
+      break;
+    case COLOR_TYPE_ALPHA:
+      {
+        char *color_string = gtk_symbolic_color_to_string (color->shade.color);
+        char factor[G_ASCII_DTOSTR_BUF_SIZE];
+
+        g_ascii_dtostr (factor, sizeof (factor), color->alpha.factor);
+        s = g_strdup_printf ("alpha (%s, %s)", color_string, factor);
+        g_free (color_string);
+      }
+      break;
+    case COLOR_TYPE_MIX:
+      {
+        char *color_string1 = gtk_symbolic_color_to_string (color->mix.color1);
+        char *color_string2 = gtk_symbolic_color_to_string (color->mix.color2);
+        char factor[G_ASCII_DTOSTR_BUF_SIZE];
+
+        g_ascii_dtostr (factor, sizeof (factor), color->mix.factor);
+        s = g_strdup_printf ("mix (%s, %s, %s)", color_string1, color_string2, factor);
+        g_free (color_string1);
+        g_free (color_string2);
+      }
+      break;
+    default:
+      g_assert_not_reached ();
+    }
+
+  return s;
+
 }

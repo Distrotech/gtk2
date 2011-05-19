@@ -91,7 +91,8 @@ static GdkEventMask gdk_x11_device_manager_xi2_get_handled_events   (GdkEventTra
 static void         gdk_x11_device_manager_xi2_select_window_events (GdkEventTranslator *translator,
                                                                      Window              window,
                                                                      GdkEventMask        event_mask);
-
+static GdkWindow *  gdk_x11_device_manager_xi2_get_window           (GdkEventTranslator *translator,
+                                                                     XEvent             *xevent);
 
 enum {
   PROP_0,
@@ -561,6 +562,7 @@ gdk_x11_device_manager_xi2_event_translator_init (GdkEventTranslatorIface *iface
   iface->translate_event = gdk_x11_device_manager_xi2_translate_event;
   iface->get_handled_events = gdk_x11_device_manager_xi2_get_handled_events;
   iface->select_window_events = gdk_x11_device_manager_xi2_select_window_events;
+  iface->get_window = gdk_x11_device_manager_xi2_get_window;
 }
 
 static void
@@ -1007,43 +1009,27 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
   gboolean return_val = TRUE;
   GdkWindow *window;
   XIEvent *ev;
-  Display *dpy;
 
-  dpy = GDK_DISPLAY_XDISPLAY (display);
   device_manager = (GdkX11DeviceManagerXI2 *) translator;
   cookie = &xevent->xcookie;
 
   if (xevent->type != GenericEvent)
     return gdk_x11_device_manager_xi2_translate_core_event (translator, display, event, xevent);
-
-  if (!XGetEventData (dpy, cookie))
+  else if (cookie->extension != device_manager->opcode)
     return FALSE;
-
-  if (cookie->type != GenericEvent ||
-      cookie->extension != device_manager->opcode)
-    {
-      XFreeEventData (dpy, cookie);
-      return FALSE;
-    }
 
   ev = (XIEvent *) cookie->data;
 
   window = get_event_window (translator, ev);
 
   if (window && GDK_WINDOW_DESTROYED (window))
-    {
-      XFreeEventData (dpy, cookie);
-      return FALSE;
-    }
+    return FALSE;
 
   if (ev->evtype == XI_Motion ||
       ev->evtype == XI_ButtonRelease)
     {
       if (_gdk_x11_moveresize_handle_event (xevent))
-        {
-          XFreeEventData (dpy, cookie);
-          return FALSE;
-        }
+        return FALSE;
     }
 
   switch (ev->evtype)
@@ -1325,8 +1311,6 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
       event->any.type = GDK_NOTHING;
     }
 
-  XFreeEventData (dpy, cookie);
-
   return return_val;
 }
 
@@ -1364,6 +1348,24 @@ gdk_x11_device_manager_xi2_select_window_events (GdkEventTranslator *translator,
 
   _gdk_x11_device_manager_xi2_select_events (device_manager, window, &event_mask);
   g_free (event_mask.mask);
+}
+
+static GdkWindow *
+gdk_x11_device_manager_xi2_get_window (GdkEventTranslator *translator,
+                                       XEvent             *xevent)
+{
+  GdkX11DeviceManagerXI2 *device_manager;
+  XIEvent *ev;
+
+  device_manager = (GdkX11DeviceManagerXI2 *) translator;
+
+  if (xevent->type != GenericEvent ||
+      xevent->xcookie.extension != device_manager->opcode)
+    return NULL;
+
+  ev = (XIEvent *) xevent->xcookie.data;
+
+  return get_event_window (translator, ev);
 }
 
 #else /* XINPUT_2 */

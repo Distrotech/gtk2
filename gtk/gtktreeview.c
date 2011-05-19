@@ -1178,7 +1178,7 @@ gtk_tree_view_class_init (GtkTreeViewClass *class)
 						       GTK_PARAM_READWRITE));
 
   /* Style properties */
-#define _TREE_VIEW_EXPANDER_SIZE 12
+#define _TREE_VIEW_EXPANDER_SIZE 14
 #define _TREE_VIEW_VERTICAL_SEPARATOR 2
 #define _TREE_VIEW_HORIZONTAL_SEPARATOR 2
 
@@ -4996,6 +4996,13 @@ gtk_tree_view_bin_draw (GtkWidget      *widget,
                                  background_area.y,
                                  background_area.width,
                                  background_area.height);
+
+          /* Draw frame */
+          gtk_render_frame (context, cr,
+                            background_area.x,
+                            background_area.y,
+                            background_area.width,
+                            background_area.height);
 
 	  if (gtk_tree_view_is_expander_column (tree_view, column))
 	    {
@@ -9996,7 +10003,7 @@ gtk_tree_view_draw_arrow (GtkTreeView *tree_view,
   area.x = x_offset;
   area.y = gtk_tree_view_get_cell_area_y_offset (tree_view, tree, node,
                                                  vertical_separator);
-  area.width = expander_size + 2;
+  area.width = expander_size;
   area.height = gtk_tree_view_get_cell_area_height (tree_view, node,
                                                     vertical_separator);
 
