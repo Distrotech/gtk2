@@ -428,6 +428,7 @@ gtk_private_h_sources =		\
 	gtksearchenginesimple.h	\
 	gtkselectionprivate.h	\
 	gtksettingsprivate.h	\
+	gtkshadowprivate.h      \
 	gtksizegroup-private.h	\
 	gtksocketprivate.h	\
 	gtkstylecontextprivate.h \
@@ -625,6 +626,7 @@ gtk_base_c_sources = 		\
 	gtksettings.c		\
 	gtksizegroup.c		\
 	gtksizerequest.c	\
+	gtkshadow.c             \
 	gtkshow.c		\
 	gtkspinbutton.c		\
 	gtkspinner.c		\
