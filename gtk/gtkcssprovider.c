@@ -29,11 +29,11 @@
 
 #include "gtkcssparserprivate.h"
 #include "gtkcssselectorprivate.h"
-#include "gtkcssstringfuncsprivate.h"
 #include "gtksymboliccolor.h"
 #include "gtkstyleprovider.h"
 #include "gtkstylecontextprivate.h"
 #include "gtkstylepropertiesprivate.h"
+#include "gtkstylepropertyprivate.h"
 #include "gtkbindings.h"
 #include "gtkmarshalers.h"
 #include "gtkprivate.h"
@@ -653,6 +653,30 @@
  *         <entry>font: Sans 15;</entry>
  *       </row>
  *       <row>
+ *         <entry>margin-top</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>margin-top: 0;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>margin-left</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>margin-left: 1;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>margin-bottom</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>margin-bottom: 2;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>margin-right</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>margin-right: 4;</entry>
+ *       </row>
+ *       <row>
  *         <entry>margin</entry>
  *         <entry morerows="1"><literallayout>@width
  * @vertical_width @horizontal_width
@@ -665,6 +689,30 @@
  * margin: 5 10 3;
  * margin: 5 10 3 5;</literallayout>
  *         </entry>
+ *       </row>
+ *       <row>
+ *         <entry>padding-top</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>padding-top: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>padding-left</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>padding-left: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>padding-bottom</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>padding-bottom: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>padding-right</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>padding-right: 5;</entry>
  *       </row>
  *       <row>
  *         <entry>padding</entry>
@@ -690,10 +738,37 @@
  *         </entry>
  *       </row>
  *       <row>
- *         <entry>border-width</entry>
+ *         <entry>border-top-width</entry>
  *         <entry>integer</entry>
  *         <entry>#gint</entry>
- *         <entry>border-width: 5;</entry>
+ *         <entry>border-top-width: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>border-left-width</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>border-left-width: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>border-bottom-width</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>border-bottom-width: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>border-right-width</entry>
+ *         <entry>integer</entry>
+ *         <entry>#gint</entry>
+ *         <entry>border-right-width: 5;</entry>
+ *       </row>
+ *       <row>
+ *         <entry>border-width</entry>
+ *         <entry morerows="1">#GtkBorder</entry>
+ *         <entry morerows="1"><literallayout>border-width: 1;
+ * border-width: 1 2;
+ * border-width: 1 2 3;
+ * border-width: 1 2 3 5;</literallayout>
+ *         </entry>
  *       </row>
  *       <row>
  *         <entry>border-radius</entry>
@@ -990,9 +1065,9 @@ gtk_css_ruleset_add_style (GtkCssRuleset *ruleset,
 }
 
 static void
-gtk_css_ruleset_add (GtkCssRuleset *ruleset,
-                     GParamSpec    *pspec,
-                     GValue        *value)
+gtk_css_ruleset_add (GtkCssRuleset          *ruleset,
+                     const GtkStyleProperty *prop,
+                     GValue                 *value)
 {
   if (ruleset->style == NULL)
     ruleset->style = g_hash_table_new_full (g_direct_hash,
@@ -1000,8 +1075,28 @@ gtk_css_ruleset_add (GtkCssRuleset *ruleset,
                                             NULL,
                                             (GDestroyNotify) property_value_free);
 
-  ruleset->has_inherit |= gtk_style_param_get_inherit (pspec);
-  g_hash_table_insert (ruleset->style, pspec, value);
+  if (_gtk_style_property_is_shorthand (prop))
+    {
+      GParameter *parameters;
+      guint i, n_parameters;
+
+      parameters = _gtk_style_property_unpack (prop, value, &n_parameters);
+
+      for (i = 0; i < n_parameters; i++)
+        {
+          const GtkStyleProperty *child;
+          GValue *value;
+          
+          child = _gtk_style_property_lookup (parameters[i].name);
+          value = g_memdup (&parameters[i].value, sizeof (GValue));
+          gtk_css_ruleset_add (ruleset, child, value);
+        }
+      g_free (parameters);
+      return;
+    }
+
+  ruleset->has_inherit |= gtk_style_param_get_inherit (prop->pspec);
+  g_hash_table_insert (ruleset->style, (gpointer) prop, value);
 }
 
 static gboolean
@@ -1199,15 +1294,15 @@ gtk_css_provider_get_style (GtkStyleProvider *provider,
 
           while (g_hash_table_iter_next (&iter, &key, &value))
             {
-              GParamSpec *pspec = key;
+              GtkStyleProperty *prop = key;
 
-              if (l != length && !gtk_style_param_get_inherit (pspec))
+              if (l != length && !gtk_style_param_get_inherit (prop->pspec))
                 continue;
 
-              _gtk_style_properties_set_property_by_pspec (props,
-                                                           pspec,
-                                                           _gtk_css_selector_get_state_flags (ruleset->selector),
-                                                           value);
+              _gtk_style_properties_set_property_by_property (props,
+                                                              prop,
+                                                              _gtk_css_selector_get_state_flags (ruleset->selector),
+                                                              value);
             }
         }
     }
@@ -1948,16 +2043,15 @@ static void
 parse_declaration (GtkCssScanner *scanner,
                    GtkCssRuleset *ruleset)
 {
-  GtkStylePropertyParser parse_func = NULL;
-  GParamSpec *pspec = NULL;
+  const GtkStyleProperty *property;
   char *name;
 
   name = _gtk_css_parser_try_ident (scanner->parser, TRUE);
   if (name == NULL)
     goto check_for_semicolon;
 
-  if (!gtk_style_properties_lookup_property (name, &parse_func, &pspec) &&
-      name[0] != '-')
+  property = _gtk_style_property_lookup (name);
+  if (property == NULL && name[0] != '-')
     {
       gtk_css_provider_error (scanner->provider,
                               scanner,
@@ -1978,24 +2072,24 @@ parse_declaration (GtkCssScanner *scanner,
       return;
     }
 
-  if (pspec)
+  if (property)
     {
       GValue *val;
 
       g_free (name);
 
       val = g_slice_new0 (GValue);
-      g_value_init (val, pspec->value_type);
+      g_value_init (val, property->pspec->value_type);
 
       if (_gtk_css_parser_try (scanner->parser, "none", TRUE))
         {
           /* Insert the default value, so it has an opportunity
            * to override other style providers when merged
            */
-          g_param_value_set_default (pspec, val);
-          gtk_css_ruleset_add (ruleset, pspec, val);
+          g_param_value_set_default (property->pspec, val);
+          gtk_css_ruleset_add (ruleset, property, val);
         }
-      else if (parse_func)
+      else if (property->parse_func)
         {
           GError *error = NULL;
           char *value_str;
@@ -2007,8 +2101,8 @@ parse_declaration (GtkCssScanner *scanner,
               return;
             }
           
-          if ((*parse_func) (value_str, val, &error))
-            gtk_css_ruleset_add (ruleset, pspec, val);
+          if ((*property->parse_func) (value_str, val, &error))
+            gtk_css_ruleset_add (ruleset, property, val);
           else
             gtk_css_provider_take_error (scanner->provider, scanner, error);
 
@@ -2024,7 +2118,7 @@ parse_declaration (GtkCssScanner *scanner,
                   _gtk_css_parser_begins_with (scanner->parser, '}') ||
                   _gtk_css_parser_is_eof (scanner->parser))
                 {
-                  gtk_css_ruleset_add (ruleset, pspec, val);
+                  gtk_css_ruleset_add (ruleset, property, val);
                 }
               else
                 {
@@ -2861,9 +2955,10 @@ gtk_css_provider_get_named (const gchar *name,
 }
 
 static int
-compare_pspecs (gconstpointer a, gconstpointer b)
+compare_properties (gconstpointer a, gconstpointer b)
 {
-  return strcmp (((const GParamSpec *) a)->name, ((const GParamSpec *) b)->name);
+  return strcmp (((const GtkStyleProperty *) a)->pspec->name,
+                 ((const GtkStyleProperty *) b)->pspec->name);
 }
 
 static void
@@ -2881,15 +2976,15 @@ gtk_css_ruleset_print (const GtkCssRuleset *ruleset,
     {
       keys = g_hash_table_get_keys (ruleset->style);
       /* so the output is identical for identical selector styles */
-      keys = g_list_sort (keys, compare_pspecs);
+      keys = g_list_sort (keys, compare_properties);
 
       for (walk = keys; walk; walk = walk->next)
         {
-          GParamSpec *pspec = walk->data;
-          const GValue *value = g_hash_table_lookup (ruleset->style, pspec);
+          GtkStyleProperty *prop = walk->data;
+          const GValue *value = g_hash_table_lookup (ruleset->style, prop);
 
           g_string_append (str, "  ");
-          g_string_append (str, pspec->name);
+          g_string_append (str, prop->pspec->name);
           g_string_append (str, ": ");
           s = _gtk_css_value_to_string (value);
           g_string_append (str, s);

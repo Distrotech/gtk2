@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "gtkcssstringfuncsprivate.h"
+#include "gtkstylepropertyprivate.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -38,6 +38,7 @@
 #include "gtkgradient.h"
 #include "gtkshadowprivate.h"
 #include "gtkthemingengine.h"
+#include "gtktypebuiltins.h"
 
 typedef gboolean (* ParseFunc)        (GtkCssParser  *parser,
                                        GFile         *base,
@@ -46,6 +47,7 @@ typedef char *   (* ToStringFunc)     (const GValue  *value);
 
 static GHashTable *parse_funcs = NULL;
 static GHashTable *to_string_funcs = NULL;
+static GHashTable *properties = NULL;
 
 static void
 register_conversion_function (GType          type,
@@ -724,6 +726,62 @@ gradient_value_to_string (const GValue *value)
   return gtk_gradient_to_string (gradient);
 }
 
+static GFile *
+gtk_css_parse_url (GtkCssParser *parser,
+                   GFile        *base)
+{
+  gchar *path;
+  GFile *file;
+
+  if (_gtk_css_parser_try (parser, "url", FALSE))
+    {
+      if (!_gtk_css_parser_try (parser, "(", TRUE))
+        {
+          _gtk_css_parser_skip_whitespace (parser);
+          if (_gtk_css_parser_try (parser, "(", TRUE))
+            {
+              GError *error;
+              
+              error = g_error_new_literal (GTK_CSS_PROVIDER_ERROR,
+                                           GTK_CSS_PROVIDER_ERROR_DEPRECATED,
+                                           "Whitespace between 'url' and '(' is not allowed");
+                             
+              _gtk_css_parser_take_error (parser, error);
+            }
+          else
+            {
+              _gtk_css_parser_error (parser, "Expected '(' after 'url'");
+              return NULL;
+            }
+        }
+
+      path = _gtk_css_parser_read_string (parser);
+      if (path == NULL)
+        return NULL;
+
+      if (!_gtk_css_parser_try (parser, ")", TRUE))
+        {
+          _gtk_css_parser_error (parser, "No closing ')' found for 'url'");
+          g_free (path);
+          return NULL;
+        }
+    }
+  else
+    {
+      path = _gtk_css_parser_try_name (parser, TRUE);
+      if (path == NULL)
+        {
+          _gtk_css_parser_error (parser, "Not a valid url");
+          return NULL;
+        }
+    }
+
+  file = g_file_resolve_relative_path (base, path);
+  g_free (path);
+
+  return file;
+}
+
 static gboolean 
 pattern_value_parse (GtkCssParser *parser,
                      GFile        *base,
@@ -746,7 +804,7 @@ pattern_value_parse (GtkCssParser *parser,
       cairo_t *cr;
       cairo_matrix_t matrix;
 
-      file = _gtk_css_parse_url (parser, base);
+      file = gtk_css_parse_url (parser, base);
       if (file == NULL)
         return FALSE;
 
@@ -868,7 +926,7 @@ slice_value_parse (GtkCssParser *parser,
   char *path;
 
   /* Parse image url */
-  file = _gtk_css_parse_url (parser, base);
+  file = gtk_css_parse_url (parser, base);
   if (!file)
       return FALSE;
 
@@ -1102,6 +1160,121 @@ bindings_value_to_string (const GValue *value)
   return g_string_free (str, FALSE);
 }
 
+/*** PACKING ***/
+
+static GParameter *
+unpack_border (const GValue *value,
+               guint        *n_params,
+               const char   *top,
+               const char   *left,
+               const char   *bottom,
+               const char   *right)
+{
+  GParameter *parameter = g_new0 (GParameter, 4);
+  GtkBorder *border = g_value_get_boxed (value);
+
+  parameter[0].name = top;
+  g_value_init (&parameter[0].value, G_TYPE_INT);
+  g_value_set_int (&parameter[0].value, border->top);
+  parameter[1].name = left;
+  g_value_init (&parameter[1].value, G_TYPE_INT);
+  g_value_set_int (&parameter[1].value, border->left);
+  parameter[2].name = bottom;
+  g_value_init (&parameter[2].value, G_TYPE_INT);
+  g_value_set_int (&parameter[2].value, border->bottom);
+  parameter[3].name = right;
+  g_value_init (&parameter[3].value, G_TYPE_INT);
+  g_value_set_int (&parameter[3].value, border->right);
+
+  *n_params = 4;
+  return parameter;
+}
+
+static void
+pack_border (GValue             *value,
+             GtkStyleProperties *props,
+             GtkStateFlags       state,
+             const char         *top,
+             const char         *left,
+             const char         *bottom,
+             const char         *right)
+{
+  GtkBorder border;
+  int t, l, b, r;
+
+  gtk_style_properties_get (props,
+                            state,
+                            top, &t,
+                            left, &l,
+                            bottom, &b,
+                            right, &r,
+                            NULL);
+
+  border.top = t;
+  border.left = l;
+  border.bottom = b;
+  border.right = r;
+
+  g_value_set_boxed (value, &border);
+}
+
+static GParameter *
+unpack_border_width (const GValue *value,
+                     guint        *n_params)
+{
+  return unpack_border (value, n_params,
+                        "border-top-width", "border-left-width",
+                        "border-bottom-width", "border-right-width");
+}
+
+static void
+pack_border_width (GValue             *value,
+                   GtkStyleProperties *props,
+                   GtkStateFlags       state)
+{
+  pack_border (value, props, state,
+               "border-top-width", "border-left-width",
+               "border-bottom-width", "border-right-width");
+}
+
+static GParameter *
+unpack_padding (const GValue *value,
+                guint        *n_params)
+{
+  return unpack_border (value, n_params,
+                        "padding-top", "padding-left",
+                        "padding-bottom", "padding-right");
+}
+
+static void
+pack_padding (GValue             *value,
+              GtkStyleProperties *props,
+              GtkStateFlags       state)
+{
+  pack_border (value, props, state,
+               "padding-top", "padding-left",
+               "padding-bottom", "padding-right");
+}
+
+static GParameter *
+unpack_margin (const GValue *value,
+               guint        *n_params)
+{
+  return unpack_border (value, n_params,
+                        "margin-top", "margin-left",
+                        "margin-bottom", "margin-right");
+}
+
+static void
+pack_margin (GValue             *value,
+             GtkStyleProperties *props,
+             GtkStateFlags       state)
+{
+  pack_border (value, props, state,
+               "margin-top", "margin-left",
+               "margin-bottom", "margin-right");
+}
+
 /*** API ***/
 
 static void
@@ -1223,58 +1396,242 @@ _gtk_css_value_to_string (const GValue *value)
   return g_strdup_value_contents (value);
 }
 
-GFile *
-_gtk_css_parse_url (GtkCssParser *parser,
-                    GFile        *base)
+gboolean
+_gtk_style_property_is_shorthand  (const GtkStyleProperty *property)
 {
-  gchar *path;
-  GFile *file;
+  g_return_val_if_fail (property != NULL, FALSE);
 
-  if (_gtk_css_parser_try (parser, "url", FALSE))
+  return property->pack_func != NULL;
+}
+
+GParameter *
+_gtk_style_property_unpack (const GtkStyleProperty *property,
+                            const GValue           *value,
+                            guint                  *n_params)
+{
+  g_return_val_if_fail (property != NULL, NULL);
+  g_return_val_if_fail (property->unpack_func != NULL, NULL);
+  g_return_val_if_fail (value != NULL, NULL);
+  g_return_val_if_fail (n_params != NULL, NULL);
+
+  return property->unpack_func (value, n_params);
+}
+
+void
+_gtk_style_property_pack (const GtkStyleProperty *property,
+                          GtkStyleProperties     *props,
+                          GtkStateFlags           state,
+                          GValue                 *value)
+{
+  g_return_if_fail (property != NULL);
+  g_return_if_fail (property->pack_func != NULL);
+  g_return_if_fail (GTK_IS_STYLE_PROPERTIES (props));
+  g_return_if_fail (G_IS_VALUE (value));
+
+  property->pack_func (value, props, state);
+}
+
+static void
+gtk_style_property_init (void)
+{
+  GParamSpec *pspec;
+
+  if (G_LIKELY (properties))
+    return;
+
+  /* stuff is never freed, so no need for free functions */
+  properties = g_hash_table_new (g_str_hash, g_str_equal);
+
+  /* note that gtk_style_properties_register_property() calls this function,
+   * so make sure we're sanely inited to avoid infloops */
+
+  pspec = g_param_spec_boxed ("color",
+                              "Foreground color",
+                              "Foreground color",
+                              GDK_TYPE_RGBA, 0);
+  gtk_style_param_set_inherit (pspec, TRUE);
+  gtk_style_properties_register_property (NULL, pspec);
+
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("background-color",
+                                                              "Background color",
+                                                              "Background color",
+                                                              GDK_TYPE_RGBA, 0));
+
+  pspec = g_param_spec_boxed ("font",
+                              "Font Description",
+                              "Font Description",
+                              PANGO_TYPE_FONT_DESCRIPTION, 0);
+  gtk_style_param_set_inherit (pspec, TRUE);
+  gtk_style_properties_register_property (NULL, pspec);
+
+  pspec = g_param_spec_boxed ("text-shadow",
+                              "Text shadow",
+                              "Text shadow",
+                              GTK_TYPE_SHADOW, 0);
+  gtk_style_param_set_inherit (pspec, TRUE);
+  gtk_style_properties_register_property (NULL, pspec);
+
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("margin-top",
+                                                            "margin top",
+                                                            "Margin at top",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("margin-left",
+                                                            "margin left",
+                                                            "Margin at left",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("margin-bottom",
+                                                            "margin bottom",
+                                                            "Margin at bottom",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("margin-right",
+                                                            "margin right",
+                                                            "Margin at right",
+                                                            0, G_MAXINT, 0, 0));
+  _gtk_style_property_register           (g_param_spec_boxed ("margin",
+                                                              "Margin",
+                                                              "Margin",
+                                                              GTK_TYPE_BORDER, 0),
+                                          NULL,
+                                          unpack_margin,
+                                          pack_margin);
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("padding-top",
+                                                            "padding top",
+                                                            "Padding at top",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("padding-left",
+                                                            "padding left",
+                                                            "Padding at left",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("padding-bottom",
+                                                            "padding bottom",
+                                                            "Padding at bottom",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("padding-right",
+                                                            "padding right",
+                                                            "Padding at right",
+                                                            0, G_MAXINT, 0, 0));
+  _gtk_style_property_register           (g_param_spec_boxed ("padding",
+                                                              "Padding",
+                                                              "Padding",
+                                                              GTK_TYPE_BORDER, 0),
+                                          NULL,
+                                          unpack_padding,
+                                          pack_padding);
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("border-top-width",
+                                                            "border top width",
+                                                            "Border width at top",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("border-left-width",
+                                                            "border left width",
+                                                            "Border width at left",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("border-bottom-width",
+                                                            "border bottom width",
+                                                            "Border width at bottom",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("border-right-width",
+                                                            "border right width",
+                                                            "Border width at right",
+                                                            0, G_MAXINT, 0, 0));
+  _gtk_style_property_register           (g_param_spec_boxed ("border-width",
+                                                              "Border width",
+                                                              "Border width, in pixels",
+                                                              GTK_TYPE_BORDER, 0),
+                                          NULL,
+                                          unpack_border_width,
+                                          pack_border_width);
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_int ("border-radius",
+                                                            "Border radius",
+                                                            "Border radius, in pixels",
+                                                            0, G_MAXINT, 0, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_enum ("border-style",
+                                                             "Border style",
+                                                             "Border style",
+                                                             GTK_TYPE_BORDER_STYLE,
+                                                             GTK_BORDER_STYLE_NONE, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("border-color",
+                                                              "Border color",
+                                                              "Border color",
+                                                              GDK_TYPE_RGBA, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("background-image",
+                                                              "Background Image",
+                                                              "Background Image",
+                                                              CAIRO_GOBJECT_TYPE_PATTERN, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("border-image",
+                                                              "Border Image",
+                                                              "Border Image",
+                                                              GTK_TYPE_9SLICE, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_object ("engine",
+                                                               "Theming Engine",
+                                                               "Theming Engine",
+                                                               GTK_TYPE_THEMING_ENGINE, 0));
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("transition",
+                                                              "Transition animation description",
+                                                              "Transition animation description",
+                                                              GTK_TYPE_ANIMATION_DESCRIPTION, 0));
+
+  /* Private property holding the binding sets */
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("gtk-key-bindings",
+                                                              "Key bindings",
+                                                              "Key bindings",
+                                                              G_TYPE_PTR_ARRAY, 0));
+}
+
+const GtkStyleProperty *
+_gtk_style_property_lookup (const char *name)
+{
+  gtk_style_property_init ();
+
+  return g_hash_table_lookup (properties, name);
+}
+
+void
+_gtk_style_property_register (GParamSpec             *pspec,
+                              GtkStylePropertyParser  parse_func,
+                              GtkStyleUnpackFunc      unpack_func,
+                              GtkStylePackFunc        pack_func)
+{
+  const GtkStyleProperty *existing;
+  GtkStyleProperty *node;
+
+  g_return_if_fail ((pack_func == NULL) == (unpack_func == NULL));
+
+  gtk_style_property_init ();
+
+  existing = _gtk_style_property_lookup (pspec->name);
+  if (existing != NULL)
     {
-      if (!_gtk_css_parser_try (parser, "(", TRUE))
-        {
-          _gtk_css_parser_skip_whitespace (parser);
-          if (_gtk_css_parser_try (parser, "(", TRUE))
-            {
-              GError *error;
-              
-              error = g_error_new_literal (GTK_CSS_PROVIDER_ERROR,
-                                           GTK_CSS_PROVIDER_ERROR_DEPRECATED,
-                                           "Whitespace between 'url' and '(' is not allowed");
-                             
-              _gtk_css_parser_take_error (parser, error);
-            }
-          else
-            {
-              _gtk_css_parser_error (parser, "Expected '(' after 'url'");
-              return NULL;
-            }
-        }
-
-      path = _gtk_css_parser_read_string (parser);
-      if (path == NULL)
-        return NULL;
-
-      if (!_gtk_css_parser_try (parser, ")", TRUE))
-        {
-          _gtk_css_parser_error (parser, "No closing ')' found for 'url'");
-          g_free (path);
-          return NULL;
-        }
-    }
-  else
-    {
-      path = _gtk_css_parser_try_name (parser, TRUE);
-      if (path == NULL)
-        {
-          _gtk_css_parser_error (parser, "Not a valid url");
-          return NULL;
-        }
+      g_warning ("Property \"%s\" was already registered with type %s",
+                 pspec->name, g_type_name (existing->pspec->value_type));
+      return;
     }
 
-  file = g_file_resolve_relative_path (base, path);
-  g_free (path);
+  node = g_slice_new0 (GtkStyleProperty);
+  node->pspec = pspec;
+  node->parse_func = parse_func;
+  node->pack_func = pack_func;
+  node->unpack_func = unpack_func;
 
-  return file;
+  g_hash_table_insert (properties, pspec->name, node);
 }

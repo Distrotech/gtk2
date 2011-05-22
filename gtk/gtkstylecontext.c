@@ -506,7 +506,6 @@ static guint signals[LAST_SIGNAL] = { 0 };
 
 static GQuark provider_list_quark = 0;
 static GdkRGBA fallback_color = { 1.0, 0.75, 0.75, 1.0 };
-static GtkBorder fallback_border = { 0 };
 
 static void gtk_style_context_finalize (GObject *object);
 
@@ -3363,7 +3362,9 @@ gtk_style_context_get_color (GtkStyleContext *context,
 
   data = style_data_lookup (context);
   value = _gtk_style_properties_peek_property (data->store,
-                                               "color", state);
+                                               "color",
+                                               state,
+                                               NULL);
 
   if (value)
     {
@@ -3402,7 +3403,9 @@ gtk_style_context_get_background_color (GtkStyleContext *context,
 
   data = style_data_lookup (context);
   value = _gtk_style_properties_peek_property (data->store,
-                                               "background-color", state);
+                                               "background-color",
+                                               state,
+                                               NULL);
 
   if (value)
     {
@@ -3441,7 +3444,9 @@ gtk_style_context_get_border_color (GtkStyleContext *context,
 
   data = style_data_lookup (context);
   value = _gtk_style_properties_peek_property (data->store,
-                                               "border-color", state);
+                                               "border-color",
+                                               state,
+                                               NULL);
 
   if (value)
     {
@@ -3468,26 +3473,27 @@ gtk_style_context_get_border (GtkStyleContext *context,
 {
   GtkStyleContextPrivate *priv;
   StyleData *data;
-  const GValue *value;
-  GtkBorder *b;
+  int top, left, bottom, right;
 
   g_return_if_fail (border != NULL);
-  *border = fallback_border;
-
   g_return_if_fail (GTK_IS_STYLE_CONTEXT (context));
 
   priv = context->priv;
   g_return_if_fail (priv->widget_path != NULL);
 
   data = style_data_lookup (context);
-  value = _gtk_style_properties_peek_property (data->store,
-                                               "border-width", state);
+  gtk_style_properties_get (data->store,
+                            state,
+                            "border-top-width", &top,
+                            "border-left-width", &left,
+                            "border-bottom-width", &bottom,
+                            "border-right-width", &right,
+                            NULL);
 
-  if (value)
-    {
-      b = g_value_get_boxed (value);
-      *border = *b;
-    }
+  border->top = top;
+  border->left = left;
+  border->bottom = bottom;
+  border->right = right;
 }
 
 /**
@@ -3508,26 +3514,27 @@ gtk_style_context_get_padding (GtkStyleContext *context,
 {
   GtkStyleContextPrivate *priv;
   StyleData *data;
-  const GValue *value;
-  GtkBorder *b;
+  int top, left, bottom, right;
 
   g_return_if_fail (padding != NULL);
-  *padding = fallback_border;
-
   g_return_if_fail (GTK_IS_STYLE_CONTEXT (context));
 
   priv = context->priv;
   g_return_if_fail (priv->widget_path != NULL);
 
   data = style_data_lookup (context);
-  value = _gtk_style_properties_peek_property (data->store,
-                                               "padding", state);
+  gtk_style_properties_get (data->store,
+                            state,
+                            "padding-top", &top,
+                            "padding-left", &left,
+                            "padding-bottom", &bottom,
+                            "padding-right", &right,
+                            NULL);
 
-  if (value)
-    {
-      b = g_value_get_boxed (value);
-      *padding = *b;
-    }
+  padding->top = top;
+  padding->left = left;
+  padding->bottom = bottom;
+  padding->right = right;
 }
 
 /**
@@ -3548,26 +3555,27 @@ gtk_style_context_get_margin (GtkStyleContext *context,
 {
   GtkStyleContextPrivate *priv;
   StyleData *data;
-  const GValue *value;
-  GtkBorder *b;
+  int top, left, bottom, right;
 
   g_return_if_fail (margin != NULL);
-  *margin = fallback_border;
-
   g_return_if_fail (GTK_IS_STYLE_CONTEXT (context));
 
   priv = context->priv;
   g_return_if_fail (priv->widget_path != NULL);
 
   data = style_data_lookup (context);
-  value = _gtk_style_properties_peek_property (data->store,
-                                               "margin", state);
+  gtk_style_properties_get (data->store,
+                            state,
+                            "margin-top", &top,
+                            "margin-left", &left,
+                            "margin-bottom", &bottom,
+                            "margin-right", &right,
+                            NULL);
 
-  if (value)
-    {
-      b = g_value_get_boxed (value);
-      *margin = *b;
-    }
+  margin->top = top;
+  margin->left = left;
+  margin->bottom = bottom;
+  margin->right = right;
 }
 
 /**
@@ -3599,7 +3607,7 @@ gtk_style_context_get_font (GtkStyleContext *context,
   g_return_val_if_fail (priv->widget_path != NULL, NULL);
 
   data = style_data_lookup (context);
-  value = _gtk_style_properties_peek_property (data->store, "font", state);
+  value = _gtk_style_properties_peek_property (data->store, "font", state, NULL);
 
   if (value)
     return g_value_get_boxed (value);

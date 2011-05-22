@@ -69,6 +69,16 @@ EXTRA_DIST += \
 	grid-homogeneous.css \
 	grid-homogeneous.ref.ui \
 	grid-homogeneous.ui \
+	grid-spacing1.ref.ui \
+	grid-spacing1.ui \
+	grid-spacing2.ref.ui \
+	grid-spacing2.ui \
+	grid-spacing3.css \
+	grid-spacing3.ref.ui \
+	grid-spacing3.ui \
+	label-shadows.css \
+	label-shadows.ref.ui \
+	label-shadows.ui \
 	label-sizing.css \
 	label-sizing.ref.ui \
 	label-sizing.ui \
@@ -88,14 +98,10 @@ EXTRA_DIST += \
 	quit-mnemonic.ui \
 	rotated-layout.ref.ui \
 	rotated-layout.ui \
+	shorthand-entry-border.css \
+	shorthand-entry-border.ref.ui \
+	shorthand-entry-border.ui \
 	simple.ref.ui \
 	simple.ui \
 	toplevel-vs-popup.ref.ui \
-	toplevel-vs-popup.ui \
-	grid-spacing1.ref.ui \
-	grid-spacing1.ui \
-	grid-spacing2.ref.ui \
-	grid-spacing2.ui \
-	grid-spacing3.ref.ui \
-	grid-spacing3.ui \
-	grid-spacing3.css
+	toplevel-vs-popup.ui

@@ -2370,29 +2370,18 @@ prepare_context_for_layout (cairo_t *cr,
 
   matrix = pango_context_get_matrix (pango_layout_get_context (layout));
 
+  cairo_move_to (cr, x, y);
+
   if (matrix)
     {
       cairo_matrix_t cairo_matrix;
-      PangoRectangle rect;
 
       cairo_matrix_init (&cairo_matrix,
                          matrix->xx, matrix->yx,
                          matrix->xy, matrix->yy,
                          matrix->x0, matrix->y0);
 
-      pango_layout_get_extents (layout, NULL, &rect);
-      pango_matrix_transform_rectangle (matrix, &rect);
-      pango_extents_to_pixels (&rect, NULL);
-
-      cairo_matrix.x0 += x - rect.x;
-      cairo_matrix.y0 += y - rect.y;
-
-      cairo_set_matrix (cr, &cairo_matrix);
-      cairo_move_to (cr, 0, 0);
-    }
-  else
-    {
-      cairo_move_to (cr, x, y);
+      cairo_transform (cr, &cairo_matrix);
     }
 }
 
@@ -2440,13 +2429,14 @@ gtk_theming_engine_render_layout (GtkThemingEngine *engine,
                           "text-shadow", &text_shadow,
                           NULL);
 
+  prepare_context_for_layout (cr, x, y, layout);
+
   if (text_shadow != NULL)
     {
-      _gtk_text_shadow_paint_layout (text_shadow, cr, x, y, layout);
+      _gtk_text_shadow_paint_layout (text_shadow, cr, layout);
       _gtk_shadow_unref (text_shadow);
     }
 
-  prepare_context_for_layout (cr, x, y, layout);
   gdk_cairo_set_source_rgba (cr, &fg_color);
   pango_cairo_show_layout (cr, layout);
 
