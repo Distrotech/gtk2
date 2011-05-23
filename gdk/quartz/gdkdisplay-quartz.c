@@ -94,7 +94,7 @@ gdk_quartz_display_init_input (GdkDisplay *display)
 
   for (l = list; l; l = l->next)
     {
-      GdkDevice *device = list->data;
+      GdkDevice *device = l->data;
 
       if (gdk_device_get_source (device) != GDK_SOURCE_MOUSE)
         continue;
@@ -321,6 +321,7 @@ gdk_quartz_display_class_init (GdkQuartzDisplayClass *class)
   GdkDisplayClass *display_class = GDK_DISPLAY_CLASS (class);
 
   object_class->finalize = gdk_quartz_display_finalize;
+  object_class->dispose = gdk_quartz_display_dispose;
 
   display_class->window_type = GDK_TYPE_QUARTZ_WINDOW;
 
