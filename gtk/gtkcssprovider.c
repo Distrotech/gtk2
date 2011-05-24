@@ -3004,14 +3004,12 @@ gtk_css_ruleset_print (const GtkCssRuleset *ruleset,
       for (walk = keys; walk; walk = walk->next)
         {
           const char *name = walk->data;
-          const GValue *value = g_hash_table_lookup (ruleset->style, (gpointer) name);
+          const GValue *value = g_hash_table_lookup (ruleset->widget_style, (gpointer) name);
 
           g_string_append (str, "  ");
           g_string_append (str, name);
           g_string_append (str, ": ");
-          s = _gtk_css_value_to_string (value);
-          g_string_append (str, s);
-          g_free (s);
+          g_string_append (str, g_value_get_string (value));
           g_string_append (str, ";\n");
         }
 
