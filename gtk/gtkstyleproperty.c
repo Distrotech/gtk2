@@ -77,6 +77,7 @@ rgba_value_parse (GtkCssParser *parser,
   if (gtk_symbolic_color_resolve (symbolic, NULL, &rgba))
     {
       g_value_set_boxed (value, &rgba);
+      gtk_symbolic_color_unref (symbolic);
     }
   else
     {
@@ -711,7 +712,7 @@ gradient_value_parse (GtkCssParser *parser,
       return FALSE;
     }
 
-  g_value_set_boxed (value, gradient);
+  g_value_take_boxed (value, gradient);
   return TRUE;
 }
 
@@ -1185,8 +1186,6 @@ unpack_border (const GValue *value,
   parameter[3].name = right;
   g_value_init (&parameter[3].value, G_TYPE_INT);
   g_value_set_int (&parameter[3].value, border->right);
-
-  gtk_border_free (border);
 
   *n_params = 4;
   return parameter;
