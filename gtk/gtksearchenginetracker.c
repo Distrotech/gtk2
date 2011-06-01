@@ -132,8 +132,6 @@ init (void)
 			  }
 	    }
 
-  g_debug ("Loaded Tracker library and all required symbols");
-
   return TRUE;
 }
 
@@ -268,8 +266,6 @@ query_callback (GObject      *object,
 	                                                 result,
 	                                                 &error);
 
-	g_debug ("Query returned cursor:%p", cursor);
-
   if (error)
     {
       _gtk_search_engine_error (GTK_SEARCH_ENGINE (tracker), error->message);
@@ -308,7 +304,10 @@ static void
 gtk_search_engine_tracker_start (GtkSearchEngine *engine)
 {
   GtkSearchEngineTracker *tracker;
-  gchar	*search_text, *location_uri;
+  gchar *search_text;
+#ifdef FTS_MATCHING
+  gchar *location_uri;
+#endif
   GString *sparql;
 
   tracker = GTK_SEARCH_ENGINE_TRACKER (engine);
@@ -326,11 +325,9 @@ gtk_search_engine_tracker_start (GtkSearchEngine *engine)
 	  }
 
   search_text = _gtk_query_get_text (tracker->priv->query);
-  location_uri = _gtk_query_get_location (tracker->priv->query);
-
-  g_debug ("Query starting, search criteria:'%s', location:'%s'", search_text, location_uri);
 
 #ifdef FTS_MATCHING
+  location_uri = _gtk_query_get_location (tracker->priv->query);
   /* Using FTS: */
   sparql = g_string_new ("SELECT nie:url(?urn) "
                          "WHERE {"
@@ -378,8 +375,6 @@ gtk_search_engine_tracker_stop (GtkSearchEngine *engine)
   GtkSearchEngineTracker *tracker;
 
   tracker = GTK_SEARCH_ENGINE_TRACKER (engine);
-
-  g_debug ("Query stopping");
 
   if (tracker->priv->query && tracker->priv->query_pending)
     {
@@ -448,8 +443,6 @@ _gtk_search_engine_tracker_new (void)
 
   if (!init ())
 	  return NULL;
-
-  g_debug ("Creating GtkSearchEngineTracker...");
 
   cancellable = g_cancellable_new ();
 	connection = tracker_sparql_connection_get (cancellable, &error);
