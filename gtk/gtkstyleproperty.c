@@ -30,6 +30,7 @@
 
 #include "gtkcssprovider.h"
 #include "gtkcssparserprivate.h"
+#include "gtkcsstypesprivate.h"
 
 /* the actual parsers we have */
 #include "gtkanimationdescription.h"
@@ -40,24 +41,66 @@
 #include "gtkthemingengine.h"
 #include "gtktypebuiltins.h"
 
-typedef gboolean (* ParseFunc)        (GtkCssParser  *parser,
-                                       GFile         *base,
-                                       GValue        *value);
-typedef char *   (* ToStringFunc)     (const GValue  *value);
-
 static GHashTable *parse_funcs = NULL;
-static GHashTable *to_string_funcs = NULL;
+static GHashTable *print_funcs = NULL;
 static GHashTable *properties = NULL;
 
 static void
-register_conversion_function (GType          type,
-                              ParseFunc      parse,
-                              ToStringFunc   to_string)
+register_conversion_function (GType             type,
+                              GtkStyleParseFunc parse,
+                              GtkStylePrintFunc print)
 {
   if (parse)
     g_hash_table_insert (parse_funcs, GSIZE_TO_POINTER (type), parse);
-  if (to_string)
-    g_hash_table_insert (to_string_funcs, GSIZE_TO_POINTER (type), to_string);
+  if (print)
+    g_hash_table_insert (print_funcs, GSIZE_TO_POINTER (type), print);
+}
+
+static void
+string_append_double (GString *string,
+                      double   d)
+{
+  char buf[G_ASCII_DTOSTR_BUF_SIZE];
+
+  g_ascii_dtostr (buf, sizeof (buf), d);
+  g_string_append (string, buf);
+}
+
+static void
+string_append_string (GString    *str,
+                      const char *string)
+{
+  gsize len;
+
+  g_string_append_c (str, '"');
+
+  do {
+    len = strcspn (string, "\"\n\r\f");
+    g_string_append (str, string);
+    string += len;
+    switch (*string)
+      {
+      case '\0':
+        break;
+      case '\n':
+        g_string_append (str, "\\A ");
+        break;
+      case '\r':
+        g_string_append (str, "\\D ");
+        break;
+      case '\f':
+        g_string_append (str, "\\C ");
+        break;
+      case '\"':
+        g_string_append (str, "\\\"");
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+      }
+  } while (*string);
+
+  g_string_append_c (str, '"');
 }
 
 /*** IMPLEMENTATIONS ***/
@@ -89,15 +132,20 @@ rgba_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-rgba_value_to_string (const GValue *value)
+static void
+rgba_value_print (const GValue *value,
+                  GString      *string)
 {
   const GdkRGBA *rgba = g_value_get_boxed (value);
 
   if (rgba == NULL)
-    return g_strdup ("none");
-
-  return gdk_rgba_to_string (rgba);
+    g_string_append (string, "none");
+  else
+    {
+      char *s = gdk_rgba_to_string (rgba);
+      g_string_append (string, s);
+      g_free (s);
+    }
 }
 
 static gboolean 
@@ -132,15 +180,20 @@ color_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-color_value_to_string (const GValue *value)
+static void
+color_value_print (const GValue *value,
+                   GString      *string)
 {
   const GdkColor *color = g_value_get_boxed (value);
 
   if (color == NULL)
-    return g_strdup ("none");
-
-  return gdk_color_to_string (color);
+    g_string_append (string, "none");
+  else
+    {
+      char *s = gdk_color_to_string (color);
+      g_string_append (string, s);
+      g_free (s);
+    }
 }
 
 static gboolean
@@ -158,15 +211,20 @@ symbolic_color_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-symbolic_color_value_to_string (const GValue *value)
+static void
+symbolic_color_value_print (const GValue *value,
+                            GString      *string)
 {
   GtkSymbolicColor *symbolic = g_value_get_boxed (value);
 
   if (symbolic == NULL)
-    return g_strdup ("none");
-
-  return gtk_symbolic_color_to_string (symbolic);
+    g_string_append (string, "none");
+  else
+    {
+      char *s = gtk_symbolic_color_to_string (symbolic);
+      g_string_append (string, s);
+      g_free (s);
+    }
 }
 
 static gboolean 
@@ -187,15 +245,20 @@ font_description_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-font_description_value_to_string (const GValue *value)
+static void
+font_description_value_print (const GValue *value,
+                              GString      *string)
 {
   const PangoFontDescription *desc = g_value_get_boxed (value);
 
   if (desc == NULL)
-    return g_strdup ("none");
-
-  return pango_font_description_to_string (desc);
+    g_string_append (string, "none");
+  else
+    {
+      char *s = pango_font_description_to_string (desc);
+      g_string_append (string, s);
+      g_free (s);
+    }
 }
 
 static gboolean 
@@ -222,13 +285,14 @@ boolean_value_parse (GtkCssParser *parser,
     }
 }
 
-static char *
-boolean_value_to_string (const GValue *value)
+static void
+boolean_value_print (const GValue *value,
+                     GString      *string)
 {
   if (g_value_get_boolean (value))
-    return g_strdup ("true");
+    g_string_append (string, "true");
   else
-    return g_strdup ("false");
+    g_string_append (string, "false");
 }
 
 static gboolean 
@@ -248,10 +312,11 @@ int_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-int_value_to_string (const GValue *value)
+static void
+int_value_print (const GValue *value,
+                 GString      *string)
 {
-  return g_strdup_printf ("%d", g_value_get_int (value));
+  g_string_append_printf (string, "%d", g_value_get_int (value));
 }
 
 static gboolean 
@@ -271,10 +336,11 @@ uint_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-uint_value_to_string (const GValue *value)
+static void
+uint_value_print (const GValue *value,
+                  GString      *string)
 {
-  return g_strdup_printf ("%u", g_value_get_uint (value));
+  g_string_append_printf (string, "%u", g_value_get_uint (value));
 }
 
 static gboolean 
@@ -294,14 +360,11 @@ double_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-double_value_to_string (const GValue *value)
+static void
+double_value_print (const GValue *value,
+                    GString      *string)
 {
-  char buf[G_ASCII_DTOSTR_BUF_SIZE];
-
-  g_ascii_dtostr (buf, sizeof (buf), g_value_get_double (value));
-
-  return g_strdup (buf);
+  string_append_double (string, g_value_get_double (value));
 }
 
 static gboolean 
@@ -321,14 +384,11 @@ float_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-float_value_to_string (const GValue *value)
+static void
+float_value_print (const GValue *value,
+                   GString      *string)
 {
-  char buf[G_ASCII_DTOSTR_BUF_SIZE];
-
-  g_ascii_dtostr (buf, sizeof (buf), g_value_get_float (value));
-
-  return g_strdup (buf);
+  string_append_double (string, g_value_get_float (value));
 }
 
 static gboolean 
@@ -345,44 +405,11 @@ string_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-string_value_to_string (const GValue *value)
+static void
+string_value_print (const GValue *value,
+                    GString      *str)
 {
-  const char *string;
-  gsize len;
-  GString *str;
-
-  string = g_value_get_string (value);
-  str = g_string_new ("\"");
-
-  do {
-    len = strcspn (string, "\"\n\r\f");
-    g_string_append (str, string);
-    string += len;
-    switch (*string)
-      {
-      case '\0':
-        break;
-      case '\n':
-        g_string_append (str, "\\A ");
-        break;
-      case '\r':
-        g_string_append (str, "\\D ");
-        break;
-      case '\f':
-        g_string_append (str, "\\C ");
-        break;
-      case '\"':
-        g_string_append (str, "\\\"");
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-      }
-  } while (*string);
-
-  g_string_append_c (str, '"');
-  return g_string_free (str, FALSE);
+  string_append_string (str, g_value_get_string (value));
 }
 
 static gboolean 
@@ -413,20 +440,23 @@ theming_engine_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-theming_engine_value_to_string (const GValue *value)
+static void
+theming_engine_value_print (const GValue *value,
+                            GString      *string)
 {
   GtkThemingEngine *engine;
   char *name;
 
   engine = g_value_get_object (value);
   if (engine == NULL)
-    return g_strdup ("none");
-
-  /* XXX: gtk_theming_engine_get_name()? */
-  g_object_get (engine, "name", &name, NULL);
-
-  return name;
+    g_string_append (string, "none");
+  else
+    {
+      /* XXX: gtk_theming_engine_get_name()? */
+      g_object_get (engine, "name", &name, NULL);
+      g_string_append (string, name);
+      g_free (name);
+    }
 }
 
 static gboolean 
@@ -454,15 +484,16 @@ animation_description_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-animation_description_value_to_string (const GValue *value)
+static void
+animation_description_value_print (const GValue *value,
+                                   GString      *string)
 {
   GtkAnimationDescription *desc = g_value_get_boxed (value);
 
   if (desc == NULL)
-    return g_strdup ("none");
-
-  return _gtk_animation_description_to_string (desc);
+    g_string_append (string, "none");
+  else
+    _gtk_animation_description_print (desc, string);
 }
 
 static gboolean 
@@ -506,21 +537,21 @@ border_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-border_value_to_string (const GValue *value)
+static void
+border_value_print (const GValue *value, GString *string)
 {
   const GtkBorder *border = g_value_get_boxed (value);
 
   if (border == NULL)
-    return g_strdup ("none");
+    g_string_append (string, "none");
   else if (border->left != border->right)
-    return g_strdup_printf ("%d %d %d %d", border->top, border->right, border->bottom, border->left);
+    g_string_append_printf (string, "%d %d %d %d", border->top, border->right, border->bottom, border->left);
   else if (border->top != border->bottom)
-    return g_strdup_printf ("%d %d %d", border->top, border->right, border->bottom);
+    g_string_append_printf (string, "%d %d %d", border->top, border->right, border->bottom);
   else if (border->top != border->left)
-    return g_strdup_printf ("%d %d", border->top, border->right);
+    g_string_append_printf (string, "%d %d", border->top, border->right);
   else
-    return g_strdup_printf ("%d", border->top);
+    g_string_append_printf (string, "%d", border->top);
 }
 
 static gboolean 
@@ -716,15 +747,20 @@ gradient_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-gradient_value_to_string (const GValue *value)
+static void
+gradient_value_print (const GValue *value,
+                      GString      *string)
 {
   GtkGradient *gradient = g_value_get_boxed (value);
 
   if (gradient == NULL)
-    return g_strdup ("none");
-
-  return gtk_gradient_to_string (gradient);
+    g_string_append (string, "none");
+  else
+    {
+      char *s = gtk_gradient_to_string (gradient);
+      g_string_append (string, s);
+      g_free (s);
+    }
 }
 
 static GFile *
@@ -898,17 +934,18 @@ shadow_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static gchar *
-shadow_value_to_string (const GValue *value)
+static void
+shadow_value_print (const GValue *value,
+                    GString      *string)
 {
   GtkShadow *shadow;
 
   shadow = g_value_get_boxed (value);
 
   if (shadow == NULL)
-    return g_strdup ("none");
-
-  return _gtk_shadow_to_string (shadow);
+    g_string_append (string, "none");
+  else
+    _gtk_shadow_print (shadow, string);
 }
 
 static gboolean 
@@ -1008,21 +1045,19 @@ enum_value_parse (GtkCssParser *parser,
   return enum_value != NULL;
 }
 
-static char *
-enum_value_to_string (const GValue *value)
+static void
+enum_value_print (const GValue *value,
+                  GString      *string)
 {
   GEnumClass *enum_class;
   GEnumValue *enum_value;
-  char *s;
 
   enum_class = g_type_class_ref (G_VALUE_TYPE (value));
   enum_value = g_enum_get_value (enum_class, g_value_get_enum (value));
 
-  s = g_strdup (enum_value->value_nick);
+  g_string_append (string, enum_value->value_nick);
 
   g_type_class_unref (enum_class);
-
-  return s;
 }
 
 static gboolean 
@@ -1071,16 +1106,15 @@ flags_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-flags_value_to_string (const GValue *value)
+static void
+flags_value_print (const GValue *value,
+                   GString      *string)
 {
   GFlagsClass *flags_class;
-  GString *string;
   guint i, flags;
 
   flags_class = g_type_class_ref (G_VALUE_TYPE (value));
   flags = g_value_get_flags (value);
-  string = g_string_new (NULL);
 
   for (i = 0; i < flags_class->n_values; i++)
     {
@@ -1096,8 +1130,6 @@ flags_value_to_string (const GValue *value)
     }
 
   g_type_class_unref (flags_class);
-
-  return g_string_free (string, FALSE);
 }
 
 static gboolean 
@@ -1139,26 +1171,233 @@ bindings_value_parse (GtkCssParser *parser,
   return TRUE;
 }
 
-static char *
-bindings_value_to_string (const GValue *value)
+static void
+bindings_value_print (const GValue *value,
+                      GString      *string)
 {
   GPtrArray *array;
-  GString *str;
   guint i;
 
   array = g_value_get_boxed (value);
-  str = g_string_new (NULL);
 
   for (i = 0; i < array->len; i++)
     {
       GtkBindingSet *binding_set = g_ptr_array_index (array, i);
 
       if (i > 0)
-        g_string_append (str, ", ");
-      g_string_append (str, binding_set->set_name);
+        g_string_append (string, ", ");
+      g_string_append (string, binding_set->set_name);
+    }
+}
+
+static gboolean 
+border_corner_radius_value_parse (GtkCssParser *parser,
+                                  GFile        *base,
+                                  GValue       *value)
+{
+  GtkCssBorderCornerRadius corner;
+
+  if (!_gtk_css_parser_try_double (parser, &corner.horizontal))
+    {
+      _gtk_css_parser_error (parser, "Expected a number");
+      return FALSE;
+    }
+  else if (corner.horizontal < 0)
+    goto negative;
+
+  if (!_gtk_css_parser_try_double (parser, &corner.vertical))
+    corner.vertical = corner.horizontal;
+  else if (corner.vertical < 0)
+    goto negative;
+
+  g_value_set_boxed (value, &corner);
+  return TRUE;
+
+negative:
+  _gtk_css_parser_error (parser, "Border radius values cannot be negative");
+  return FALSE;
+}
+
+static void
+border_corner_radius_value_print (const GValue *value,
+                                  GString      *string)
+{
+  GtkCssBorderCornerRadius *corner;
+
+  corner = g_value_get_boxed (value);
+
+  if (corner == NULL)
+    {
+      g_string_append (string, "none");
+      return;
     }
 
-  return g_string_free (str, FALSE);
+  string_append_double (string, corner->horizontal);
+  if (corner->horizontal != corner->vertical)
+    {
+      g_string_append_c (string, ' ');
+      string_append_double (string, corner->vertical);
+    }
+}
+
+static gboolean 
+border_radius_value_parse (GtkCssParser *parser,
+                           GFile        *base,
+                           GValue       *value)
+{
+  GtkCssBorderRadius border;
+
+  if (!_gtk_css_parser_try_double (parser, &border.top_left.horizontal))
+    {
+      _gtk_css_parser_error (parser, "Expected a number");
+      return FALSE;
+    }
+  else if (border.top_left.horizontal < 0)
+    goto negative;
+
+  if (_gtk_css_parser_try_double (parser, &border.top_right.horizontal))
+    {
+      if (border.top_right.horizontal < 0)
+        goto negative;
+      if (_gtk_css_parser_try_double (parser, &border.bottom_right.horizontal))
+        {
+          if (border.bottom_right.horizontal < 0)
+            goto negative;
+          if (!_gtk_css_parser_try_double (parser, &border.bottom_left.horizontal))
+            border.bottom_left.horizontal = border.top_right.horizontal;
+          else if (border.bottom_left.horizontal < 0)
+            goto negative;
+        }
+      else
+        {
+          border.bottom_right.horizontal = border.top_left.horizontal;
+          border.bottom_left.horizontal = border.top_right.horizontal;
+        }
+    }
+  else
+    {
+      border.top_right.horizontal = border.top_left.horizontal;
+      border.bottom_right.horizontal = border.top_left.horizontal;
+      border.bottom_left.horizontal = border.top_left.horizontal;
+    }
+
+  if (_gtk_css_parser_try (parser, "/", TRUE))
+    {
+      if (!_gtk_css_parser_try_double (parser, &border.top_left.vertical))
+        {
+          _gtk_css_parser_error (parser, "Expected a number");
+          return FALSE;
+        }
+      else if (border.top_left.vertical < 0)
+        goto negative;
+
+      if (_gtk_css_parser_try_double (parser, &border.top_right.vertical))
+        {
+          if (border.top_right.vertical < 0)
+            goto negative;
+          if (_gtk_css_parser_try_double (parser, &border.bottom_right.vertical))
+            {
+              if (border.bottom_right.vertical < 0)
+                goto negative;
+              if (!_gtk_css_parser_try_double (parser, &border.bottom_left.vertical))
+                border.bottom_left.vertical = border.top_right.vertical;
+              else if (border.bottom_left.vertical < 0)
+                goto negative;
+            }
+          else
+            {
+              border.bottom_right.vertical = border.top_left.vertical;
+              border.bottom_left.vertical = border.top_right.vertical;
+            }
+        }
+      else
+        {
+          border.top_right.vertical = border.top_left.vertical;
+          border.bottom_right.vertical = border.top_left.vertical;
+          border.bottom_left.vertical = border.top_left.vertical;
+        }
+    }
+  else
+    {
+      border.top_left.vertical = border.top_left.horizontal;
+      border.top_right.vertical = border.top_right.horizontal;
+      border.bottom_right.vertical = border.bottom_right.horizontal;
+      border.bottom_left.vertical = border.bottom_left.horizontal;
+    }
+
+  /* border-radius is an int property for backwards-compat reasons */
+  g_value_unset (value);
+  g_value_init (value, GTK_TYPE_CSS_BORDER_RADIUS);
+  g_value_set_boxed (value, &border);
+
+  return TRUE;
+
+negative:
+  _gtk_css_parser_error (parser, "Border radius values cannot be negative");
+  return FALSE;
+}
+
+static void
+border_radius_value_print (const GValue *value,
+                           GString      *string)
+{
+  GtkCssBorderRadius *border;
+
+  border = g_value_get_boxed (value);
+
+  if (border == NULL)
+    {
+      g_string_append (string, "none");
+      return;
+    }
+
+  string_append_double (string, border->top_left.horizontal);
+  if (border->top_left.horizontal != border->top_right.horizontal ||
+      border->top_left.horizontal != border->bottom_right.horizontal ||
+      border->top_left.horizontal != border->bottom_left.horizontal)
+    {
+      g_string_append_c (string, ' ');
+      string_append_double (string, border->top_right.horizontal);
+      if (border->top_left.horizontal != border->bottom_right.horizontal ||
+          border->top_right.horizontal != border->bottom_left.horizontal)
+        {
+          g_string_append_c (string, ' ');
+          string_append_double (string, border->bottom_right.horizontal);
+          if (border->top_right.horizontal != border->bottom_left.horizontal)
+            {
+              g_string_append_c (string, ' ');
+              string_append_double (string, border->bottom_left.horizontal);
+            }
+        }
+    }
+
+  if (border->top_left.horizontal != border->top_left.vertical ||
+      border->top_right.horizontal != border->top_right.vertical ||
+      border->bottom_right.horizontal != border->bottom_right.vertical ||
+      border->bottom_left.horizontal != border->bottom_left.vertical)
+    {
+      g_string_append (string, " / ");
+      string_append_double (string, border->top_left.vertical);
+      if (border->top_left.vertical != border->top_right.vertical ||
+          border->top_left.vertical != border->bottom_right.vertical ||
+          border->top_left.vertical != border->bottom_left.vertical)
+        {
+          g_string_append_c (string, ' ');
+          string_append_double (string, border->top_right.vertical);
+          if (border->top_left.vertical != border->bottom_right.vertical ||
+              border->top_right.vertical != border->bottom_left.vertical)
+            {
+              g_string_append_c (string, ' ');
+              string_append_double (string, border->bottom_right.vertical);
+              if (border->top_right.vertical != border->bottom_left.vertical)
+                {
+                  g_string_append_c (string, ' ');
+                  string_append_double (string, border->bottom_left.vertical);
+                }
+            }
+        }
+
+    }
 }
 
 /*** PACKING ***/
@@ -1276,6 +1515,60 @@ pack_margin (GValue             *value,
                "margin-bottom", "margin-right");
 }
 
+static GParameter *
+unpack_border_radius (const GValue *value,
+                      guint        *n_params)
+{
+  GParameter *parameter = g_new0 (GParameter, 4);
+  GtkCssBorderRadius *border;
+  
+  if (G_VALUE_HOLDS_BOXED (value))
+    border = g_value_get_boxed (value);
+  else
+    border = NULL;
+
+  parameter[0].name = "border-top-left-radius";
+  g_value_init (&parameter[0].value, GTK_TYPE_CSS_BORDER_CORNER_RADIUS);
+  parameter[1].name = "border-top-right-radius";
+  g_value_init (&parameter[1].value, GTK_TYPE_CSS_BORDER_CORNER_RADIUS);
+  parameter[2].name = "border-bottom-right-radius";
+  g_value_init (&parameter[2].value, GTK_TYPE_CSS_BORDER_CORNER_RADIUS);
+  parameter[3].name = "border-bottom-left-radius";
+  g_value_init (&parameter[3].value, GTK_TYPE_CSS_BORDER_CORNER_RADIUS);
+  if (border)
+    {
+      g_value_set_boxed (&parameter[0].value, &border->top_left);
+      g_value_set_boxed (&parameter[1].value, &border->top_right);
+      g_value_set_boxed (&parameter[2].value, &border->bottom_right);
+      g_value_set_boxed (&parameter[3].value, &border->bottom_left);
+    }
+
+  *n_params = 4;
+  return parameter;
+}
+
+static void
+pack_border_radius (GValue             *value,
+                    GtkStyleProperties *props,
+                    GtkStateFlags       state)
+{
+  GtkCssBorderCornerRadius *top_left;
+
+  /* NB: We are an int property, so we have to resolve to an int here.
+   * So we just resolve to an int. We pick one and stick to it.
+   * Lesson learned: Don't query border-radius shorthand, query the 
+   * real properties instead. */
+  gtk_style_properties_get (props,
+                            state,
+                            "border-top-left-radius", &top_left,
+                            NULL);
+
+  if (top_left)
+    g_value_set_int (value, top_left->horizontal);
+
+  g_free (top_left);
+}
+
 /*** API ***/
 
 static void
@@ -1285,50 +1578,50 @@ css_string_funcs_init (void)
     return;
 
   parse_funcs = g_hash_table_new (NULL, NULL);
-  to_string_funcs = g_hash_table_new (NULL, NULL);
+  print_funcs = g_hash_table_new (NULL, NULL);
 
   register_conversion_function (GDK_TYPE_RGBA,
                                 rgba_value_parse,
-                                rgba_value_to_string);
+                                rgba_value_print);
   register_conversion_function (GDK_TYPE_COLOR,
                                 color_value_parse,
-                                color_value_to_string);
+                                color_value_print);
   register_conversion_function (GTK_TYPE_SYMBOLIC_COLOR,
                                 symbolic_color_value_parse,
-                                symbolic_color_value_to_string);
+                                symbolic_color_value_print);
   register_conversion_function (PANGO_TYPE_FONT_DESCRIPTION,
                                 font_description_value_parse,
-                                font_description_value_to_string);
+                                font_description_value_print);
   register_conversion_function (G_TYPE_BOOLEAN,
                                 boolean_value_parse,
-                                boolean_value_to_string);
+                                boolean_value_print);
   register_conversion_function (G_TYPE_INT,
                                 int_value_parse,
-                                int_value_to_string);
+                                int_value_print);
   register_conversion_function (G_TYPE_UINT,
                                 uint_value_parse,
-                                uint_value_to_string);
+                                uint_value_print);
   register_conversion_function (G_TYPE_DOUBLE,
                                 double_value_parse,
-                                double_value_to_string);
+                                double_value_print);
   register_conversion_function (G_TYPE_FLOAT,
                                 float_value_parse,
-                                float_value_to_string);
+                                float_value_print);
   register_conversion_function (G_TYPE_STRING,
                                 string_value_parse,
-                                string_value_to_string);
+                                string_value_print);
   register_conversion_function (GTK_TYPE_THEMING_ENGINE,
                                 theming_engine_value_parse,
-                                theming_engine_value_to_string);
+                                theming_engine_value_print);
   register_conversion_function (GTK_TYPE_ANIMATION_DESCRIPTION,
                                 animation_description_value_parse,
-                                animation_description_value_to_string);
+                                animation_description_value_print);
   register_conversion_function (GTK_TYPE_BORDER,
                                 border_value_parse,
-                                border_value_to_string);
+                                border_value_print);
   register_conversion_function (GTK_TYPE_GRADIENT,
                                 gradient_value_parse,
-                                gradient_value_to_string);
+                                gradient_value_print);
   register_conversion_function (CAIRO_GOBJECT_TYPE_PATTERN,
                                 pattern_value_parse,
                                 NULL);
@@ -1337,32 +1630,63 @@ css_string_funcs_init (void)
                                 NULL);
   register_conversion_function (GTK_TYPE_SHADOW,
                                 shadow_value_parse,
-                                shadow_value_to_string);
+                                shadow_value_print);
   register_conversion_function (G_TYPE_ENUM,
                                 enum_value_parse,
-                                enum_value_to_string);
+                                enum_value_print);
   register_conversion_function (G_TYPE_FLAGS,
                                 flags_value_parse,
-                                flags_value_to_string);
-  register_conversion_function (G_TYPE_PTR_ARRAY,
-                                bindings_value_parse,
-                                bindings_value_to_string);
+                                flags_value_print);
 }
 
 gboolean
-_gtk_css_value_parse (GValue       *value,
-                      GtkCssParser *parser,
-                      GFile        *base)
+_gtk_style_property_parse_value (const GtkStyleProperty *property,
+                                 GValue                 *value,
+                                 GtkCssParser           *parser,
+                                 GFile                  *base)
 {
-  ParseFunc func;
+  GtkStyleParseFunc func;
 
   g_return_val_if_fail (value != NULL, FALSE);
   g_return_val_if_fail (parser != NULL, FALSE);
 
   css_string_funcs_init ();
 
-  func = g_hash_table_lookup (parse_funcs,
-                              GSIZE_TO_POINTER (G_VALUE_TYPE (value)));
+  if (property)
+    {
+      if (_gtk_css_parser_try (parser, "none", TRUE))
+        {
+          /* Insert the default value, so it has an opportunity
+           * to override other style providers when merged
+           */
+          g_param_value_set_default (property->pspec, value);
+          return TRUE;
+        }
+      else if (property->property_parse_func)
+        {
+          GError *error = NULL;
+          char *value_str;
+          gboolean success;
+          
+          value_str = _gtk_css_parser_read_value (parser);
+          if (value_str == NULL)
+            return FALSE;
+          
+          success = (*property->property_parse_func) (value_str, value, &error);
+
+          g_free (value_str);
+
+          return success;
+        }
+
+      func = property->parse_func;
+    }
+  else
+    func = NULL;
+
+  if (func == NULL)
+    func = g_hash_table_lookup (parse_funcs,
+                                GSIZE_TO_POINTER (G_VALUE_TYPE (value)));
   if (func == NULL)
     func = g_hash_table_lookup (parse_funcs,
                                 GSIZE_TO_POINTER (g_type_fundamental (G_VALUE_TYPE (value))));
@@ -1378,23 +1702,182 @@ _gtk_css_value_parse (GValue       *value,
   return (*func) (parser, base, value);
 }
 
-char *
-_gtk_css_value_to_string (const GValue *value)
+void
+_gtk_style_property_print_value (const GtkStyleProperty *property,
+                                 const GValue           *value,
+                                 GString                *string)
 {
-  ToStringFunc func;
+  GtkStylePrintFunc func;
 
   css_string_funcs_init ();
 
-  func = g_hash_table_lookup (to_string_funcs,
-                              GSIZE_TO_POINTER (G_VALUE_TYPE (value)));
+  if (property)
+    func = property->print_func;
+  else
+    func = NULL;
+
   if (func == NULL)
-    func = g_hash_table_lookup (to_string_funcs,
+    func = g_hash_table_lookup (print_funcs,
+                                GSIZE_TO_POINTER (G_VALUE_TYPE (value)));
+  if (func == NULL)
+    func = g_hash_table_lookup (print_funcs,
                                 GSIZE_TO_POINTER (g_type_fundamental (G_VALUE_TYPE (value))));
 
-  if (func)
-    return func (value);
+  if (func == NULL)
+    {
+      char *s = g_strdup_value_contents (value);
+      g_string_append (string, s);
+      g_free (s);
+      return;
+    }
+  
+  func (value, string);
+}
 
-  return g_strdup_value_contents (value);
+void
+_gtk_style_property_default_value (const GtkStyleProperty *property,
+                                   GtkStyleProperties     *properties,
+                                   GValue                 *value)
+{
+  if (property->default_value_func)
+    property->default_value_func (properties, value);
+  else if (property->pspec->value_type == GTK_TYPE_THEMING_ENGINE)
+    g_value_set_object (value, gtk_theming_engine_load (NULL));
+  else if (property->pspec->value_type == PANGO_TYPE_FONT_DESCRIPTION)
+    g_value_take_boxed (value, pango_font_description_from_string ("Sans 10"));
+  else if (property->pspec->value_type == GDK_TYPE_RGBA)
+    {
+      GdkRGBA color;
+      gdk_rgba_parse (&color, "pink");
+      g_value_set_boxed (value, &color);
+    }
+  else if (property->pspec->value_type == GTK_TYPE_BORDER)
+    {
+      g_value_take_boxed (value, gtk_border_new ());
+    }
+  else
+    g_param_value_set_default (property->pspec, value);
+}
+
+gboolean
+_gtk_style_property_is_inherit (const GtkStyleProperty *property)
+{
+  g_return_val_if_fail (property != NULL, FALSE);
+
+  return property->flags & GTK_STYLE_PROPERTY_INHERIT ? TRUE : FALSE;
+}
+
+static gboolean
+resolve_color (GtkStyleProperties *props,
+	       GValue             *value)
+{
+  GdkRGBA color;
+
+  /* Resolve symbolic color to GdkRGBA */
+  if (!gtk_symbolic_color_resolve (g_value_get_boxed (value), props, &color))
+    return FALSE;
+
+  /* Store it back, this is where GdkRGBA caching happens */
+  g_value_unset (value);
+  g_value_init (value, GDK_TYPE_RGBA);
+  g_value_set_boxed (value, &color);
+
+  return TRUE;
+}
+
+static gboolean
+resolve_color_rgb (GtkStyleProperties *props,
+                   GValue             *value)
+{
+  GdkColor color = { 0 };
+  GdkRGBA rgba;
+
+  if (!gtk_symbolic_color_resolve (g_value_get_boxed (value), props, &rgba))
+    return FALSE;
+
+  color.red = rgba.red * 65535. + 0.5;
+  color.green = rgba.green * 65535. + 0.5;
+  color.blue = rgba.blue * 65535. + 0.5;
+
+  g_value_unset (value);
+  g_value_init (value, GDK_TYPE_COLOR);
+  g_value_set_boxed (value, &color);
+
+  return TRUE;
+}
+
+static gboolean
+resolve_gradient (GtkStyleProperties *props,
+                  GValue             *value)
+{
+  cairo_pattern_t *gradient;
+
+  if (!gtk_gradient_resolve (g_value_get_boxed (value), props, &gradient))
+    return FALSE;
+
+  /* Store it back, this is where cairo_pattern_t caching happens */
+  g_value_unset (value);
+  g_value_init (value, CAIRO_GOBJECT_TYPE_PATTERN);
+  g_value_take_boxed (value, gradient);
+
+  return TRUE;
+}
+
+static gboolean
+resolve_shadow (GtkStyleProperties *props,
+                GValue *value)
+{
+  GtkShadow *resolved, *base;
+
+  base = g_value_get_boxed (value);
+
+  if (base == NULL)
+    return TRUE;
+  
+  if (_gtk_shadow_get_resolved (base))
+    return TRUE;
+
+  resolved = _gtk_shadow_resolve (base, props);
+  if (resolved == NULL)
+    return FALSE;
+
+  g_value_take_boxed (value, resolved);
+
+  return TRUE;
+}
+
+void
+_gtk_style_property_resolve (const GtkStyleProperty *property,
+                             GtkStyleProperties     *props,
+                             GValue                 *val)
+{
+  if (G_VALUE_TYPE (val) == GTK_TYPE_SYMBOLIC_COLOR)
+    {
+      if (property->pspec->value_type == GDK_TYPE_RGBA)
+        {
+          if (!resolve_color (props, val))
+            _gtk_style_property_resolve (property, props, val);
+        }
+      else if (property->pspec->value_type == GDK_TYPE_COLOR)
+        {
+          if (!resolve_color_rgb (props, val))
+            _gtk_style_property_resolve (property, props, val);
+        }
+      else
+        _gtk_style_property_resolve (property, props, val);
+    }
+  else if (G_VALUE_TYPE (val) == GTK_TYPE_GRADIENT)
+    {
+      g_return_if_fail (property->pspec->value_type == CAIRO_GOBJECT_TYPE_PATTERN);
+
+      if (!resolve_gradient (props, val))
+        _gtk_style_property_resolve (property, props, val);
+    }
+  else if (G_VALUE_TYPE (val) == GTK_TYPE_SHADOW)
+    {
+      if (!resolve_shadow (props, val))
+        _gtk_style_property_resolve (property, props, val);
+    }
 }
 
 gboolean
@@ -1435,8 +1918,6 @@ _gtk_style_property_pack (const GtkStyleProperty *property,
 static void
 gtk_style_property_init (void)
 {
-  GParamSpec *pspec;
-
   if (G_LIKELY (properties))
     return;
 
@@ -1446,12 +1927,17 @@ gtk_style_property_init (void)
   /* note that gtk_style_properties_register_property() calls this function,
    * so make sure we're sanely inited to avoid infloops */
 
-  pspec = g_param_spec_boxed ("color",
-                              "Foreground color",
-                              "Foreground color",
-                              GDK_TYPE_RGBA, 0);
-  gtk_style_param_set_inherit (pspec, TRUE);
-  gtk_style_properties_register_property (NULL, pspec);
+  _gtk_style_property_register           (g_param_spec_boxed ("color",
+                                          "Foreground color",
+                                          "Foreground color",
+                                          GDK_TYPE_RGBA, 0),
+                                          GTK_STYLE_PROPERTY_INHERIT,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL);
 
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_boxed ("background-color",
@@ -1459,19 +1945,29 @@ gtk_style_property_init (void)
                                                               "Background color",
                                                               GDK_TYPE_RGBA, 0));
 
-  pspec = g_param_spec_boxed ("font",
-                              "Font Description",
-                              "Font Description",
-                              PANGO_TYPE_FONT_DESCRIPTION, 0);
-  gtk_style_param_set_inherit (pspec, TRUE);
-  gtk_style_properties_register_property (NULL, pspec);
+  _gtk_style_property_register           (g_param_spec_boxed ("font",
+                                                              "Font Description",
+                                                              "Font Description",
+                                                              PANGO_TYPE_FONT_DESCRIPTION, 0),
+                                          GTK_STYLE_PROPERTY_INHERIT,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          font_description_value_parse,
+                                          font_description_value_print,
+                                          NULL);
 
-  pspec = g_param_spec_boxed ("text-shadow",
-                              "Text shadow",
-                              "Text shadow",
-                              GTK_TYPE_SHADOW, 0);
-  gtk_style_param_set_inherit (pspec, TRUE);
-  gtk_style_properties_register_property (NULL, pspec);
+  _gtk_style_property_register           (g_param_spec_boxed ("text-shadow",
+                                                              "Text shadow",
+                                                              "Text shadow",
+                                                              GTK_TYPE_SHADOW, 0),
+                                          GTK_STYLE_PROPERTY_INHERIT,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL);
 
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_int ("margin-top",
@@ -1497,9 +1993,13 @@ gtk_style_property_init (void)
                                                               "Margin",
                                                               "Margin",
                                                               GTK_TYPE_BORDER, 0),
+                                          0,
                                           NULL,
                                           unpack_margin,
-                                          pack_margin);
+                                          pack_margin,
+                                          NULL,
+                                          NULL,
+                                          NULL);
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_int ("padding-top",
                                                             "padding top",
@@ -1524,9 +2024,13 @@ gtk_style_property_init (void)
                                                               "Padding",
                                                               "Padding",
                                                               GTK_TYPE_BORDER, 0),
+                                          0,
                                           NULL,
                                           unpack_padding,
-                                          pack_padding);
+                                          pack_padding,
+                                          NULL,
+                                          NULL,
+                                          NULL);
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_int ("border-top-width",
                                                             "border top width",
@@ -1551,14 +2055,70 @@ gtk_style_property_init (void)
                                                               "Border width",
                                                               "Border width, in pixels",
                                                               GTK_TYPE_BORDER, 0),
+                                          0,
                                           NULL,
                                           unpack_border_width,
-                                          pack_border_width);
-  gtk_style_properties_register_property (NULL,
-                                          g_param_spec_int ("border-radius",
+                                          pack_border_width,
+                                          NULL,
+                                          NULL,
+                                          NULL);
+
+  _gtk_style_property_register           (g_param_spec_boxed ("border-top-left-radius",
+                                                              "Border top left radius",
+                                                              "Border radius of top left corner, in pixels",
+                                                              GTK_TYPE_CSS_BORDER_CORNER_RADIUS, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          border_corner_radius_value_parse,
+                                          border_corner_radius_value_print,
+                                          NULL);
+  _gtk_style_property_register           (g_param_spec_boxed ("border-top-right-radius",
+                                                              "Border top right radius",
+                                                              "Border radius of top right corner, in pixels",
+                                                              GTK_TYPE_CSS_BORDER_CORNER_RADIUS, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          border_corner_radius_value_parse,
+                                          border_corner_radius_value_print,
+                                          NULL);
+  _gtk_style_property_register           (g_param_spec_boxed ("border-bottom-right-radius",
+                                                              "Border bottom right radius",
+                                                              "Border radius of bottom right corner, in pixels",
+                                                              GTK_TYPE_CSS_BORDER_CORNER_RADIUS, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          border_corner_radius_value_parse,
+                                          border_corner_radius_value_print,
+                                          NULL);
+  _gtk_style_property_register           (g_param_spec_boxed ("border-bottom-left-radius",
+                                                              "Border bottom left radius",
+                                                              "Border radius of bottom left corner, in pixels",
+                                                              GTK_TYPE_CSS_BORDER_CORNER_RADIUS, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          border_corner_radius_value_parse,
+                                          border_corner_radius_value_print,
+                                          NULL);
+  _gtk_style_property_register           (g_param_spec_int ("border-radius",
                                                             "Border radius",
                                                             "Border radius, in pixels",
-                                                            0, G_MAXINT, 0, 0));
+                                                            0, G_MAXINT, 0, 0),
+                                          0,
+                                          NULL,
+                                          unpack_border_radius,
+                                          pack_border_radius,
+                                          border_radius_value_parse,
+                                          border_radius_value_print,
+                                          NULL);
+
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_enum ("border-style",
                                                              "Border style",
@@ -1592,11 +2152,17 @@ gtk_style_property_init (void)
                                                               GTK_TYPE_ANIMATION_DESCRIPTION, 0));
 
   /* Private property holding the binding sets */
-  gtk_style_properties_register_property (NULL,
-                                          g_param_spec_boxed ("gtk-key-bindings",
+  _gtk_style_property_register           (g_param_spec_boxed ("gtk-key-bindings",
                                                               "Key bindings",
                                                               "Key bindings",
-                                                              G_TYPE_PTR_ARRAY, 0));
+                                                              G_TYPE_PTR_ARRAY, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          bindings_value_parse,
+                                          bindings_value_print,
+                                          NULL);
 }
 
 const GtkStyleProperty *
@@ -1608,10 +2174,14 @@ _gtk_style_property_lookup (const char *name)
 }
 
 void
-_gtk_style_property_register (GParamSpec             *pspec,
-                              GtkStylePropertyParser  parse_func,
-                              GtkStyleUnpackFunc      unpack_func,
-                              GtkStylePackFunc        pack_func)
+_gtk_style_property_register (GParamSpec               *pspec,
+                              GtkStylePropertyFlags     flags,
+                              GtkStylePropertyParser    property_parse_func,
+                              GtkStyleUnpackFunc        unpack_func,
+                              GtkStylePackFunc          pack_func,
+                              GtkStyleParseFunc         parse_func,
+                              GtkStylePrintFunc         print_func,
+                              GtkStyleDefaultValueFunc  default_value_func)
 {
   const GtkStyleProperty *existing;
   GtkStyleProperty *node;
@@ -1629,10 +2199,14 @@ _gtk_style_property_register (GParamSpec             *pspec,
     }
 
   node = g_slice_new0 (GtkStyleProperty);
+  node->flags = flags;
   node->pspec = pspec;
-  node->parse_func = parse_func;
+  node->property_parse_func = property_parse_func;
   node->pack_func = pack_func;
   node->unpack_func = unpack_func;
+  node->parse_func = parse_func;
+  node->print_func = print_func;
+  node->default_value_func = default_value_func;
 
   g_hash_table_insert (properties, pspec->name, node);
 }

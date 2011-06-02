@@ -115,6 +115,7 @@ struct _GtkBoxPrivate
 
   GtkOrientation  orientation;
   gint16          spacing;
+  GtkWidgetPath  *sibling_path;
 
   guint           default_expand : 1;
   guint           homogeneous    : 1;
@@ -154,6 +155,8 @@ static void gtk_box_size_allocate         (GtkWidget              *widget,
 static void gtk_box_compute_expand     (GtkWidget      *widget,
                                         gboolean       *hexpand,
                                         gboolean       *vexpand);
+static void gtk_box_direction_changed  (GtkWidget        *widget,
+                                        GtkTextDirection  previous_direction);
 
 static void gtk_box_set_property       (GObject        *object,
                                         guint           prop_id,
@@ -182,6 +185,9 @@ static void gtk_box_get_child_property (GtkContainer   *container,
                                         GValue         *value,
                                         GParamSpec     *pspec);
 static GType gtk_box_child_type        (GtkContainer   *container);
+static GtkWidgetPath * gtk_box_get_path_for_child
+                                       (GtkContainer   *container,
+                                        GtkWidget      *child);
 
 
 static void               gtk_box_get_preferred_width            (GtkWidget           *widget,
@@ -219,6 +225,7 @@ gtk_box_class_init (GtkBoxClass *class)
   widget_class->get_preferred_height_for_width = gtk_box_get_preferred_height_for_width;
   widget_class->get_preferred_width_for_height = gtk_box_get_preferred_width_for_height;
   widget_class->compute_expand                 = gtk_box_compute_expand;
+  widget_class->direction_changed              = gtk_box_direction_changed;
 
   container_class->add = gtk_box_add;
   container_class->remove = gtk_box_remove;
@@ -226,6 +233,7 @@ gtk_box_class_init (GtkBoxClass *class)
   container_class->child_type = gtk_box_child_type;
   container_class->set_child_property = gtk_box_set_child_property;
   container_class->get_child_property = gtk_box_get_child_property;
+  container_class->get_path_for_child = gtk_box_get_path_for_child;
   gtk_container_class_handle_border_width (container_class);
 
   g_object_class_override_property (object_class,
@@ -831,6 +839,121 @@ gtk_box_get_child_property (GtkContainer *container,
     }
 }
 
+typedef struct _CountingData CountingData;
+struct _CountingData {
+  GtkWidget *widget;
+  gboolean found;
+  guint before;
+  guint after;
+};
+
+static void
+count_widget_position (GtkWidget *widget,
+                       gpointer   data)
+{
+  CountingData *count = data;
+
+#if 0
+  /* We cannot reliably detect changes in widget visibility */
+  if (!gtk_widget_get_visible (widget))
+    return;
+#endif
+
+  if (count->widget == widget)
+    count->found = TRUE;
+  else if (count->found)
+    count->after++;
+  else
+    count->before++;
+}
+
+static guint
+gtk_box_get_visible_position (GtkBox *box,
+                              GtkWidget *child)
+{
+  CountingData count = { child, FALSE, 0, 0 };
+
+  /* forall iterates in visible order */
+  gtk_container_forall (GTK_CONTAINER (box),
+                        count_widget_position,
+                        &count);
+
+  g_assert (count.found);
+  if (box->priv->orientation == GTK_ORIENTATION_HORIZONTAL &&
+      gtk_widget_get_direction (GTK_WIDGET (box)) == GTK_TEXT_DIR_RTL)
+    return count.after;
+  else
+    return count.before;
+}
+
+static GtkWidgetPath *
+gtk_box_get_path_for_child (GtkContainer *container,
+                            GtkWidget    *child)
+{
+  GtkWidgetPath *path;
+  GtkBox *box;
+  GtkBoxPrivate *private;
+
+  box = GTK_BOX (container);
+  private = box->priv;
+
+  if (private->sibling_path == NULL)
+    {
+      GList *list, *children;
+      private->sibling_path = gtk_widget_path_new ();
+
+      /* get_children works in visible order */
+      children = gtk_container_get_children (container);
+      if (private->orientation == GTK_ORIENTATION_HORIZONTAL &&
+          gtk_widget_get_direction (GTK_WIDGET (box)) == GTK_TEXT_DIR_RTL)
+        children = g_list_reverse (children);
+
+      for (list = children; list; list = list->next)
+        {
+#if 0
+          /* We cannot reliably detect changes in widget visibility */
+          if (!gtk_widget_get_visible (list->data))
+            return;
+#endif
+          gtk_widget_path_append_for_widget (private->sibling_path, list->data);
+        }
+      g_list_free (children);
+    }
+
+  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (container)));
+  if (gtk_widget_get_visible (child))
+    gtk_widget_path_append_with_siblings (path,
+                                          private->sibling_path,
+                                          gtk_box_get_visible_position (box,
+                                                                        child));
+  else
+    gtk_widget_path_append_for_widget (path, child);
+
+  return path;
+}
+
+static void
+gtk_box_invalidate_order (GtkBox *box)
+{
+  GtkBoxPrivate *private = box->priv;
+
+  if (private->sibling_path != NULL)
+    {
+      gtk_widget_path_unref (private->sibling_path);
+      private->sibling_path = NULL;
+    }
+
+  gtk_container_foreach (GTK_CONTAINER (box),
+                         (GtkCallback) gtk_widget_reset_style,
+                         NULL);
+}
+
+static void
+gtk_box_direction_changed (GtkWidget        *widget,
+                           GtkTextDirection  previous_direction)
+{
+  gtk_box_invalidate_order (GTK_BOX (widget));
+}
 static void
 gtk_box_pack (GtkBox      *box,
               GtkWidget   *child,
@@ -857,6 +980,7 @@ gtk_box_pack (GtkBox      *box,
 
   gtk_widget_freeze_child_notify (child);
 
+  gtk_box_invalidate_order (box);
   gtk_widget_set_parent (child, GTK_WIDGET (box));
 
   gtk_widget_child_notify (child, "expand");
@@ -1495,7 +1619,10 @@ gtk_box_reorder_child (GtkBox    *box,
   gtk_widget_child_notify (child, "position");
   if (gtk_widget_get_visible (child)
       && gtk_widget_get_visible (GTK_WIDGET (box)))
-    gtk_widget_queue_resize (child);
+    {
+      gtk_box_invalidate_order (box);
+      gtk_widget_queue_resize (child);
+    }
 }
 
 /**
@@ -1612,11 +1739,14 @@ gtk_box_set_child_packing (GtkBox      *box,
       gtk_widget_child_notify (child, "fill");
       child_info->padding = padding;
       gtk_widget_child_notify (child, "padding");
-      if (pack_type == GTK_PACK_END)
-	child_info->pack = GTK_PACK_END;
-      else
-	child_info->pack = GTK_PACK_START;
-      gtk_widget_child_notify (child, "pack-type");
+      if (pack_type != GTK_PACK_END)
+        pack_type = GTK_PACK_START;
+      if (child_info->pack != pack_type)
+        {
+	  child_info->pack = GTK_PACK_END;
+          gtk_widget_child_notify (child, "pack-type");
+          gtk_box_invalidate_order (box);
+        }
 
       if (gtk_widget_get_visible (child)
           && gtk_widget_get_visible (GTK_WIDGET (box)))
@@ -1678,7 +1808,10 @@ gtk_box_remove (GtkContainer *container,
 	   * since that's what is needed by toplevels.
 	   */
 	  if (was_visible)
-	    gtk_widget_queue_resize (GTK_WIDGET (container));
+            {
+              gtk_box_invalidate_order (box);
+	      gtk_widget_queue_resize (GTK_WIDGET (container));
+            }
 
 	  break;
 	}

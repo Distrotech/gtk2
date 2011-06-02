@@ -31,12 +31,18 @@ G_BEGIN_DECLS
 
 typedef struct _GtkWidgetPath GtkWidgetPath;
 
+/* We make this forward declaration here, since gtkwidget.h includes us.
+ */
+typedef struct _GtkWidget      GtkWidget;
+
 #define GTK_TYPE_WIDGET_PATH (gtk_widget_path_get_type ())
 
 GType           gtk_widget_path_get_type            (void) G_GNUC_CONST;
 GtkWidgetPath * gtk_widget_path_new                 (void);
 
 GtkWidgetPath * gtk_widget_path_copy                (const GtkWidgetPath *path);
+GtkWidgetPath * gtk_widget_path_ref                 (GtkWidgetPath       *path);
+void            gtk_widget_path_unref               (GtkWidgetPath       *path);
 void            gtk_widget_path_free                (GtkWidgetPath       *path);
 
 char *          gtk_widget_path_to_string           (const GtkWidgetPath *path);
@@ -46,12 +52,23 @@ gint            gtk_widget_path_append_type         (GtkWidgetPath       *path,
                                                      GType                type);
 void            gtk_widget_path_prepend_type        (GtkWidgetPath       *path,
                                                      GType                type);
+gint            gtk_widget_path_append_with_siblings(GtkWidgetPath       *path,
+                                                     GtkWidgetPath       *siblings,
+                                                     guint                sibling_index);
+/* gtk_widget_path_append_for_widget() is declared in gtkwidget.c */
+gint            gtk_widget_path_append_for_widget   (GtkWidgetPath       *path,
+                                                     GtkWidget           *widget);
 
-GType               gtk_widget_path_iter_get_object_type (const GtkWidgetPath *path,
-                                                          gint                 pos);
-void                gtk_widget_path_iter_set_object_type (GtkWidgetPath       *path,
-                                                          gint                 pos,
-                                                          GType                type);
+GType               gtk_widget_path_iter_get_object_type  (const GtkWidgetPath *path,
+                                                           gint                 pos);
+void                gtk_widget_path_iter_set_object_type  (GtkWidgetPath       *path,
+                                                           gint                 pos,
+                                                           GType                type);
+const GtkWidgetPath *
+                    gtk_widget_path_iter_get_siblings     (const GtkWidgetPath *path,
+                                                           gint                 pos);
+guint               gtk_widget_path_iter_get_sibling_index(const GtkWidgetPath *path,
+                                                           gint                 pos);
 
 G_CONST_RETURN gchar * gtk_widget_path_iter_get_name  (const GtkWidgetPath *path,
                                                        gint                 pos);

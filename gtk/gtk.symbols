@@ -2520,8 +2520,6 @@ gtk_style_has_context
 gtk_style_lookup_color
 gtk_style_lookup_icon_set
 gtk_style_new
-gtk_style_param_get_inherit
-gtk_style_param_set_inherit
 gtk_style_properties_clear
 gtk_style_properties_get
 gtk_style_properties_get_property
@@ -3577,7 +3575,10 @@ gtk_widget_override_font
 gtk_widget_override_symbolic_color
 gtk_widget_path
 gtk_widget_path_append_type
+gtk_widget_path_append_with_siblings
 gtk_widget_path_copy
+gtk_widget_path_ref
+gtk_widget_path_unref
 gtk_widget_path_free
 gtk_widget_path_get_type
 gtk_widget_path_get_object_type
@@ -3589,6 +3590,8 @@ gtk_widget_path_iter_clear_classes
 gtk_widget_path_iter_clear_regions
 gtk_widget_path_iter_get_name
 gtk_widget_path_iter_get_object_type
+gtk_widget_path_iter_get_siblings
+gtk_widget_path_iter_get_sibling_index
 gtk_widget_path_iter_has_class
 gtk_widget_path_iter_has_name
 gtk_widget_path_iter_has_qclass

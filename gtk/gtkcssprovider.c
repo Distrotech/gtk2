@@ -141,12 +141,12 @@
  *
  * /&ast; Theme any widget within a GtkBin &ast;/
  * GtkBin * {
- *     font-name: Sans 20
+ *     font: Sans 20
  * }
  *
  * /&ast; Theme a label named title-label &ast;/
  * GtkLabel&num;title-label {
- *     font-name: Sans 15
+ *     font: Sans 15
  * }
  *
  * /&ast; Theme any widget named main-entry &ast;/
@@ -1096,7 +1096,7 @@ gtk_css_ruleset_add (GtkCssRuleset          *ruleset,
       return;
     }
 
-  ruleset->has_inherit |= gtk_style_param_get_inherit (prop->pspec);
+  ruleset->has_inherit |= _gtk_style_property_is_inherit (prop);
   g_hash_table_insert (ruleset->style, (gpointer) prop, value);
 }
 
@@ -1297,7 +1297,7 @@ gtk_css_provider_get_style (GtkStyleProvider *provider,
             {
               GtkStyleProperty *prop = key;
 
-              if (l != length && !gtk_style_param_get_inherit (prop->pspec))
+              if (l != length && !_gtk_style_property_is_inherit (prop))
                 continue;
 
               _gtk_style_properties_set_property_by_property (props,
@@ -1371,9 +1371,10 @@ gtk_css_provider_get_style_property (GtkStyleProvider *provider,
                                         gtk_css_provider_parser_error,
                                         provider);
 
-          found = _gtk_css_value_parse (value,
-                                        parser,
-                                        NULL);
+          found = _gtk_style_property_parse_value (NULL,
+                                                   value,
+                                                   parser,
+                                                   NULL);
 
           _gtk_css_parser_free (parser);
 
@@ -1524,6 +1525,8 @@ gtk_css_provider_reset (GtkCssProvider *css_provider)
   guint i;
 
   priv = css_provider->priv;
+
+  g_hash_table_remove_all (priv->symbolic_colors);
 
   for (i = 0; i < priv->rulesets->len; i++)
     gtk_css_ruleset_clear (&g_array_index (priv->rulesets, GtkCssRuleset, i));
@@ -2086,70 +2089,36 @@ parse_declaration (GtkCssScanner *scanner,
       val = g_slice_new0 (GValue);
       g_value_init (val, property->pspec->value_type);
 
-      if (_gtk_css_parser_try (scanner->parser, "none", TRUE))
+      if (_gtk_style_property_parse_value (property,
+                                           val,
+                                           scanner->parser,
+                                           gtk_css_scanner_get_base_url (scanner)))
         {
-          /* Insert the default value, so it has an opportunity
-           * to override other style providers when merged
-           */
-          g_param_value_set_default (property->pspec, val);
-          gtk_css_ruleset_add (ruleset, property, val);
-        }
-      else if (property->parse_func)
-        {
-          GError *error = NULL;
-          char *value_str;
-
-          value_str = _gtk_css_parser_read_value (scanner->parser);
-          if (value_str == NULL)
+          if (_gtk_css_parser_begins_with (scanner->parser, ';') ||
+              _gtk_css_parser_begins_with (scanner->parser, '}') ||
+              _gtk_css_parser_is_eof (scanner->parser))
             {
+              gtk_css_ruleset_add (ruleset, property, val);
+            }
+          else
+            {
+              gtk_css_provider_error_literal (scanner->provider,
+                                              scanner,
+                                              GTK_CSS_PROVIDER_ERROR,
+                                              GTK_CSS_PROVIDER_ERROR_SYNTAX,
+                                              "Junk at end of value");
               _gtk_css_parser_resync (scanner->parser, TRUE, '}');
+              g_value_unset (val);
               g_slice_free (GValue, val);
               return;
             }
-
-          if ((*property->parse_func) (value_str, val, &error))
-            gtk_css_ruleset_add (ruleset, property, val);
-          else
-            {
-              gtk_css_provider_take_error (scanner->provider, scanner, error);
-              g_value_unset (val);
-              g_slice_free (GValue, val);
-            }
-
-          g_free (value_str);
         }
       else
         {
-          if (_gtk_css_value_parse (val,
-                                    scanner->parser,
-                                    gtk_css_scanner_get_base_url (scanner)))
-            {
-              if (_gtk_css_parser_begins_with (scanner->parser, ';') ||
-                  _gtk_css_parser_begins_with (scanner->parser, '}') ||
-                  _gtk_css_parser_is_eof (scanner->parser))
-                {
-                  gtk_css_ruleset_add (ruleset, property, val);
-                }
-              else
-                {
-                  gtk_css_provider_error_literal (scanner->provider,
-                                                  scanner,
-                                                  GTK_CSS_PROVIDER_ERROR,
-                                                  GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                                  "Junk at end of value");
-                  _gtk_css_parser_resync (scanner->parser, TRUE, '}');
-                  g_value_unset (val);
-                  g_slice_free (GValue, val);
-                  return;
-                }
-            }
-          else
-            {
-              g_value_unset (val);
-              g_slice_free (GValue, val);
-              _gtk_css_parser_resync (scanner->parser, TRUE, '}');
-              return;
-            }
+          g_value_unset (val);
+          g_slice_free (GValue, val);
+          _gtk_css_parser_resync (scanner->parser, TRUE, '}');
+          return;
         }
     }
   else if (name[0] == '-')
@@ -2976,7 +2945,6 @@ gtk_css_ruleset_print (const GtkCssRuleset *ruleset,
                        GString             *str)
 {
   GList *keys, *walk;
-  char *s;
 
   _gtk_css_selector_print (ruleset->selector, str);
 
@@ -2996,9 +2964,7 @@ gtk_css_ruleset_print (const GtkCssRuleset *ruleset,
           g_string_append (str, "  ");
           g_string_append (str, prop->pspec->name);
           g_string_append (str, ": ");
-          s = _gtk_css_value_to_string (value);
-          g_string_append (str, s);
-          g_free (s);
+          _gtk_style_property_print_value (prop, value, str);
           g_string_append (str, ";\n");
         }
 
