@@ -1750,7 +1750,7 @@ create_handle_box (GtkWidget *widget)
 		      "detached");
     gtk_widget_show (handle_box2);
 
-    hbox = g_object_new (GTK_TYPE_HBOX, "visible", 1, "parent", handle_box2, NULL);
+    hbox = g_object_new (GTK_TYPE_BOX, "visible", 1, "parent", handle_box2, NULL);
     label = gtk_label_new ("Fooo!");
     gtk_container_add (GTK_CONTAINER (hbox), label);
     gtk_widget_show (label);
@@ -2673,7 +2673,7 @@ create_saved_position (GtkWidget *widget)
       g_object_set_data (G_OBJECT (window), "y", y_label);
 
       any =
-	g_object_new (gtk_hseparator_get_type (),
+	g_object_new (gtk_separator_get_type (),
 			"GtkWidget::visible", TRUE,
 			NULL);
       gtk_box_pack_start (GTK_BOX (main_vbox), any, FALSE, TRUE, 0);
@@ -9480,7 +9480,7 @@ create_idle_test (GtkWidget *widget)
       gtk_widget_show (label);
       
       container =
-	g_object_new (GTK_TYPE_HBOX,
+	g_object_new (GTK_TYPE_BOX,
 			"visible", TRUE,
 			/* "GtkContainer::child", g_object_new (GTK_TYPE_HBOX,
 			 * "GtkWidget::visible", TRUE,
@@ -9498,9 +9498,10 @@ create_idle_test (GtkWidget *widget)
 			"parent", content_area,
 			NULL);
       box =
-	g_object_new (GTK_TYPE_VBOX,
+	g_object_new (GTK_TYPE_BOX,
 			"visible", TRUE,
 			"parent", frame,
+                        "orientation", GTK_ORIENTATION_VERTICAL,
 			NULL);
       button =
 	g_object_connect (g_object_new (GTK_TYPE_RADIO_BUTTON,

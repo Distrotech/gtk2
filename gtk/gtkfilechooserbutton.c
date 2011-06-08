@@ -44,13 +44,14 @@
 #include "gtkliststore.h"
 #include "gtkstock.h"
 #include "gtktreemodelfilter.h"
-#include "gtkvseparator.h"
 #include "gtkfilechooserdialog.h"
 #include "gtkfilechooserprivate.h"
 #include "gtkfilechooserutils.h"
 #include "gtkmarshalers.h"
 
 #include "gtkfilechooserbutton.h"
+
+#include "gtkorientable.h"
 
 #include "gtktypebuiltins.h"
 #include "gtkprivate.h"
@@ -342,7 +343,7 @@ static guint file_chooser_button_signals[LAST_SIGNAL] = { 0 };
  *  GType Declaration  *
  * ******************* */
 
-G_DEFINE_TYPE_WITH_CODE (GtkFileChooserButton, gtk_file_chooser_button, GTK_TYPE_HBOX, { \
+G_DEFINE_TYPE_WITH_CODE (GtkFileChooserButton, gtk_file_chooser_button, GTK_TYPE_BOX, { \
     G_IMPLEMENT_INTERFACE (GTK_TYPE_FILE_CHOOSER, gtk_file_chooser_button_file_chooser_iface_init) \
 })
 

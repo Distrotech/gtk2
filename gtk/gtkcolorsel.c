@@ -33,13 +33,12 @@
 #include <string.h>
 
 #include "gdk/gdk.h"
+#include "gtkorientable.h"
 #include "gtkhsv.h"
 #include "gtkwindow.h"
 #include "gtkselection.h"
 #include "gtkdnd.h"
 #include "gtkdrawingarea.h"
-#include "gtkhbox.h"
-#include "gtkhbbox.h"
 #include "gtkrc.h"
 #include "gtkframe.h"
 #include "gtktable.h"
@@ -48,10 +47,9 @@
 #include "gtkimage.h"
 #include "gtkspinbutton.h"
 #include "gtkrange.h"
-#include "gtkhscale.h"
+#include "gtkscale.h"
 #include "gtkentry.h"
 #include "gtkbutton.h"
-#include "gtkhseparator.h"
 #include "gtkinvisible.h"
 #include "gtkmenuitem.h"
 #include "gtkmain.h"
@@ -59,6 +57,7 @@
 #include "gtkstock.h"
 #include "gtkaccessible.h"
 #include "gtksizerequest.h"
+#include "gtkseparator.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
 
@@ -298,7 +297,7 @@ static const guchar dropper_bits[] = {
   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"};
 
-G_DEFINE_TYPE (GtkColorSelection, gtk_color_selection, GTK_TYPE_VBOX)
+G_DEFINE_TYPE (GtkColorSelection, gtk_color_selection, GTK_TYPE_BOX)
 
 static void
 gtk_color_selection_class_init (GtkColorSelectionClass *klass)
@@ -393,6 +392,9 @@ gtk_color_selection_init (GtkColorSelection *colorsel)
   GtkColorSelectionPrivate *priv;
   AtkObject *atk_obj;
   GList *focus_chain = NULL;
+
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (colorsel),
+                                  GTK_ORIENTATION_VERTICAL);
 
   gtk_widget_push_composite_child ();
 
