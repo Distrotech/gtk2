@@ -26,6 +26,26 @@ clean-local:
 
 EXTRA_DIST += \
 	align-expand.sh \
+	border-image-ball-green.png \
+	border-image-ball-red.png \
+	border-image-ball-yellow.png \
+	border-image-balls.png \
+	border-image-3-balls-green.png \
+	border-image-3-balls-yellow.png \
+	border-image-excess-size.css \
+	border-image-excess-size.ref.ui \
+	border-image-excess-size.ui \
+	border-image-gradient.css \
+	border-image-gradient.ref.ui \
+	border-image-gradient.ui \
+	border-image-repeat.css \
+	border-image-repeat.ref.png \
+	border-image-repeat.ref.ui \
+	border-image-repeat.sh \
+	border-image-repeat.ui \
+	border-image-url.css \
+	border-image-url.ref.ui \
+	border-image-url.ui \
 	box-packing.css \
 	box-packing.ref.ui \
 	box-packing.ui \

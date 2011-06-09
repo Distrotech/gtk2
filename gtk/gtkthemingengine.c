@@ -27,7 +27,7 @@
 #include <gtk/gtkintl.h>
 
 #include "gtkprivate.h"
-#include "gtk9slice.h"
+#include "gtkborderimageprivate.h"
 #include "gtkpango.h"
 #include "gtkshadowprivate.h"
 #include "gtkcsstypesprivate.h"
@@ -1490,32 +1490,6 @@ _cairo_uneven_frame (cairo_t                  *cr,
                                 SIDE_ALL);
 }
 
-/* Set the appropriate matrix for
- * patterns coming from the style context
- */
-static void
-style_pattern_set_matrix (cairo_pattern_t *pattern,
-                          gdouble          width,
-                          gdouble          height)
-{
-  cairo_matrix_t matrix;
-  gint w, h;
-
-  if (cairo_pattern_get_type (pattern) == CAIRO_PATTERN_TYPE_SURFACE)
-    {
-      cairo_surface_t *surface;
-
-      cairo_pattern_get_surface (pattern, &surface);
-      w = cairo_image_surface_get_width (surface);
-      h = cairo_image_surface_get_height (surface);
-    }
-  else
-    w = h = 1;
-
-  cairo_matrix_init_scale (&matrix, (gdouble) w / width, (gdouble) h / height);
-  cairo_pattern_set_matrix (pattern, &matrix);
-}
-
 static void
 render_background_internal (GtkThemingEngine *engine,
                             cairo_t          *cr,
@@ -1537,15 +1511,12 @@ render_background_internal (GtkThemingEngine *engine,
   gint border_width;
   GtkBorderStyle border_style;
   gdouble mat_w, mat_h;
-  cairo_matrix_t identity;
 
   /* Use unmodified size for pattern scaling */
   mat_w = width;
   mat_h = height;
 
   flags = gtk_theming_engine_get_state (engine);
-
-  cairo_matrix_init_identity (&identity);
 
   gtk_theming_engine_get_background_color (engine, flags, &bg_color);
   gtk_theming_engine_get_border (engine, flags, &border);
@@ -1703,11 +1674,10 @@ render_background_internal (GtkThemingEngine *engine,
                                             0, 0, width, height,
                                             SIDE_ALL);
 
-              style_pattern_set_matrix (other_pattern, mat_w, mat_h);
+              cairo_scale (cr, mat_w, mat_h);
               cairo_set_source (cr, other_pattern);
+              cairo_scale (cr, 1.0 / mat_w, 1.0 / mat_h);
               cairo_fill_preserve (cr);
-
-              cairo_pattern_set_matrix (other_pattern, &identity);
 
               /* Set alpha for posterior drawing
                * of the target pattern
@@ -1789,8 +1759,9 @@ render_background_internal (GtkThemingEngine *engine,
                                 SIDE_ALL);
   if (pattern)
     {
-      style_pattern_set_matrix (pattern, mat_w, mat_h);
+      cairo_scale (cr, mat_w, mat_h);
       cairo_set_source (cr, pattern);
+      cairo_scale (cr, 1.0 / mat_w, 1.0 / mat_h);
     }
   else
     gdk_cairo_set_source_rgba (cr, &bg_color);
@@ -1826,10 +1797,7 @@ render_background_internal (GtkThemingEngine *engine,
     }
 
   if (pattern)
-    {
-      cairo_pattern_set_matrix (pattern, &identity);
-      cairo_pattern_destroy (pattern);
-    }
+    cairo_pattern_destroy (pattern);
 
   cairo_restore (cr);
 }
@@ -2148,22 +2116,25 @@ gtk_theming_engine_render_frame (GtkThemingEngine *engine,
                                  gdouble           height)
 {
   GtkStateFlags flags;
-  Gtk9Slice *slice;
   GtkBorderStyle border_style;
   GtkJunctionSides junction;
+  GtkBorderImage *border_image;
+  GtkBorder border;
 
   flags = gtk_theming_engine_get_state (engine);
   junction = gtk_theming_engine_get_junction_sides (engine);
+  gtk_theming_engine_get_border (engine, flags, &border);
 
   gtk_theming_engine_get (engine, flags,
-                          "border-image", &slice,
+                          "border-image", &border_image,
                           "border-style", &border_style,
                           NULL);
 
-  if (slice)
+  if (border_image != NULL)
     {
-      _gtk_9slice_render (slice, cr, x, y, width, height);
-      _gtk_9slice_unref (slice);
+      _gtk_border_image_render (border_image, &border,
+                                cr, x, y, width, height);
+      _gtk_border_image_unref (border_image);
     }
   else if (border_style != GTK_BORDER_STYLE_NONE)
     render_frame_internal (engine, cr,
