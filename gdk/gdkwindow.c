@@ -7973,7 +7973,7 @@ gdk_window_move_region (GdkWindow       *window,
  * The @color must be allocated; gdk_rgb_find_color() is the best way
  * to allocate a color.
  *
- * See also gdk_window_set_background_pixmap().
+ * See also gdk_window_set_back_pixmap().
  */
 void
 gdk_window_set_background (GdkWindow      *window,
@@ -8004,11 +8004,15 @@ gdk_window_set_background (GdkWindow      *window,
     }
 
   if (!GDK_WINDOW_DESTROYED (window) &&
-      gdk_window_has_impl (private) &&
       !private->input_only)
     {
-      impl_iface = GDK_WINDOW_IMPL_GET_IFACE (private->impl);
-      impl_iface->set_background (window, &private->bg_color);
+      if (gdk_window_has_impl (private))
+        {
+          impl_iface = GDK_WINDOW_IMPL_GET_IFACE (private->impl);
+          impl_iface->set_background (window, &private->bg_color);
+        }
+      else
+        gdk_window_invalidate_rect_full (window, NULL, TRUE, CLEAR_BG_ALL);
     }
 }
 
@@ -8077,11 +8081,15 @@ gdk_window_set_back_pixmap (GdkWindow *window,
     private->bg_pixmap = GDK_NO_BG;
 
   if (!GDK_WINDOW_DESTROYED (window) &&
-      gdk_window_has_impl (private) &&
       !private->input_only)
     {
-      impl_iface = GDK_WINDOW_IMPL_GET_IFACE (private->impl);
-      impl_iface->set_back_pixmap (window, private->bg_pixmap);
+      if (gdk_window_has_impl (private))
+        {
+          impl_iface = GDK_WINDOW_IMPL_GET_IFACE (private->impl);
+          impl_iface->set_back_pixmap (window, private->bg_pixmap);
+        }
+      else
+        gdk_window_invalidate_rect_full (window, NULL, TRUE, CLEAR_BG_ALL);
     }
 }
 
