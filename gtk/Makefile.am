@@ -444,6 +444,7 @@ gtk_private_h_sources =		\
 	gtktexttagprivate.h	\
 	gtktexttypes.h		\
 	gtktextutil.h		\
+	gtkthemingengineprivate.h \
 	gtktimeline.h		\
 	gtktoolpaletteprivate.h	\
 	gtktreedatalist.h	\

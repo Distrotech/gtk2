@@ -31,6 +31,7 @@
 #include "gtkpango.h"
 #include "gtkshadowprivate.h"
 #include "gtkcsstypesprivate.h"
+#include "gtkthemingengineprivate.h"
 
 /**
  * SECTION:gtkthemingengine
@@ -177,6 +178,11 @@ static void gtk_theming_engine_render_activity  (GtkThemingEngine *engine,
 static GdkPixbuf * gtk_theming_engine_render_icon_pixbuf (GtkThemingEngine    *engine,
                                                           const GtkIconSource *source,
                                                           GtkIconSize          size);
+static void gtk_theming_engine_render_icon (GtkThemingEngine *engine,
+                                            cairo_t *cr,
+					    GdkPixbuf *pixbuf,
+                                            gdouble x,
+                                            gdouble y);
 
 G_DEFINE_TYPE (GtkThemingEngine, gtk_theming_engine, G_TYPE_OBJECT)
 
@@ -215,6 +221,7 @@ gtk_theming_engine_class_init (GtkThemingEngineClass *klass)
   object_class->set_property = gtk_theming_engine_impl_set_property;
   object_class->get_property = gtk_theming_engine_impl_get_property;
 
+  klass->render_icon = gtk_theming_engine_render_icon;
   klass->render_check = gtk_theming_engine_render_check;
   klass->render_option = gtk_theming_engine_render_option;
   klass->render_arrow = gtk_theming_engine_render_arrow;
@@ -3025,6 +3032,103 @@ gtk_theming_engine_render_handle (GtkThemingEngine *engine,
   cairo_restore (cr);
 }
 
+void
+_gtk_theming_engine_paint_spinner (cairo_t *cr,
+                                   gdouble  radius,
+                                   gdouble  progress,
+                                   GdkRGBA *color)
+{
+  guint num_steps, step;
+  gdouble half;
+  gint i;
+
+  num_steps = 12;
+
+  if (progress >= 0)
+    step = (guint) (progress * num_steps);
+  else
+    step = 0;
+
+  cairo_save (cr);
+
+  cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
+  cairo_set_line_width (cr, 2.0);
+
+  half = num_steps / 2;
+
+  for (i = 0; i < num_steps; i++)
+    {
+      gint inset = 0.7 * radius;
+
+      /* transparency is a function of time and intial value */
+      gdouble t = 1.0 - (gdouble) ((i + step) % num_steps) / num_steps;
+      gdouble xscale = - sin (i * G_PI / half);
+      gdouble yscale = - cos (i * G_PI / half);
+
+      cairo_set_source_rgba (cr,
+                             color->red,
+                             color->green,
+                             color->blue,
+                             color->alpha * t);
+
+      cairo_move_to (cr,
+                     (radius - inset) * xscale,
+                     (radius - inset) * yscale);
+      cairo_line_to (cr,
+                     radius * xscale,
+                     radius * yscale);
+
+      cairo_stroke (cr);
+    }
+
+  cairo_restore (cr);
+}
+
+static void
+render_spinner (GtkThemingEngine *engine,
+                cairo_t          *cr,
+                gdouble           x,
+                gdouble           y,
+                gdouble           width,
+                gdouble           height)
+{
+  GtkStateFlags state;
+  GtkShadow *shadow;
+  GdkRGBA color;
+  gdouble progress;
+  gdouble radius;
+
+  state = gtk_theming_engine_get_state (engine);
+
+  if (!gtk_theming_engine_state_is_running (engine, GTK_STATE_ACTIVE, &progress))
+    progress = -1;
+
+  radius = MIN (width / 2, height / 2);
+
+  gtk_theming_engine_get_color (engine, state, &color);
+  gtk_theming_engine_get (engine, state,
+                          "icon-shadow", &shadow,
+                          NULL);
+
+  cairo_save (cr);
+  cairo_translate (cr, x + width / 2, y + height / 2);
+
+  if (shadow != NULL)
+    {
+      _gtk_icon_shadow_paint_spinner (shadow, cr,
+                                      radius,
+                                      progress);
+      _gtk_shadow_unref (shadow);
+    }
+
+  _gtk_theming_engine_paint_spinner (cr,
+                                     radius,
+                                     progress,
+                                     &color);
+
+  cairo_restore (cr);
+}
+
 static void
 gtk_theming_engine_render_activity (GtkThemingEngine *engine,
                                     cairo_t          *cr,
@@ -3035,58 +3139,7 @@ gtk_theming_engine_render_activity (GtkThemingEngine *engine,
 {
   if (gtk_theming_engine_has_class (engine, GTK_STYLE_CLASS_SPINNER))
     {
-      GtkStateFlags state;
-      guint num_steps, step;
-      GdkRGBA color;
-      gdouble progress;
-      gdouble radius;
-      gdouble half;
-      gint i;
-
-      num_steps = 12;
-
-      state = gtk_theming_engine_get_state (engine);
-      gtk_theming_engine_get_color (engine, state, &color);
-
-      if (gtk_theming_engine_state_is_running (engine, GTK_STATE_ACTIVE, &progress))
-        step = (guint) (progress * num_steps);
-      else
-        step = 0;
-
-      cairo_save (cr);
-
-      cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
-      cairo_set_line_width (cr, 2.0);
-      cairo_translate (cr, x + width / 2, y + height / 2);
-
-      radius = MIN (width / 2, height / 2);
-      half = num_steps / 2;
-
-      for (i = 0; i < num_steps; i++)
-        {
-          gint inset = 0.7 * radius;
-
-          /* transparency is a function of time and intial value */
-          gdouble t = 1.0 - (gdouble) ((i + step) % num_steps) / num_steps;
-          gdouble xscale = - sin (i * G_PI / half);
-          gdouble yscale = - cos (i * G_PI / half);
-
-          cairo_set_source_rgba (cr,
-                                 color.red,
-                                 color.green,
-                                 color.blue,
-                                 color.alpha * t);
-
-          cairo_move_to (cr,
-                         (radius - inset) * xscale,
-                         (radius - inset) * yscale);
-          cairo_line_to (cr,
-                         radius * xscale,
-                         radius * yscale);
-          cairo_stroke (cr);
-        }
-
-      cairo_restore (cr);
+      render_spinner (engine, cr, x, y, width, height);
     }
   else
     {
@@ -3124,53 +3177,24 @@ lookup_icon_size (GtkThemingEngine *engine,
   return gtk_icon_size_lookup_for_settings (settings, size, width, height);
 }
 
-/* Kudos to the gnome-panel guys. */
 static void
-colorshift_pixbuf (GdkPixbuf *src,
-                   GdkPixbuf *dest,
-                   gint       shift)
+colorshift_source (cairo_t *cr,
+		   gdouble shift)
 {
-  gint i, j;
-  gint width, height, has_alpha, src_rowstride, dest_rowstride;
-  guchar *target_pixels;
-  guchar *original_pixels;
-  guchar *pix_src;
-  guchar *pix_dest;
-  int val;
-  guchar r, g, b;
+  cairo_pattern_t *source;
 
-  has_alpha       = gdk_pixbuf_get_has_alpha (src);
-  width           = gdk_pixbuf_get_width (src);
-  height          = gdk_pixbuf_get_height (src);
-  src_rowstride   = gdk_pixbuf_get_rowstride (src);
-  dest_rowstride  = gdk_pixbuf_get_rowstride (dest);
-  original_pixels = gdk_pixbuf_get_pixels (src);
-  target_pixels   = gdk_pixbuf_get_pixels (dest);
+  cairo_save (cr);
+  cairo_paint (cr);
 
-  for (i = 0; i < height; i++)
-    {
-      pix_dest = target_pixels   + i * dest_rowstride;
-      pix_src  = original_pixels + i * src_rowstride;
+  source = cairo_pattern_reference (cairo_get_source (cr));
 
-      for (j = 0; j < width; j++)
-        {
-          r = *(pix_src++);
-          g = *(pix_src++);
-          b = *(pix_src++);
+  cairo_set_source_rgb (cr, shift, shift, shift);
+  cairo_set_operator (cr, CAIRO_OPERATOR_COLOR_DODGE);
 
-          val = r + shift;
-          *(pix_dest++) = CLAMP (val, 0, 255);
+  cairo_mask (cr, source);
 
-          val = g + shift;
-          *(pix_dest++) = CLAMP (val, 0, 255);
-
-          val = b + shift;
-          *(pix_dest++) = CLAMP (val, 0, 255);
-
-          if (has_alpha)
-            *(pix_dest++) = *(pix_src++);
-        }
-    }
+  cairo_pattern_destroy (source);
+  cairo_restore (cr);
 }
 
 static GdkPixbuf *
@@ -3184,6 +3208,8 @@ gtk_theming_engine_render_icon_pixbuf (GtkThemingEngine    *engine,
   GtkStateFlags state;
   gint width = 1;
   gint height = 1;
+  cairo_t *cr;
+  cairo_surface_t *surface;
 
   base_pixbuf = gtk_icon_source_get_pixbuf (source);
   state = gtk_theming_engine_get_state (engine);
@@ -3211,16 +3237,36 @@ gtk_theming_engine_render_icon_pixbuf (GtkThemingEngine    *engine,
     {
       if (state & GTK_STATE_FLAG_INSENSITIVE)
         {
-          stated = gdk_pixbuf_copy (scaled);
-          gdk_pixbuf_saturate_and_pixelate (scaled, stated,
-                                            0.8, TRUE);
-          g_object_unref (scaled);
+	  surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
+						gdk_pixbuf_get_width (scaled),
+						gdk_pixbuf_get_height (scaled));
+	  cr = cairo_create (surface);
+	  gdk_cairo_set_source_pixbuf (cr, scaled, 0, 0);
+	  cairo_paint_with_alpha (cr, 0.5);
+
+	  cairo_destroy (cr);
+
+	  g_object_unref (scaled);
+	  stated = gdk_pixbuf_get_from_surface (surface, 0, 0,
+						cairo_image_surface_get_width (surface),
+						cairo_image_surface_get_height (surface));
         }
       else if (state & GTK_STATE_FLAG_PRELIGHT)
         {
-          stated = gdk_pixbuf_copy (scaled);
-          colorshift_pixbuf (scaled, stated, 30);
-          g_object_unref (scaled);
+	  surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
+						gdk_pixbuf_get_width (scaled),
+						gdk_pixbuf_get_height (scaled));
+
+	  cr = cairo_create (surface);
+	  gdk_cairo_set_source_pixbuf (cr, scaled, 0, 0);
+	  colorshift_source (cr, 0.10);
+
+	  cairo_destroy (cr);
+
+	  g_object_unref (scaled);
+	  stated = gdk_pixbuf_get_from_surface (surface, 0, 0,
+						cairo_image_surface_get_width (surface),
+						cairo_image_surface_get_height (surface));
         }
       else
         stated = scaled;
@@ -3230,3 +3276,35 @@ gtk_theming_engine_render_icon_pixbuf (GtkThemingEngine    *engine,
 
   return stated;
 }
+
+static void
+gtk_theming_engine_render_icon (GtkThemingEngine *engine,
+                                cairo_t *cr,
+				GdkPixbuf *pixbuf,
+                                gdouble x,
+                                gdouble y)
+{
+  GtkStateFlags state;
+  GtkShadow *icon_shadow;
+
+  state = gtk_theming_engine_get_state (engine);
+
+  cairo_save (cr);
+
+  gdk_cairo_set_source_pixbuf (cr, pixbuf, x, y);
+
+  gtk_theming_engine_get (engine, state,
+                          "icon-shadow", &icon_shadow,
+                          NULL);
+
+  if (icon_shadow != NULL)
+    {
+      _gtk_icon_shadow_paint (icon_shadow, cr);
+      _gtk_shadow_unref (icon_shadow);
+    }
+
+  cairo_paint (cr);
+
+  cairo_restore (cr);
+}
+

@@ -2230,6 +2230,7 @@ gtk_render_focus
 gtk_render_frame
 gtk_render_frame_gap
 gtk_render_handle
+gtk_render_icon
 gtk_render_icon_pixbuf
 gtk_render_layout
 gtk_render_line
@@ -3277,6 +3278,7 @@ gtk_tree_view_column_get_type
 gtk_tree_view_column_get_visible
 gtk_tree_view_column_get_widget
 gtk_tree_view_column_get_width
+gtk_tree_view_column_get_x_offset
 gtk_tree_view_column_new
 gtk_tree_view_column_new_with_area
 gtk_tree_view_column_new_with_attributes

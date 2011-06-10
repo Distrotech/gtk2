@@ -52,14 +52,16 @@ struct _GtkBorderImage {
   GtkGradient *source_gradient;
 
   GtkBorder slice;
+  GtkBorder *width;
   GtkCssBorderImageRepeat repeat;
 
   gint ref_count;
 };
 
 GtkBorderImage *
-_gtk_border_image_new (cairo_pattern_t      *pattern,
-                       GtkBorder            *slice,
+_gtk_border_image_new (cairo_pattern_t         *pattern,
+                       GtkBorder               *slice,
+                       GtkBorder               *width,
                        GtkCssBorderImageRepeat *repeat)
 {
   GtkBorderImage *image;
@@ -73,6 +75,9 @@ _gtk_border_image_new (cairo_pattern_t      *pattern,
   if (slice != NULL)
     image->slice = *slice;
 
+  if (width != NULL)
+    image->width = gtk_border_copy (width);
+
   if (repeat != NULL)
     image->repeat = *repeat;
 
@@ -80,8 +85,9 @@ _gtk_border_image_new (cairo_pattern_t      *pattern,
 }
 
 GtkBorderImage *
-_gtk_border_image_new_for_gradient (GtkGradient          *gradient,
-                                    GtkBorder            *slice,
+_gtk_border_image_new_for_gradient (GtkGradient             *gradient,
+                                    GtkBorder               *slice,
+                                    GtkBorder               *width,
                                     GtkCssBorderImageRepeat *repeat)
 {
   GtkBorderImage *image;
@@ -94,6 +100,9 @@ _gtk_border_image_new_for_gradient (GtkGradient          *gradient,
 
   if (slice != NULL)
     image->slice = *slice;
+
+  if (width != NULL)
+    image->width = gtk_border_copy (width);
 
   if (repeat != NULL)
     image->repeat = *repeat;
@@ -126,6 +135,9 @@ _gtk_border_image_unref (GtkBorderImage *image)
       if (image->source_gradient != NULL)
         gtk_gradient_unref (image->source_gradient);
 
+      if (image->width != NULL)
+        gtk_border_free (image->width);
+
       g_slice_free (GtkBorderImage, image);
     }
 }
@@ -134,22 +146,39 @@ GParameter *
 _gtk_border_image_unpack (const GValue *value,
                           guint        *n_params)
 {
-  GParameter *parameter = g_new0 (GParameter, 3);
+  GParameter *parameter = g_new0 (GParameter, 4);
   GtkBorderImage *image = g_value_get_boxed (value);
 
   parameter[0].name = "border-image-source";
-  g_value_init (&parameter[0].value, CAIRO_GOBJECT_TYPE_PATTERN);
-  g_value_set_boxed (&parameter[0].value, image->source);
+
+  if ((image != NULL) && 
+      (image->source_gradient != NULL))
+    g_value_init (&parameter[0].value, GTK_TYPE_GRADIENT);
+  else
+    g_value_init (&parameter[0].value, CAIRO_GOBJECT_TYPE_PATTERN);
 
   parameter[1].name = "border-image-slice";
   g_value_init (&parameter[1].value, GTK_TYPE_BORDER);
-  g_value_set_boxed (&parameter[1].value, &image->slice);
 
   parameter[2].name = "border-image-repeat";
   g_value_init (&parameter[2].value, GTK_TYPE_CSS_BORDER_IMAGE_REPEAT);
-  g_value_set_boxed (&parameter[2].value, &image->repeat);
 
-  *n_params = 3;
+  parameter[3].name = "border-image-width";
+  g_value_init (&parameter[3].value, GTK_TYPE_BORDER);
+
+  if (image != NULL)
+    {
+      if (image->source_gradient != NULL)
+        g_value_set_boxed (&parameter[0].value, image->source_gradient);
+      else
+        g_value_set_boxed (&parameter[0].value, image->source);
+
+      g_value_set_boxed (&parameter[1].value, &image->slice);
+      g_value_set_boxed (&parameter[2].value, &image->repeat);
+      g_value_set_boxed (&parameter[3].value, image->width);
+    }
+
+  *n_params = 4;
   return parameter;
 }
 
@@ -160,13 +189,14 @@ _gtk_border_image_pack (GValue             *value,
 {
   GtkBorderImage *image;
   cairo_pattern_t *source;
-  GtkBorder *slice;
+  GtkBorder *slice, *width;
   GtkCssBorderImageRepeat *repeat;
 
   gtk_style_properties_get (props, state,
                             "border-image-source", &source,
                             "border-image-slice", &slice,
                             "border-image-repeat", &repeat,
+                            "border-image-width", &width,
                             NULL);
 
   if (source == NULL)
@@ -175,7 +205,7 @@ _gtk_border_image_pack (GValue             *value,
     }
   else
     {
-      image = _gtk_border_image_new (source, slice, repeat);
+      image = _gtk_border_image_new (source, slice, width, repeat);
       g_value_take_boxed (value, image);
 
       cairo_pattern_destroy (source);
@@ -183,6 +213,9 @@ _gtk_border_image_pack (GValue             *value,
 
   if (slice != NULL)
     gtk_border_free (slice);
+
+  if (width != NULL)
+    gtk_border_free (width);
 
   if (repeat != NULL)
     g_free (repeat);
@@ -366,6 +399,9 @@ _gtk_border_image_render (GtkBorderImage   *image,
   int surface_width, surface_height;
   int h, v;
 
+  if (image->width != NULL)
+    border_width = image->width;
+
   if (cairo_pattern_get_type (image->source) != CAIRO_PATTERN_TYPE_SURFACE)
     {
       cairo_matrix_t matrix;
@@ -421,7 +457,7 @@ _gtk_border_image_render (GtkBorderImage   *image,
       for (h = 0; h < 3; h++)
         {
           if (horizontal_slice[h].size == 0 ||
-              horizontal_border[v].size == 0)
+              horizontal_border[h].size == 0)
             continue;
 
           if (h == 1 && v == 1)
@@ -433,7 +469,6 @@ _gtk_border_image_render (GtkBorderImage   *image,
                                                       horizontal_slice[h].size,
                                                       vertical_slice[v].size);
 
-          /* xxx: we scale to border-width here, that's wrong, isn't it? */
           gtk_border_image_render_slice (cr,
                                          slice,
                                          horizontal_slice[h].size,

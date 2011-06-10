@@ -401,6 +401,13 @@ struct _GtkStyleContextClass
 #define GTK_STYLE_CLASS_SIDEBAR "sidebar"
 
 /**
+ * GTK_STYLE_CLASS_IMAGE:
+ *
+ * A widget class defining an image, such as the icon in an entry.
+ */
+#define GTK_STYLE_CLASS_IMAGE "image"
+
+/**
  * GTK_STYLE_CLASS_HIGHLIGHT:
  *
  * A CSS class defining a highlighted area, such as headings in
@@ -745,6 +752,11 @@ void        gtk_render_activity    (GtkStyleContext     *context,
 GdkPixbuf * gtk_render_icon_pixbuf (GtkStyleContext     *context,
                                     const GtkIconSource *source,
                                     GtkIconSize          size);
+void        gtk_render_icon        (GtkStyleContext     *context,
+                                    cairo_t             *cr,
+				    GdkPixbuf           *pixbuf,
+                                    gdouble              x,
+                                    gdouble              y);
 
 G_END_DECLS
 
