@@ -387,13 +387,15 @@ gtk_font_selection_init (GtkFontSelection *fontsel)
 			  fontsel);
   
   font_label = gtk_label_new_with_mnemonic (_("_Family:"));
-  gtk_misc_set_alignment (GTK_MISC (font_label), 0.0, 0.5);
+  gtk_widget_set_halign (font_label, GTK_ALIGN_START);
+  gtk_widget_set_valign (font_label, GTK_ALIGN_CENTER);
   gtk_widget_show (font_label);
   gtk_table_attach (GTK_TABLE (table), font_label, 0, 1, 0, 1,
 		    GTK_FILL, 0, 0, 0);  
 
   style_label = gtk_label_new_with_mnemonic (_("_Style:"));
-  gtk_misc_set_alignment (GTK_MISC (style_label), 0.0, 0.5);
+  gtk_widget_set_halign (style_label, GTK_ALIGN_START);
+  gtk_widget_set_valign (style_label, GTK_ALIGN_CENTER);
   gtk_widget_show (style_label);
   gtk_table_attach (GTK_TABLE (table), style_label, 1, 2, 0, 1,
 		    GTK_FILL, 0, 0, 0);
@@ -401,7 +403,8 @@ gtk_font_selection_init (GtkFontSelection *fontsel)
   label = gtk_label_new_with_mnemonic (_("Si_ze:"));
   gtk_label_set_mnemonic_widget (GTK_LABEL (label),
                                  priv->size_entry);
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_widget_show (label);
   gtk_table_attach (GTK_TABLE (table), label, 2, 3, 0, 1,
 		    GTK_FILL, 0, 0, 0);
@@ -575,7 +578,8 @@ gtk_font_selection_init (GtkFontSelection *fontsel)
   
   /* create the text entry widget */
   label = gtk_label_new_with_mnemonic (_("_Preview:"));
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_widget_show (label);
   gtk_box_pack_start (GTK_BOX (vbox), label, FALSE, TRUE, 0);
 
@@ -1563,7 +1567,7 @@ gtk_font_selection_set_font_name (GtkFontSelection *fontsel,
  *     This string is owned by the widget and should not be 
  *     modified or freed 
  */
-G_CONST_RETURN gchar*
+const gchar*
 gtk_font_selection_get_preview_text (GtkFontSelection *fontsel)
 {
   GtkFontSelectionPrivate *priv;
@@ -1868,7 +1872,7 @@ gtk_font_selection_dialog_set_font_name (GtkFontSelectionDialog *fsd,
  *     This string is owned by the widget and should not be 
  *     modified or freed 
  */
-G_CONST_RETURN gchar*
+const gchar*
 gtk_font_selection_dialog_get_preview_text (GtkFontSelectionDialog *fsd)
 {
   GtkFontSelectionDialogPrivate *priv;

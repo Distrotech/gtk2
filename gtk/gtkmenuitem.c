@@ -155,7 +155,7 @@ static gboolean gtk_menu_item_can_activate_accel (GtkWidget *widget,
 
 static void gtk_real_menu_item_set_label (GtkMenuItem     *menu_item,
                                           const gchar     *label);
-static G_CONST_RETURN gchar * gtk_real_menu_item_get_label (GtkMenuItem *menu_item);
+static const gchar * gtk_real_menu_item_get_label (GtkMenuItem *menu_item);
 
 static void gtk_menu_item_get_preferred_width            (GtkWidget           *widget,
                                                           gint                *minimum_size,
@@ -1893,7 +1893,7 @@ gtk_real_menu_item_set_label (GtkMenuItem *menu_item,
     }
 }
 
-static G_CONST_RETURN gchar *
+static const gchar *
 gtk_real_menu_item_get_label (GtkMenuItem *menu_item)
 {
   GtkWidget *child;
@@ -2521,7 +2521,7 @@ gtk_menu_item_set_accel_path (GtkMenuItem *menu_item,
  *
  * Since: 2.14
  */
-G_CONST_RETURN gchar *
+const gchar *
 gtk_menu_item_get_accel_path (GtkMenuItem *menu_item)
 {
   g_return_val_if_fail (GTK_IS_MENU_ITEM (menu_item), NULL);
@@ -2566,7 +2566,8 @@ gtk_menu_item_ensure_label (GtkMenuItem *menu_item)
   if (!gtk_bin_get_child (GTK_BIN (menu_item)))
     {
       accel_label = g_object_new (GTK_TYPE_ACCEL_LABEL, NULL);
-      gtk_misc_set_alignment (GTK_MISC (accel_label), 0.0, 0.5);
+      gtk_widget_set_halign (accel_label, GTK_ALIGN_START);
+      gtk_widget_set_valign (accel_label, GTK_ALIGN_CENTER);
 
       gtk_container_add (GTK_CONTAINER (menu_item), accel_label);
       gtk_accel_label_set_accel_widget (GTK_ACCEL_LABEL (accel_label),
@@ -2604,7 +2605,7 @@ gtk_menu_item_set_label (GtkMenuItem *menu_item,
  *
  * Since: 2.16
  */
-G_CONST_RETURN gchar *
+const gchar *
 gtk_menu_item_get_label (GtkMenuItem *menu_item)
 {
   g_return_val_if_fail (GTK_IS_MENU_ITEM (menu_item), NULL);
