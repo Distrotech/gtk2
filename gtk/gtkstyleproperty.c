@@ -884,38 +884,68 @@ shadow_value_parse (GtkCssParser *parser,
                     GFile *base,
                     GValue *value)
 {
-  gboolean inset;
+  gboolean have_inset, have_color, have_lengths;
   gdouble hoffset, voffset, blur, spread;
   GtkSymbolicColor *color;
   GtkShadow *shadow;
+  guint i;
 
   shadow = _gtk_shadow_new ();
 
   do
     {
-      inset = _gtk_css_parser_try (parser, "inset", TRUE);
+      have_inset = have_lengths = have_color = FALSE;
 
-      if (!_gtk_css_parser_try_double (parser, &hoffset) ||
-          !_gtk_css_parser_try_double (parser, &voffset))
+      for (i = 0; i < 3; i++)
         {
-          _gtk_css_parser_error (parser, "Horizontal and vertical offsets are required");
-          _gtk_shadow_unref (shadow);
-          return FALSE;
+          if (!have_inset && 
+              _gtk_css_parser_try (parser, "inset", TRUE))
+            {
+              have_inset = TRUE;
+              continue;
+            }
+            
+          if (!have_lengths &&
+              _gtk_css_parser_try_double (parser, &hoffset))
+            {
+              have_lengths = TRUE;
+
+              if (!_gtk_css_parser_try_double (parser, &voffset))
+                {
+                  _gtk_css_parser_error (parser, "Horizontal and vertical offsets are required");
+                  _gtk_shadow_unref (shadow);
+                  return FALSE;
+                }
+
+              if (!_gtk_css_parser_try_double (parser, &blur))
+                blur = 0;
+
+              if (!_gtk_css_parser_try_double (parser, &spread))
+                spread = 0;
+
+              continue;
+            }
+
+          if (!have_color)
+            {
+              have_color = TRUE;
+
+              /* XXX: the color is optional and UA-defined if it's missing,
+               * but it doesn't really make sense for us...
+               */
+              color = _gtk_css_parser_read_symbolic_color (parser);
+
+              if (color == NULL)
+                {
+                  _gtk_shadow_unref (shadow);
+                  return FALSE;
+                }
+            }
         }
 
-      if (!_gtk_css_parser_try_double (parser, &blur))
-        blur = 0;
-
-      if (!_gtk_css_parser_try_double (parser, &spread))
-        spread = 0;
-
-      /* XXX: the color is optional and UA-defined if it's missing,
-       * but it doesn't really make sense for us...
-       */
-      color = _gtk_css_parser_read_symbolic_color (parser);
-
-      if (color == NULL)
+      if (!have_color || !have_lengths)
         {
+          _gtk_css_parser_error (parser, "Must specify at least color and offsets");
           _gtk_shadow_unref (shadow);
           return FALSE;
         }
@@ -923,7 +953,7 @@ shadow_value_parse (GtkCssParser *parser,
       _gtk_shadow_append (shadow,
                           hoffset, voffset,
                           blur, spread,
-                          inset, color);
+                          have_inset, color);
 
       gtk_symbolic_color_unref (color);
 
@@ -1649,6 +1679,14 @@ pack_border_radius (GValue             *value,
   g_free (top_left);
 }
 
+/*** default values ***/
+
+static void
+border_image_width_default_value (GtkStyleProperties *props,
+                                  GValue             *value)
+{
+}
+
 /*** API ***/
 
 static void
@@ -1938,28 +1976,39 @@ _gtk_style_property_resolve (const GtkStyleProperty *property,
     {
       if (property->pspec->value_type == GDK_TYPE_RGBA)
         {
-          if (!resolve_color (props, val))
-            _gtk_style_property_resolve (property, props, val);
+          if (resolve_color (props, val))
+            return;
         }
       else if (property->pspec->value_type == GDK_TYPE_COLOR)
         {
-          if (!resolve_color_rgb (props, val))
-            _gtk_style_property_resolve (property, props, val);
+          if (resolve_color_rgb (props, val))
+            return;
         }
-      else
-        _gtk_style_property_resolve (property, props, val);
+      
+      g_value_unset (val);
+      g_value_init (val, property->pspec->value_type);
+      _gtk_style_property_default_value (property, props, val);
+    }
+  else if (G_VALUE_TYPE (val) == GDK_TYPE_RGBA)
+    {
+      if (g_value_get_boxed (val) == NULL)
+        _gtk_style_property_default_value (property, props, val);
     }
   else if (G_VALUE_TYPE (val) == GTK_TYPE_GRADIENT)
     {
       g_return_if_fail (property->pspec->value_type == CAIRO_GOBJECT_TYPE_PATTERN);
 
       if (!resolve_gradient (props, val))
-        _gtk_style_property_resolve (property, props, val);
+        {
+          g_value_unset (val);
+          g_value_init (val, CAIRO_GOBJECT_TYPE_PATTERN);
+          _gtk_style_property_default_value (property, props, val);
+        }
     }
   else if (G_VALUE_TYPE (val) == GTK_TYPE_SHADOW)
     {
       if (!resolve_shadow (props, val))
-        _gtk_style_property_resolve (property, props, val);
+        _gtk_style_property_default_value (property, props, val);
     }
 }
 
@@ -2064,6 +2113,11 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL);
 
+  gtk_style_properties_register_property (NULL,
+                                          g_param_spec_boxed ("box-shadow",
+                                                              "Box shadow",
+                                                              "Box shadow",
+                                                              GTK_TYPE_SHADOW, 0));
   gtk_style_properties_register_property (NULL,
                                           g_param_spec_int ("margin-top",
                                                             "margin top",
@@ -2245,11 +2299,17 @@ gtk_style_property_init (void)
                                                               "Border image slice",
                                                               "Border image slice",
                                                               GTK_TYPE_BORDER, 0));
-  gtk_style_properties_register_property (NULL,
-                                          g_param_spec_boxed ("border-image-width",
+  _gtk_style_property_register           (g_param_spec_boxed ("border-image-width",
                                                               "Border image width",
                                                               "Border image width",
-                                                              GTK_TYPE_BORDER, 0));  
+                                                              GTK_TYPE_BORDER, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          border_image_width_default_value);
   _gtk_style_property_register           (g_param_spec_boxed ("border-image",
                                                               "Border Image",
                                                               "Border Image",

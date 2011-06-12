@@ -26,6 +26,9 @@ clean-local:
 
 EXTRA_DIST += \
 	align-expand.sh \
+	background-area.css \
+	background-area.ref.ui \
+	background-area.ui \
 	border-image-ball-green.png \
 	border-image-ball-red.png \
 	border-image-ball-yellow.png \
@@ -51,6 +54,9 @@ EXTRA_DIST += \
 	box-pseudo-classes.css \
 	box-pseudo-classes.ref.ui \
 	box-pseudo-classes.ui \
+	box-shadow-spec-inset.css \
+	box-shadow-spec-inset.ref.ui \
+	box-shadow-spec-inset.ui \
 	css-match-class.css \
 	css-match-class.ref.ui \
 	css-match-class.ui \
@@ -131,4 +137,7 @@ EXTRA_DIST += \
 	simple.ref.ui \
 	simple.ui \
 	toplevel-vs-popup.ref.ui \
-	toplevel-vs-popup.ui
+	toplevel-vs-popup.ui \
+	unresolvable.css \
+	unresolvable.ref.ui \
+	unresolvable.ui
