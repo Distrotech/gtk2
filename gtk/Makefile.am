@@ -255,6 +255,7 @@ gtk_public_h_sources = 		\
 	gtknumerableicon.h	\
 	gtkoffscreenwindow.h	\
 	gtkorientable.h		\
+	gtkoverlay.h		\
 	gtkpagesetup.h		\
 	gtkpaned.h		\
 	gtkpapersize.h		\
@@ -591,6 +592,7 @@ gtk_base_c_sources = 		\
 	gtknumerableicon.c	\
 	gtkoffscreenwindow.c	\
 	gtkorientable.c		\
+	gtkoverlay.c		\
 	gtkpagesetup.c		\
 	gtkpaned.c		\
 	gtkpango.c		\

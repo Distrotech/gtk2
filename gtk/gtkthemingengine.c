@@ -1634,6 +1634,20 @@ gtk_theming_engine_render_background (GtkThemingEngine *engine,
 }
 
 static void
+gtk_theming_engine_hide_border_sides (GtkBorder *border,
+                                      guint      hidden_side)
+{
+  if (hidden_side & SIDE_TOP)
+    border->top = 0;
+  if (hidden_side & SIDE_RIGHT)
+    border->right = 0;
+  if (hidden_side & SIDE_BOTTOM)
+    border->bottom = 0;
+  if (hidden_side & SIDE_LEFT)
+    border->left = 0;
+}
+
+static void
 render_frame_internal (GtkThemingEngine *engine,
                        cairo_t          *cr,
                        gdouble           x,
@@ -1657,6 +1671,7 @@ render_frame_internal (GtkThemingEngine *engine,
 
   gtk_theming_engine_get_border_color (engine, state, &border_color);
   gtk_theming_engine_get_border (engine, state, &border);
+  gtk_theming_engine_hide_border_sides (&border, hidden_side);
 
   gtk_theming_engine_get (engine, state,
                           "border-style", &border_style,
@@ -1717,26 +1732,34 @@ render_frame_internal (GtkThemingEngine *engine,
       _gtk_rounded_box_path (&padding_box, cr);
       cairo_clip (cr);
 
-      if (border_style == GTK_BORDER_STYLE_INSET)
-        gdk_cairo_set_source_rgba (cr, &border_color);
-      else
-        gdk_cairo_set_source_rgba (cr, &lighter);
-      cairo_move_to (cr, 0, 0);
-      cairo_line_to (cr, 0, height);
-      cairo_line_to (cr, min_size, height - min_size);
-      cairo_line_to (cr, width - min_size, min_size);
-      cairo_line_to (cr, width, 0);
-      cairo_fill (cr);
+      /* Now that we've clipped the border, we split the rectangle like this:
+       * +----------------------+
+       * |                   · /|
+       * |                   ·/ |
+       * |··+----------------+··|
+       * | /·                   |
+       * |/ ·                   |
+       * +----------------------+
+       * The dots mark how we adapt the area when sides are hidden to not get
+       * artifacts at the corners.
+       */
+      cairo_move_to (cr, x, y);
+      cairo_line_to (cr, x, y + height - ((hidden_side & SIDE_LEFT) ? min_size : 0));
+      cairo_line_to (cr, x + min_size, y + height - ((hidden_side & SIDE_BOTTOM) ? 0 : min_size));
+      cairo_line_to (cr, x + width - ((hidden_side & SIDE_RIGHT) ? 0 : min_size), y + min_size);
+      cairo_line_to (cr, x + width, y + ((hidden_side & SIDE_TOP) ? min_size : 0));
 
-      if (border_style == GTK_BORDER_STYLE_INSET)
-        gdk_cairo_set_source_rgba (cr, &lighter);
-      else
-        gdk_cairo_set_source_rgba (cr, &border_color);
-      cairo_move_to (cr, width, height);
-      cairo_line_to (cr, 0, height);
-      cairo_line_to (cr, min_size, height - min_size);
-      cairo_line_to (cr, width - min_size, min_size);
-      cairo_line_to (cr, width, 0);
+      /* Now we (ab)use the fact that with the EVEN_ODD fill rule one can
+       * "invert" the filled area by adding it to the path again.
+       */
+      if (border_style == GTK_BORDER_STYLE_OUTSET)
+        cairo_rectangle (cr, x, y, width, height);
+
+      gdk_cairo_set_source_rgba (cr, &border_color);
+      cairo_fill_preserve (cr);
+
+      cairo_rectangle (cr, x, y, width, height);
+      gdk_cairo_set_source_rgba (cr, &lighter);
       cairo_fill (cr);
 
       cairo_restore (cr);
