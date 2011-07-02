@@ -34,7 +34,8 @@
   "}\n" \
   "\n" \
   ".play:nth-child(even) {\n" \
-  "  background-color: yellow\n" \
+  "  background-color: yellow;\n" \
+  "  color: green;\n" \
   "}\n" \
   "\n" \
   ".play:nth-child(first) {\n" \
@@ -95,15 +96,16 @@ remove_widget (GtkWidget *widget)
   gtk_container_remove (GTK_CONTAINER (gtk_widget_get_parent (widget)), widget);
 }
 
+static int count = 0;
+
 static void
-add_widget (GtkBox *box)
+add_button (GtkBox *box)
 {
-  static int count = 0;
   GtkWidget* button;
   char *text;
 
   text = g_strdup_printf ("Remove %d", ++count);
-  button = gtk_button_new_from_stock (text);
+  button = (GtkWidget *)gtk_button_new_from_stock (text);
   g_free (text);
   gtk_style_context_add_class (gtk_widget_get_style_context (button), "play");
   g_signal_connect_swapped (button,
@@ -115,6 +117,24 @@ add_widget (GtkBox *box)
 }
 
 static void
+add_toolbutton (GtkToolbar *toolbar)
+{
+  GtkWidget* button;
+  char *text;
+
+  text = g_strdup_printf ("Remove %d", ++count);
+  button = (GtkWidget *)gtk_tool_button_new (NULL, text);
+  g_free (text);
+  gtk_style_context_add_class (gtk_widget_get_style_context (button), "play");
+  g_signal_connect_swapped (button,
+                            "clicked",
+                            G_CALLBACK (remove_widget),
+                            button);
+  gtk_widget_show (button);
+  gtk_container_add (GTK_CONTAINER (toolbar), button);
+}
+
+static void
 set_orientation (GtkSwitch *switch_)
 {
   gtk_widget_set_default_direction (gtk_switch_get_active (switch_) ? GTK_TEXT_DIR_LTR : GTK_TEXT_DIR_RTL);
@@ -123,7 +143,8 @@ set_orientation (GtkSwitch *switch_)
 gint
 main (gint argc, gchar **argv)
 {
-  GtkWidget *window, *main_box, *box, *container, *child;
+  GtkWidget *window, *main_box, *container, *child;
+  GtkWidget *box, *toolbar;
   GtkStyleProvider *provider;
   GtkTextBuffer *css;
   
@@ -151,6 +172,10 @@ main (gint argc, gchar **argv)
 
   main_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add (GTK_CONTAINER (window), main_box);
+
+  toolbar = gtk_toolbar_new ();
+  gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_TEXT);
+  gtk_box_pack_start (GTK_BOX (main_box), toolbar, FALSE, TRUE, 0);
 
   box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_box_pack_start (GTK_BOX (main_box), box, FALSE, TRUE, 0);
@@ -184,17 +209,28 @@ main (gint argc, gchar **argv)
   gtk_box_pack_start (GTK_BOX (container), child, FALSE, FALSE, 0);
   child = gtk_label_new ("left-to-right");
   gtk_box_pack_start (GTK_BOX (container), child, FALSE, FALSE, 0);
-  child = gtk_button_new_with_label ("Add widget");
+  child = gtk_button_new_with_label ("Add button");
   g_signal_connect_swapped (child,
                             "clicked",
-                            G_CALLBACK (add_widget),
+                            G_CALLBACK (add_button),
                             box);
   gtk_box_pack_end (GTK_BOX (container), child, FALSE, FALSE, 0);
+  child = gtk_button_new_with_label ("Add toolbutton");
+  g_signal_connect_swapped (child,
+                            "clicked",
+                            G_CALLBACK (add_toolbutton),
+                            toolbar);
+  gtk_box_pack_end (GTK_BOX (container), child, FALSE, FALSE, 0);
 
-  add_widget (GTK_BOX (box));
-  add_widget (GTK_BOX (box));
-  add_widget (GTK_BOX (box));
-  add_widget (GTK_BOX (box));
+  add_toolbutton (GTK_TOOLBAR (toolbar));
+  add_toolbutton (GTK_TOOLBAR (toolbar));
+  add_toolbutton (GTK_TOOLBAR (toolbar));
+  add_toolbutton (GTK_TOOLBAR (toolbar));
+
+  add_button (GTK_BOX (box));
+  add_button (GTK_BOX (box));
+  add_button (GTK_BOX (box));
+  add_button (GTK_BOX (box));
 
   gtk_widget_show_all (window);
 

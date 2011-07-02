@@ -109,7 +109,6 @@ struct _GtkBoxPrivate
 
   GtkOrientation  orientation;
   gint16          spacing;
-  GtkWidgetPath  *sibling_path;
 
   guint           default_expand : 1;
   guint           homogeneous    : 1;
@@ -847,11 +846,8 @@ count_widget_position (GtkWidget *widget,
 {
   CountingData *count = data;
 
-#if 0
-  /* We cannot reliably detect changes in widget visibility */
   if (!gtk_widget_get_visible (widget))
     return;
-#endif
 
   if (count->widget == widget)
     count->found = TRUE;
@@ -884,17 +880,19 @@ static GtkWidgetPath *
 gtk_box_get_path_for_child (GtkContainer *container,
                             GtkWidget    *child)
 {
-  GtkWidgetPath *path;
+  GtkWidgetPath *path, *sibling_path;
   GtkBox *box;
   GtkBoxPrivate *private;
+  GList *list, *children;
 
   box = GTK_BOX (container);
   private = box->priv;
 
-  if (private->sibling_path == NULL)
+  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (container)));
+
+  if (gtk_widget_get_visible (child))
     {
-      GList *list, *children;
-      private->sibling_path = gtk_widget_path_new ();
+      sibling_path = gtk_widget_path_new ();
 
       /* get_children works in visible order */
       children = gtk_container_get_children (container);
@@ -904,22 +902,19 @@ gtk_box_get_path_for_child (GtkContainer *container,
 
       for (list = children; list; list = list->next)
         {
-#if 0
-          /* We cannot reliably detect changes in widget visibility */
           if (!gtk_widget_get_visible (list->data))
-            return;
-#endif
-          gtk_widget_path_append_for_widget (private->sibling_path, list->data);
-        }
-      g_list_free (children);
-    }
+            continue;
 
-  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (container)));
-  if (gtk_widget_get_visible (child))
-    gtk_widget_path_append_with_siblings (path,
-                                          private->sibling_path,
-                                          gtk_box_get_visible_position (box,
-                                                                        child));
+          gtk_widget_path_append_for_widget (sibling_path, list->data);
+        }
+        g_list_free (children);
+
+        gtk_widget_path_append_with_siblings (path,
+                                              sibling_path,
+                                              gtk_box_get_visible_position (box,
+                                                                            child));
+        gtk_widget_path_unref (sibling_path);
+    }
   else
     gtk_widget_path_append_for_widget (path, child);
 
@@ -929,17 +924,9 @@ gtk_box_get_path_for_child (GtkContainer *container,
 static void
 gtk_box_invalidate_order (GtkBox *box)
 {
-  GtkBoxPrivate *private = box->priv;
-
-  if (private->sibling_path != NULL)
-    {
-      gtk_widget_path_unref (private->sibling_path);
-      private->sibling_path = NULL;
-
-      gtk_container_foreach (GTK_CONTAINER (box),
-                             (GtkCallback) gtk_widget_reset_style,
-                             NULL);
-    }
+  gtk_container_foreach (GTK_CONTAINER (box),
+                         (GtkCallback) gtk_widget_reset_style,
+                         NULL);
 }
 
 static void
@@ -947,6 +934,16 @@ gtk_box_direction_changed (GtkWidget        *widget,
                            GtkTextDirection  previous_direction)
 {
   gtk_box_invalidate_order (GTK_BOX (widget));
+}
+
+static void
+box_child_visibility_notify_cb (GObject *obj,
+                                GParamSpec *pspec,
+                                gpointer user_data)
+{
+  GtkBox *box = user_data;
+
+  gtk_box_invalidate_order (box);
 }
 
 static void
@@ -977,6 +974,9 @@ gtk_box_pack (GtkBox      *box,
 
   gtk_box_invalidate_order (box);
   gtk_widget_set_parent (child, GTK_WIDGET (box));
+
+  g_signal_connect (child, "notify::visible",
+                    G_CALLBACK (box_child_visibility_notify_cb), box);
 
   gtk_widget_child_notify (child, "expand");
   gtk_widget_child_notify (child, "fill");
@@ -1612,12 +1612,10 @@ gtk_box_reorder_child (GtkBox    *box,
   priv->children = g_list_insert_before (priv->children, new_link, child_info);
 
   gtk_widget_child_notify (child, "position");
-
-  gtk_box_invalidate_order (box);
-
   if (gtk_widget_get_visible (child)
       && gtk_widget_get_visible (GTK_WIDGET (box)))
     {
+      gtk_box_invalidate_order (box);
       gtk_widget_queue_resize (child);
     }
 }
@@ -1797,17 +1795,20 @@ gtk_box_remove (GtkContainer *container,
 	  was_visible = gtk_widget_get_visible (widget);
 	  gtk_widget_unparent (widget);
 
+          g_signal_handlers_disconnect_by_func (widget,
+                                                box_child_visibility_notify_cb,
+                                                box);
+
 	  priv->children = g_list_remove_link (priv->children, children);
 	  g_list_free (children);
 	  g_free (child);
-
-	  gtk_box_invalidate_order (box);
 
 	  /* queue resize regardless of gtk_widget_get_visible (container),
 	   * since that's what is needed by toplevels.
 	   */
 	  if (was_visible)
             {
+              gtk_box_invalidate_order (box);
 	      gtk_widget_queue_resize (GTK_WIDGET (container));
             }
 
