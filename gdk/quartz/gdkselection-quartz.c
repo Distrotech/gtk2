@@ -125,9 +125,10 @@ make_list (const gchar  *text,
     }
 
   if (list)
-    *list = g_new (gchar *, n_strings + 1);
-
-  (*list)[n_strings] = NULL;
+    {
+      *list = g_new (gchar *, n_strings + 1);
+      memset (*list, 0, sizeof (*list));
+    }
 
   i = n_strings;
   tmp_list = strings;
