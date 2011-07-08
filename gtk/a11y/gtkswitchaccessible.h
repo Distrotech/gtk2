@@ -37,9 +37,6 @@ typedef struct _GtkSwitchAccessibleClass GtkSwitchAccessibleClass;
 struct _GtkSwitchAccessible
 {
   GtkWidgetAccessible parent;
-
-  gchar *action_description;
-  guint action_idle;
 };
 
 struct _GtkSwitchAccessibleClass

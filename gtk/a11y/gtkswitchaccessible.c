@@ -56,19 +56,6 @@ gtk_switch_accessible_ref_state_set (AtkObject *accessible)
 }
 
 static void
-gtk_switch_accessible_finalize (GObject *obj)
-{
-  GtkSwitchAccessible *accessible = (GtkSwitchAccessible *)obj;
-
-  g_free (accessible->action_description);
-
-  if (accessible->action_idle)
-    g_source_remove (accessible->action_idle);
-
-  G_OBJECT_CLASS (gtk_switch_accessible_parent_class)->finalize (obj);
-}
-
-static void
 gtk_switch_accessible_initialize (AtkObject *accessible,
                                   gpointer   widget)
 {
@@ -82,10 +69,7 @@ gtk_switch_accessible_initialize (AtkObject *accessible,
 static void
 gtk_switch_accessible_class_init (GtkSwitchAccessibleClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   AtkObjectClass *atk_class = ATK_OBJECT_CLASS (klass);
-
-  object_class->finalize = gtk_switch_accessible_finalize;
 
   atk_class->initialize = gtk_switch_accessible_initialize;
   atk_class->ref_state_set = gtk_switch_accessible_ref_state_set;
@@ -94,8 +78,6 @@ gtk_switch_accessible_class_init (GtkSwitchAccessibleClass *klass)
 static void
 gtk_switch_accessible_init (GtkSwitchAccessible *self)
 {
-  self->action_description = NULL;
-  self->action_idle = 0;
 }
 
 static gint
@@ -114,60 +96,11 @@ gtk_switch_action_get_name (AtkAction *action,
   return "toggle";
 }
 
-static const gchar *
-gtk_switch_action_get_description (AtkAction *action,
-                                   gint       i)
-{
-  GtkSwitchAccessible *accessible = (GtkSwitchAccessible *)action;
-
-  if (i != 0)
-    return NULL;
-
-  return accessible->action_description;
-}
-
-static gboolean
-gtk_switch_action_set_description (AtkAction   *action,
-                                   gint         i,
-                                   const gchar *description)
-{
-  GtkSwitchAccessible *accessible = (GtkSwitchAccessible*)action;
-
-  if (i != 0)
-    return FALSE;
-
-  g_free (accessible->action_description);
-  accessible->action_description = g_strdup (description);
-
-  return TRUE;
-}
-
-static gboolean
-idle_do_action (gpointer data)
-{
-  GtkSwitchAccessible *accessible = data;
-  GtkWidget *widget;
-  GtkSwitch *sw;
-
-  widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (data));
-  sw = GTK_SWITCH (widget);
-
-  accessible->action_idle = 0;
-
-  if (widget == NULL ||
-      !gtk_widget_is_sensitive (widget) || !gtk_widget_get_visible (widget))
-    return FALSE;
-
-  gtk_switch_set_active (sw, !gtk_switch_get_active (sw));
-
-  return FALSE;
-}
-
 static gboolean
 gtk_switch_action_do_action (AtkAction *action,
                              gint       i)
 {
-  GtkSwitchAccessible *accessible;
+  GtkSwitch *sw;
   GtkWidget *widget;
 
   widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (action));
@@ -180,10 +113,8 @@ gtk_switch_action_do_action (AtkAction *action,
   if (!gtk_widget_is_sensitive (widget) || !gtk_widget_get_visible (widget))
     return FALSE;
 
-  accessible = (GtkSwitchAccessible *)action;
-
-  if (!accessible->action_idle)
-    accessible->action_idle = gdk_threads_add_idle (idle_do_action, accessible);
+  sw = GTK_SWITCH (widget);
+  gtk_switch_set_active (sw, !gtk_switch_get_active (sw));
 
   return TRUE;
 }
@@ -194,6 +125,4 @@ atk_action_interface_init (AtkActionIface *iface)
   iface->do_action = gtk_switch_action_do_action;
   iface->get_n_actions = gtk_switch_action_get_n_actions;
   iface->get_name = gtk_switch_action_get_name;
-  iface->get_description = gtk_switch_action_get_description;
-  iface->set_description = gtk_switch_action_set_description;
 }
