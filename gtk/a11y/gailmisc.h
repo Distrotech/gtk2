@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
@@ -20,59 +20,32 @@
 #ifndef __GAIL_MISC_H__
 #define __GAIL_MISC_H__
 
-#include <glib-object.h>
-#include <gtk/gtk.h>
-#include <pango/pango.h>
+#include <atk/atk.h>
 
 G_BEGIN_DECLS
 
-AtkAttributeSet* gail_misc_add_attribute          (AtkAttributeSet   *attrib_set,
-                                                   AtkTextAttribute   attr,
-                                                   gchar             *value);
-AtkAttributeSet* gail_misc_layout_get_run_attributes
-                                                  (AtkAttributeSet   *attrib_set,
-                                                   PangoLayout       *layout,
-                                                   const gchar       *text,
-                                                   gint              offset,
-                                                   gint              *start_offset,
-                                                   gint              *end_offset);
+#define GAIL_TYPE_MISC                           (gail_misc_get_type ())
+#define GAIL_MISC(obj)                           (G_TYPE_CHECK_INSTANCE_CAST ((obj), GAIL_TYPE_MISC, GailMisc))
+#define GAIL_MISC_CLASS(klass)                   (G_TYPE_CHECK_CLASS_CAST ((klass), GAIL_TYPE_MISC, GailMiscClass))
+#define GAIL_IS_MISC(obj)                        (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GAIL_TYPE_MISC))
+#define GAIL_IS_MISC_CLASS(klass)                (G_TYPE_CHECK_CLASS_TYPE ((klass), GAIL_TYPE_MISC))
+#define GAIL_MISC_GET_CLASS(obj)                 (G_TYPE_INSTANCE_GET_CLASS ((obj), GAIL_TYPE_MISC, GailMiscClass))
 
-AtkAttributeSet* gail_misc_get_default_attributes (AtkAttributeSet   *attrib_set,
-                                                   PangoLayout       *layout,
-                                                   GtkWidget         *widget);
+typedef struct _GailMisc      GailMisc;
+typedef struct _GailMiscClass GailMiscClass;
 
-void             gail_misc_get_extents_from_pango_rectangle
-                                                  (GtkWidget         *widget,
-                                                   PangoRectangle    *char_rect,
-                                                   gint              x_layout,
-                                                   gint              y_layout,
-                                                   gint              *x,
-                    		                   gint              *y,
-                                                   gint              *width,
-                                                   gint              *height,
-                                                   AtkCoordType      coords);
+struct _GailMisc
+{
+  AtkMisc parent;
+};
 
-gint             gail_misc_get_index_at_point_in_layout
-                                                  (GtkWidget         *widget,
-                                                   PangoLayout       *layout, 
-                                                   gint              x_layout,
-                                                   gint              y_layout,
-                                                   gint              x,
-                                                   gint              y,
-                                                   AtkCoordType      coords);
+struct _GailMiscClass
+{
+  AtkMiscClass parent_class;
+};
 
-void		 gail_misc_get_origins            (GtkWidget         *widget,
-                                                   gint              *x_window,
-					           gint              *y_window,
-					           gint              *x_toplevel,
-					           gint              *y_toplevel);
-
-AtkAttributeSet* gail_misc_buffer_get_run_attributes
-                                                  (GtkTextBuffer     *buffer,
-                                                   gint              offset,
-                                                   gint              *start_offset,
-                                                   gint              *end_offset);
+GType gail_misc_get_type (void);
 
 G_END_DECLS
 
-#endif /*__GAIL_MISC_H__ */
+#endif /* __GAIL_MISC_H__ */

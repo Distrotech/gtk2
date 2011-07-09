@@ -23,10 +23,9 @@
 #include <stdlib.h>
 
 #include <gtk/gtkx.h>
-#include "gailtoplevel.h"
 #include "gailutil.h"
+#include "gailmisc.h"
 
-#define GNOME_ACCESSIBILITY_ENV "GNOME_ACCESSIBILITY"
 
 static gboolean gail_focus_watcher      (GSignalInvocationHint *ihint,
                                          guint                  n_param_values,
@@ -790,27 +789,17 @@ static int gail_initialized = FALSE;
 void
 gail_accessibility_module_init (void)
 {
-  const char *env_a_t_support;
-  gboolean a_t_support = FALSE;
-
   if (gail_initialized)
-    {
-      return;
-    }
+    return;
+
   gail_initialized = TRUE;
   quark_focus_object = g_quark_from_static_string ("gail-focus-object");
-
-  env_a_t_support = g_getenv (GNOME_ACCESSIBILITY_ENV);
-
-  if (env_a_t_support)
-    a_t_support = atoi (env_a_t_support);
-  if (a_t_support)
-    fprintf (stderr, "GTK Accessibility Module initialized\n");
 
   atk_focus_tracker_init (gail_focus_tracker_init);
   focus_tracker_id = atk_add_focus_tracker (gail_focus_tracker);
 
   /* Initialize the GailUtility class */
   g_type_class_unref (g_type_class_ref (GAIL_TYPE_UTIL));
-  g_type_class_unref (g_type_class_ref (GAIL_TYPE_MISC));
+
+  atk_misc_instance = g_object_new (GAIL_TYPE_MISC, NULL);
 }

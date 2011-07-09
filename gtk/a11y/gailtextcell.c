@@ -20,10 +20,10 @@
 #include "config.h"
 #include <string.h>
 #include <gtk/gtk.h>
+#include "../gtkpango.h"
 #include "gailtextcell.h"
 #include "gailcontainercell.h"
 #include "gailcellparent.h"
-#include <libgail-util/gailmisc.h>
 
 static void      gail_text_cell_class_init		(GailTextCellClass *klass);
 static void      gail_text_cell_init			(GailTextCell	*text_cell);
@@ -78,8 +78,8 @@ static AtkAttributeSet* gail_text_cell_get_run_attributes
 static AtkAttributeSet* gail_text_cell_get_default_attributes 
                                                         (AtkText        *text);
 
-static PangoLayout*     create_pango_layout             (GtkCellRendererText *gtk_renderer,
-                                                         GtkWidget           *widget);
+static GtkWidget*       get_widget                      (GailTextCell *cell);
+static PangoLayout*     create_pango_layout             (GailTextCell *cell);
 static void             add_attr                        (PangoAttrList  *attr_list,
                                                          PangoAttribute *attr);
 
@@ -91,7 +91,6 @@ static gboolean gail_text_cell_update_cache		(GailRendererCell *cell,
 gchar *gail_text_cell_property_list[] = {
   /* Set font_desc first since it resets other values if it is NULL */
   "font_desc",
-
   "attributes",
   "background-gdk",
   "editable",
@@ -152,7 +151,6 @@ gail_text_cell_init (GailTextCell *text_cell)
   text_cell->cell_text = NULL;
   text_cell->caret_pos = 0;
   text_cell->cell_length = 0;
-  text_cell->textutil = gail_text_util_new ();
   atk_state_set_add_state (GAIL_CELL (text_cell)->state_set,
                            ATK_STATE_SINGLE_LINE);
 }
@@ -183,7 +181,6 @@ gail_text_cell_finalize (GObject            *object)
 {
   GailTextCell *text_cell = GAIL_TEXT_CELL (object);
 
-  g_object_unref (text_cell->textutil);
   g_free (text_cell->cell_text);
 
   G_OBJECT_CLASS (gail_text_cell_parent_class)->finalize (object);
@@ -255,8 +252,7 @@ gail_text_cell_update_cache (GailRendererCell *cell,
     }
 
   g_free (new_cache);
-  gail_text_util_text_setup (text_cell->textutil, text_cell->cell_text);
-  
+
   if (rv)
     {
       if (emit_change_signal)
@@ -289,50 +285,68 @@ atk_text_interface_init (AtkTextIface *iface)
 }
 
 static gchar* 
-gail_text_cell_get_text (AtkText *text, 
+gail_text_cell_get_text (AtkText *atk_text, 
                          gint    start_pos,
                          gint    end_pos)
 {
-  if (GAIL_TEXT_CELL (text)->cell_text)
-    return gail_text_util_get_substring (GAIL_TEXT_CELL (text)->textutil,
-              start_pos, end_pos);
+  gchar *text;
+
+  text = GAIL_TEXT_CELL (atk_text)->cell_text;
+  if (text)
+    return g_utf8_substring (text, start_pos, end_pos > -1 ? end_pos : g_utf8_strlen (text, -1));
   else
     return g_strdup ("");
 }
 
 static gchar* 
-gail_text_cell_get_text_before_offset (AtkText         *text,
+gail_text_cell_get_text_before_offset (AtkText         *atk_text,
                                        gint            offset,
                                        AtkTextBoundary boundary_type,
                                        gint            *start_offset,
                                        gint            *end_offset)
 {
-  return gail_text_util_get_text (GAIL_TEXT_CELL (text)->textutil,
-        NULL, GAIL_BEFORE_OFFSET, boundary_type, offset, start_offset,
-        end_offset);
+  PangoLayout *layout;
+  gchar *text;
+
+  layout = create_pango_layout (GAIL_TEXT_CELL (atk_text));
+  text = _gtk_pango_get_text_before (layout, boundary_type, offset, start_offset, end_offset);
+  g_object_unref (layout);
+
+  return text;
 }
 
 static gchar* 
-gail_text_cell_get_text_at_offset (AtkText         *text,
+gail_text_cell_get_text_at_offset (AtkText         *atk_text,
                                    gint            offset,
                                    AtkTextBoundary boundary_type,
                                    gint            *start_offset,
                                    gint            *end_offset)
 {
-  return gail_text_util_get_text (GAIL_TEXT_CELL (text)->textutil,
-        NULL, GAIL_AT_OFFSET, boundary_type, offset, start_offset, end_offset);
+  PangoLayout *layout;
+  gchar *text;
+
+  layout = create_pango_layout (GAIL_TEXT_CELL (atk_text));
+  text = _gtk_pango_get_text_at (layout, boundary_type, offset, start_offset, end_offset);
+  g_object_unref (layout);
+
+  return text;
 }
 
 static gchar* 
-gail_text_cell_get_text_after_offset (AtkText         *text,
+gail_text_cell_get_text_after_offset (AtkText         *atk_text,
                                       gint            offset,
                                       AtkTextBoundary boundary_type,
                                       gint            *start_offset,
                                       gint            *end_offset)
 {
-  return gail_text_util_get_text (GAIL_TEXT_CELL (text)->textutil,
-        NULL, GAIL_AFTER_OFFSET, boundary_type, offset, start_offset,
-        end_offset);
+  PangoLayout *layout;
+  gchar *text;
+
+  layout = create_pango_layout (GAIL_TEXT_CELL (atk_text));
+  text = _gtk_pango_get_text_after (layout, boundary_type, offset, start_offset, end_offset);
+  g_object_unref (layout);
+
+  return text;
 }
 
 static gint 
@@ -381,63 +395,66 @@ static AtkAttributeSet*
 gail_text_cell_get_run_attributes (AtkText *text,
                                   gint     offset,
                                   gint     *start_offset,
-                                  gint     *end_offset) 
+                                  gint     *end_offset)
 {
-  GailRendererCell *gail_renderer; 
-  GtkCellRendererText *gtk_renderer;
   AtkAttributeSet *attrib_set = NULL;
   PangoLayout *layout;
-  AtkObject *parent;
-  GtkWidget *widget;
-  gchar *renderer_text;
 
-  gail_renderer = GAIL_RENDERER_CELL (text);
-  gtk_renderer = GTK_CELL_RENDERER_TEXT (gail_renderer->renderer);
-
-  parent = atk_object_get_parent (ATK_OBJECT (text));
-  if (GAIL_IS_CONTAINER_CELL (parent))
-    parent = atk_object_get_parent (parent);
-  g_return_val_if_fail (GAIL_IS_CELL_PARENT (parent), NULL);
-  widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (parent));
-  layout = create_pango_layout (gtk_renderer, widget),
-  g_object_get (gtk_renderer, "text", &renderer_text, NULL);
-  attrib_set = gail_misc_layout_get_run_attributes (attrib_set, 
-                                                    layout,
-                                                    renderer_text,
-                                                    offset,
-                                                    start_offset,
-                                                    end_offset);
-  g_free (renderer_text);
+  layout = create_pango_layout (GAIL_TEXT_CELL (text));
+  attrib_set = _gtk_pango_get_run_attributes  (NULL, layout, offset, start_offset, end_offset);
   g_object_unref (G_OBJECT (layout));
-  
+
   return attrib_set;
+}
+
+static AtkAttributeSet *
+add_attribute (AtkAttributeSet  *attributes,
+               AtkTextAttribute  attr,
+               const gchar      *value)
+{
+  AtkAttribute *at;
+
+  at = g_new (AtkAttribute, 1);
+  at->name = g_strdup (atk_text_attribute_get_name (attr));
+  at->value = g_strdup (value);
+
+  return g_slist_prepend (attributes, at);
 }
 
 static AtkAttributeSet*
 gail_text_cell_get_default_attributes (AtkText	*text)
 {
-  GailRendererCell *gail_renderer; 
-  GtkCellRendererText *gtk_renderer;
   AtkAttributeSet *attrib_set = NULL;
   PangoLayout *layout;
-  AtkObject *parent;
   GtkWidget *widget;
 
-  gail_renderer = GAIL_RENDERER_CELL (text);
-  gtk_renderer = GTK_CELL_RENDERER_TEXT (gail_renderer->renderer);
+  layout = create_pango_layout (GAIL_TEXT_CELL (text));
+  widget = get_widget (GAIL_TEXT_CELL (text));
+
+  attrib_set = add_attribute (attrib_set, ATK_TEXT_ATTR_DIRECTION,
+                   atk_text_attribute_get_value (ATK_TEXT_ATTR_DIRECTION,
+                                                 gtk_widget_get_direction (widget)));
+  attrib_set = _gtk_pango_get_default_attributes (NULL, layout);
+
+  attrib_set = _gtk_style_context_get_attributes (attrib_set,
+                                                  gtk_widget_get_style_context (widget),
+                                                  gtk_widget_get_state_flags (widget));
+
+  g_object_unref (G_OBJECT (layout));
+
+  return attrib_set;
+}
+
+GtkWidget *
+get_widget (GailTextCell *text)
+{
+  AtkObject *parent;
 
   parent = atk_object_get_parent (ATK_OBJECT (text));
   if (GAIL_IS_CONTAINER_CELL (parent))
     parent = atk_object_get_parent (parent);
-  g_return_val_if_fail (GAIL_IS_CELL_PARENT (parent), NULL);
-  widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (parent));
-  layout = create_pango_layout (gtk_renderer, widget),
 
-  attrib_set = gail_misc_get_default_attributes (attrib_set, 
-                                                 layout,
-                                                 widget);
-  g_object_unref (G_OBJECT (layout));
-  return attrib_set;
+  return gtk_accessible_get_widget (GTK_ACCESSIBLE (parent));
 }
 
 /* 
@@ -447,8 +464,7 @@ gail_text_cell_get_default_attributes (AtkText	*text)
  * one using this function.
  */ 
 static PangoLayout*
-create_pango_layout(GtkCellRendererText *gtk_renderer,
-                    GtkWidget           *widget)
+create_pango_layout (GailTextCell *text)
 {
   GdkRGBA *foreground_rgba;
   PangoAttrList *attr_list, *attributes;
@@ -461,6 +477,11 @@ create_pango_layout(GtkCellRendererText *gtk_renderer,
   gchar *renderer_text;
   gdouble scale;
   gint rise;
+  GailRendererCell *gail_renderer;
+  GtkCellRendererText *gtk_renderer;
+
+  gail_renderer = GAIL_RENDERER_CELL (text);
+  gtk_renderer = GTK_CELL_RENDERER_TEXT (gail_renderer->renderer);
 
   g_object_get (gtk_renderer,
                 "text", &renderer_text,
@@ -478,7 +499,7 @@ create_pango_layout(GtkCellRendererText *gtk_renderer,
                 "rise", &rise,
                 NULL);
 
-  layout = gtk_widget_create_pango_layout (widget, renderer_text);
+  layout = gtk_widget_create_pango_layout (get_widget (text), renderer_text);
 
   if (attributes)
     attr_list = pango_attr_list_copy (attributes);
@@ -553,6 +574,26 @@ add_attr (PangoAttrList  *attr_list,
   pango_attr_list_insert (attr_list, attr);
 }
 
+
+static void
+get_origins (GtkWidget *widget,
+             gint      *x_window,
+             gint      *y_window,
+             gint      *x_toplevel,
+             gint      *y_toplevel)
+{
+  GdkWindow *window;
+
+  if (GTK_IS_TREE_VIEW (widget))
+    window = gtk_tree_view_get_bin_window (GTK_TREE_VIEW (widget));
+  else
+    window = gtk_widget_get_window (widget);
+
+  gdk_window_get_origin (window, x_window, y_window);
+  window = gdk_window_get_toplevel (gtk_widget_get_window (widget));
+  gdk_window_get_origin (window, x_toplevel, y_toplevel);
+}
+
 static void      
 gail_text_cell_get_character_extents (AtkText          *text,
                                       gint             offset,
@@ -574,6 +615,7 @@ gail_text_cell_get_character_extents (AtkText          *text,
   gfloat xalign, yalign;
   gint x_offset, y_offset, index;
   gint xpad, ypad;
+  gint x_window, y_window, x_toplevel, y_toplevel;
 
   if (!GAIL_TEXT_CELL (text)->cell_text)
     {
@@ -615,22 +657,35 @@ gail_text_cell_get_character_extents (AtkText          *text,
   x_offset = MAX (0, xalign * (rendered_rect.width - min_size.width));
   y_offset = MAX (0, yalign * (rendered_rect.height - min_size.height));
 
-  layout = create_pango_layout (gtk_renderer, widget);
+  layout = create_pango_layout (GAIL_TEXT_CELL (text));
 
   index = g_utf8_offset_to_pointer (renderer_text, offset) - renderer_text;
   pango_layout_index_to_pos (layout, index, &char_rect);
 
   gtk_cell_renderer_get_padding (gail_renderer->renderer, &xpad, &ypad);
-  gail_misc_get_extents_from_pango_rectangle (widget,
-      &char_rect,
-      x_offset + rendered_rect.x + xpad,
-      y_offset + rendered_rect.y + ypad,
-      x, y, width, height, coords);
+
+  get_origins (widget, &x_window, &y_window, &x_toplevel, &y_toplevel);
+
+  *x = (char_rect.x / PANGO_SCALE) + x_offset + rendered_rect.x + xpad + x_window;
+  *y = (char_rect.y / PANGO_SCALE) + y_offset + rendered_rect.y + ypad + y_window;
+  if (coords == ATK_XY_WINDOW)
+    {
+      *x -= x_toplevel;
+      *y -= y_toplevel;
+    }
+  else if (coords != ATK_XY_SCREEN)
+    {
+      *x = 0;
+      *y = 0;
+      *height = 0;
+      *width = 0;
+      return;
+    }
+  *height = char_rect.height / PANGO_SCALE;
+  *width = char_rect.width / PANGO_SCALE;
 
   g_free (renderer_text);
   g_object_unref (layout);
-
-  return;
 } 
 
 static gint      
@@ -650,6 +705,10 @@ gail_text_cell_get_offset_at_point (AtkText          *text,
   gfloat xalign, yalign;
   gint x_offset, y_offset, index;
   gint xpad, ypad;
+  gint x_window, y_window, x_toplevel, y_toplevel;
+  gint x_temp, y_temp;
+  gboolean ret;
+
  
   if (!GAIL_TEXT_CELL (text)->cell_text)
     return -1;
@@ -683,13 +742,34 @@ gail_text_cell_get_offset_at_point (AtkText          *text,
   x_offset = MAX (0, xalign * (rendered_rect.width - min_size.width));
   y_offset = MAX (0, yalign * (rendered_rect.height - min_size.height));
 
-  layout = create_pango_layout (gtk_renderer, widget);
+  layout = create_pango_layout (GAIL_TEXT_CELL (text));
 
   gtk_cell_renderer_get_padding (gail_renderer->renderer, &xpad, &ypad);
-  index = gail_misc_get_index_at_point_in_layout (widget, layout,
-        x_offset + rendered_rect.x + xpad,
-        y_offset + rendered_rect.y + ypad,
-        x, y, coords);
+
+  get_origins (widget, &x_window, &y_window, &x_toplevel, &y_toplevel);
+
+  x_temp =  x - (x_offset + rendered_rect.x + xpad) - x_window;
+  y_temp =  y - (y_offset + rendered_rect.y + ypad) - y_window;
+  if (coords == ATK_XY_WINDOW)
+    {
+      x_temp += x_toplevel;  
+      y_temp += y_toplevel;
+    }
+  else if (coords != ATK_XY_SCREEN)
+    index = -1;
+
+  ret = pango_layout_xy_to_index (layout, 
+                                  x_temp * PANGO_SCALE,
+                                  y_temp * PANGO_SCALE,
+                                  &index, NULL);
+  if (!ret)
+    {
+      if (x_temp < 0 || y_temp < 0)
+        index = 0;
+      else
+        index = -1; 
+    }
+
   g_object_unref (layout);
   if (index == -1)
     {
