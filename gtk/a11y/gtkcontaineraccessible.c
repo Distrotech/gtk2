@@ -23,12 +23,7 @@
 #include "gtkcontaineraccessible.h"
 
 
-G_DEFINE_TYPE (GtkContainerAccessible, gtk_container_accessible, GTK_TYPE_WIDGET_ACCESSIBLE)
-
-static void
-gtk_container_accessible_init (GtkContainerAccessible *container)
-{
-}
+G_DEFINE_TYPE (GtkContainerAccessible, _gtk_container_accessible, GTK_TYPE_WIDGET_ACCESSIBLE)
 
 static gint
 gtk_container_accessible_get_n_children (AtkObject* obj)
@@ -142,6 +137,8 @@ gtk_container_accessible_real_remove_gtk (GtkContainer *container,
 
   atk_parent = ATK_OBJECT (data);
   atk_child = gtk_widget_get_accessible (widget);
+  if (atk_child == NULL)
+    return 1;
   accessible = GTK_CONTAINER_ACCESSIBLE (atk_parent);
 
   g_object_notify (G_OBJECT (atk_child), "accessible_parent");
@@ -160,7 +157,7 @@ gtk_container_accessible_real_initialize (AtkObject *obj,
 {
   GtkContainerAccessible *accessible = GTK_CONTAINER_ACCESSIBLE (obj);
 
-  ATK_OBJECT_CLASS (gtk_container_accessible_parent_class)->initialize (obj, data);
+  ATK_OBJECT_CLASS (_gtk_container_accessible_parent_class)->initialize (obj, data);
 
   accessible->children = gtk_container_get_children (GTK_CONTAINER (data));
 
@@ -182,11 +179,11 @@ gtk_container_accessible_finalize (GObject *object)
 
   g_list_free (accessible->children);
 
-  G_OBJECT_CLASS (gtk_container_accessible_parent_class)->finalize (object);
+  G_OBJECT_CLASS (_gtk_container_accessible_parent_class)->finalize (object);
 }
 
 static void
-gtk_container_accessible_class_init (GtkContainerAccessibleClass *klass)
+_gtk_container_accessible_class_init (GtkContainerAccessibleClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   AtkObjectClass *class = ATK_OBJECT_CLASS (klass);
@@ -200,3 +197,9 @@ gtk_container_accessible_class_init (GtkContainerAccessibleClass *klass)
   klass->add_gtk = gtk_container_accessible_real_add_gtk;
   klass->remove_gtk = gtk_container_accessible_real_remove_gtk;
 }
+
+static void
+_gtk_container_accessible_init (GtkContainerAccessible *container)
+{
+}
+

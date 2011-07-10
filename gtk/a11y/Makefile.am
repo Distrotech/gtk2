@@ -5,21 +5,21 @@ noinst_LTLIBRARIES = libgail.la
 gail_c_sources =			\
 	gail.c				\
 	gtkarrowaccessible.c		\
-	gailbooleancell.c		\
+	gtkbooleancellaccessible.c	\
 	gtkboxaccessible.c		\
 	gtkbuttonaccessible.c		\
-	gailcell.c			\
-	gailcellparent.c		\
+	gtkcellaccessible.c		\
+	gtkcellaccessibleparent.c	\
 	gtkcheckmenuitemaccessible.c	\
 	gtkchecksubmenuitemaccessible.c	\
 	gtkcomboboxaccessible.c		\
 	gtkcontaineraccessible.c	\
-	gailcontainercell.c		\
+	gtkcontainercellaccessible.c	\
 	gtkentryaccessible.c		\
 	gtkexpanderaccessible.c		\
 	gtkframeaccessible.c		\
 	gtkimageaccessible.c		\
-	gailimagecell.c			\
+	gtkimagecellaccessible.c	\
 	gtklabelaccessible.c		\
 	gtklinkbuttonaccessible.c	\
 	gtkmenuaccessible.c		\
@@ -33,7 +33,7 @@ gail_c_sources =			\
 	gtkradiomenuitemaccessible.c	\
 	gtkradiosubmenuitemaccessible.c	\
 	gtkrangeaccessible.c		\
-	gailrenderercell.c		\
+	gtkrenderercellaccessible.c	\
 	gtkscaleaccessible.c		\
 	gtkscalebuttonaccessible.c	\
 	gtkscrollbaraccessible.c	\
@@ -43,7 +43,7 @@ gail_c_sources =			\
 	gtkstatusbaraccessible.c	\
 	gtksubmenuitemaccessible.c	\
 	gtkswitchaccessible.c		\
-	gailtextcell.c			\
+	gtktextcellaccessible.c		\
 	gtktextviewaccessible.c		\
 	gtktogglebuttonaccessible.c	\
 	gtktoplevelaccessible.c		\
@@ -57,21 +57,21 @@ libgailincludedir=$(includedir)/gail-3.0/gail
 
 gail_private_h_sources =		\
 	gtkarrowaccessible.h		\
-	gailbooleancell.h		\
+	gtkbooleancellaccessible.h	\
 	gtkboxaccessible.h		\
 	gtkbuttonaccessible.h		\
-	gailcell.h			\
-	gailcellparent.h		\
+	gtkcellaccessible.h		\
+	gtkcellaccessibleparent.h	\
 	gtkcheckmenuitemaccessible.h	\
 	gtkchecksubmenuitemaccessible.h	\
 	gtkcomboboxaccessible.h		\
 	gtkcontaineraccessible.h	\
-	gailcontainercell.h		\
+	gtkcontainercellaccessible.h	\
 	gtkentryaccessible.h		\
 	gtkexpanderaccessible.h		\
 	gtkframeaccessible.h		\
 	gtkimageaccessible.h		\
-	gailimagecell.h			\
+	gtkimagecellaccessible.h	\
 	gtklabelaccessible.h		\
 	gtklinkbuttonaccessible.h	\
 	gtkmenuaccessible.h		\
@@ -85,7 +85,7 @@ gail_private_h_sources =		\
 	gtkradiomenuitemaccessible.h	\
 	gtkradiosubmenuitemaccessible.h	\
 	gtkrangeaccessible.h		\
-	gailrenderercell.h		\
+	gtkrenderercellaccessible.h	\
 	gtkscaleaccessible.h		\
 	gtkscalebuttonaccessible.h	\
 	gtkscrollbaraccessible.h	\
@@ -95,7 +95,7 @@ gail_private_h_sources =		\
 	gtkstatusbaraccessible.h	\
 	gtksubmenuitemaccessible.h	\
 	gtkswitchaccessible.h		\
-	gailtextcell.h			\
+	gtktextcellaccessible.h		\
 	gtktextviewaccessible.h		\
 	gtktogglebuttonaccessible.h	\
 	gtktoplevelaccessible.h		\

@@ -19,8 +19,6 @@
 
 #include "config.h"
 
-#include <string.h>
-
 #include <gtk/gtk.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/x11/gdkx.h>
@@ -28,7 +26,7 @@
 #include "gtkwidgetaccessible.h"
 #include "gtknotebookpageaccessible.h"
 
-extern GtkWidget *focus_widget;
+extern GtkWidget *_focus_widget;
 
 
 static gboolean gtk_widget_accessible_on_screen           (GtkWidget *widget);
@@ -36,7 +34,7 @@ static gboolean gtk_widget_accessible_all_parents_visible (GtkWidget *widget);
 
 static void atk_component_interface_init (AtkComponentIface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (GtkWidgetAccessible, gtk_widget_accessible, GTK_TYPE_ACCESSIBLE,
+G_DEFINE_TYPE_WITH_CODE (GtkWidgetAccessible, _gtk_widget_accessible, GTK_TYPE_ACCESSIBLE,
                          G_IMPLEMENT_INTERFACE (ATK_TYPE_COMPONENT, atk_component_interface_init))
 
 /* Translate GtkWidget::focus-in/out-event to the focus_gtk vfunc */
@@ -270,7 +268,7 @@ gtk_widget_accessible_ref_relation_set (AtkObject *obj)
   if (widget == NULL)
     return NULL;
 
-  relation_set = ATK_OBJECT_CLASS (gtk_widget_accessible_parent_class)->ref_relation_set (obj);
+  relation_set = ATK_OBJECT_CLASS (_gtk_widget_accessible_parent_class)->ref_relation_set (obj);
 
   if (GTK_IS_BOX (widget))
     return relation_set;
@@ -339,7 +337,7 @@ gtk_widget_accessible_ref_state_set (AtkObject *accessible)
   GtkWidget *widget;
   AtkStateSet *state_set;
 
-  state_set = ATK_OBJECT_CLASS (gtk_widget_accessible_parent_class)->ref_state_set (accessible);
+  state_set = ATK_OBJECT_CLASS (_gtk_widget_accessible_parent_class)->ref_state_set (accessible);
 
   widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (accessible));
   if (widget == NULL)
@@ -384,7 +382,7 @@ gtk_widget_accessible_ref_state_set (AtkObject *accessible)
             atk_state_set_add_state (state_set, ATK_STATE_SHOWING);
         }
 
-      if (gtk_widget_has_focus (widget) && (widget == focus_widget))
+      if (gtk_widget_has_focus (widget) && (widget == _focus_widget))
         {
           AtkObject *focus_obj;
 
@@ -478,23 +476,23 @@ gtk_widget_accessible_notify_gtk (GObject    *obj,
   AtkState state;
   gboolean value;
 
-  if (strcmp (pspec->name, "has-focus") == 0)
+  if (g_strcmp0 (pspec->name, "has-focus") == 0)
     /*
      * We use focus-in-event and focus-out-event signals to catch
      * focus changes so we ignore this.
      */
     return;
-  else if (strcmp (pspec->name, "visible") == 0)
+  else if (g_strcmp0 (pspec->name, "visible") == 0)
     {
       state = ATK_STATE_VISIBLE;
       value = gtk_widget_get_visible (widget);
     }
-  else if (strcmp (pspec->name, "sensitive") == 0)
+  else if (g_strcmp0 (pspec->name, "sensitive") == 0)
     {
       state = ATK_STATE_SENSITIVE;
       value = gtk_widget_get_sensitive (widget);
     }
-  else if (strcmp (pspec->name, "orientation") == 0)
+  else if (g_strcmp0 (pspec->name, "orientation") == 0)
     {
       GtkOrientable *orientable;
 
@@ -549,7 +547,7 @@ gtk_widget_accessible_get_attributes (AtkObject *obj)
 }
 
 static void
-gtk_widget_accessible_class_init (GtkWidgetAccessibleClass *klass)
+_gtk_widget_accessible_class_init (GtkWidgetAccessibleClass *klass)
 {
   AtkObjectClass *class = ATK_OBJECT_CLASS (klass);
   GtkAccessibleClass *accessible_class = GTK_ACCESSIBLE_CLASS (klass);
@@ -569,7 +567,7 @@ gtk_widget_accessible_class_init (GtkWidgetAccessibleClass *klass)
 }
 
 static void
-gtk_widget_accessible_init (GtkWidgetAccessible *accessible)
+_gtk_widget_accessible_init (GtkWidgetAccessible *accessible)
 {
 }
 
@@ -656,7 +654,7 @@ gtk_widget_accessible_get_layer (AtkComponent *component)
 }
 
 void
-gtk_widget_accessible_set_layer (GtkWidgetAccessible *accessible,
+_gtk_widget_accessible_set_layer (GtkWidgetAccessible *accessible,
                                  AtkLayer             layer)
 {
   g_object_set_data (G_OBJECT (accessible), "atk-component-layer", GINT_TO_POINTER (layer));
