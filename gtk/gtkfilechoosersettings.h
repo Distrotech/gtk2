@@ -44,6 +44,8 @@ struct _GtkFileChooserSettings
 {
   GObject object;
 
+  char *last_folder_uri;
+
   LocationMode location_mode;
 
   GtkSortType sort_order;
@@ -57,7 +59,6 @@ struct _GtkFileChooserSettings
   guint settings_read    : 1;
   guint show_hidden      : 1;
   guint show_size_column : 1;
-  guint expand_folders   : 1;
 };
 
 struct _GtkFileChooserSettingsClass
@@ -69,6 +70,9 @@ GType _gtk_file_chooser_settings_get_type (void) G_GNUC_CONST;
 
 GtkFileChooserSettings *_gtk_file_chooser_settings_new (void);
 
+char *_gtk_file_chooser_settings_get_last_folder_uri (GtkFileChooserSettings *settings);
+void  _gtk_file_chooser_settings_set_last_folder_uri (GtkFileChooserSettings *settings, const char *uri);
+
 LocationMode _gtk_file_chooser_settings_get_location_mode (GtkFileChooserSettings *settings);
 void         _gtk_file_chooser_settings_set_location_mode (GtkFileChooserSettings *settings,
 							   LocationMode            location_mode);
@@ -76,10 +80,6 @@ void         _gtk_file_chooser_settings_set_location_mode (GtkFileChooserSetting
 gboolean _gtk_file_chooser_settings_get_show_hidden (GtkFileChooserSettings *settings);
 void     _gtk_file_chooser_settings_set_show_hidden (GtkFileChooserSettings *settings,
 						     gboolean                show_hidden);
-
-gboolean _gtk_file_chooser_settings_get_expand_folders (GtkFileChooserSettings *settings);
-void     _gtk_file_chooser_settings_set_expand_folders (GtkFileChooserSettings *settings,
-							gboolean                expand_folders);
 
 gboolean _gtk_file_chooser_settings_get_show_size_column (GtkFileChooserSettings *settings);
 void     _gtk_file_chooser_settings_set_show_size_column (GtkFileChooserSettings *settings,

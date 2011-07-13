@@ -38,9 +38,9 @@
 #include "gtkalias.h"
 
 #define SETTINGS_GROUP		"Filechooser Settings"
+#define LAST_FOLDER_URI_KEY     "LastFolderUri"
 #define LOCATION_MODE_KEY	"LocationMode"
 #define SHOW_HIDDEN_KEY		"ShowHidden"
-#define EXPAND_FOLDERS_KEY	"ExpandFolders"
 #define SHOW_SIZE_COLUMN_KEY    "ShowSizeColumn"
 #define GEOMETRY_X_KEY		"GeometryX"
 #define GEOMETRY_Y_KEY		"GeometryY"
@@ -138,6 +138,10 @@ ensure_settings_read (GtkFileChooserSettings *settings)
   if (!g_key_file_has_group (key_file, SETTINGS_GROUP))
     goto out;
 
+  /* Last folder URI */
+
+  settings->last_folder_uri = g_key_file_get_string (key_file, SETTINGS_GROUP, LAST_FOLDER_URI_KEY, NULL);
+
   /* Location mode */
 
   location_mode_str = g_key_file_get_string (key_file, SETTINGS_GROUP,
@@ -163,15 +167,6 @@ ensure_settings_read (GtkFileChooserSettings *settings)
     warn_if_invalid_key_and_clear_error (SHOW_HIDDEN_KEY, &error);
   else
     settings->show_hidden = value != FALSE;
-
-  /* Expand folders */
-
-  value = g_key_file_get_boolean (key_file, SETTINGS_GROUP,
-				  EXPAND_FOLDERS_KEY, &error);
-  if (error)
-    warn_if_invalid_key_and_clear_error (EXPAND_FOLDERS_KEY, &error);
-  else
-    settings->expand_folders = value != FALSE;
 
   /* Show size column */
 
@@ -243,11 +238,11 @@ _gtk_file_chooser_settings_class_init (GtkFileChooserSettingsClass *class)
 static void
 _gtk_file_chooser_settings_init (GtkFileChooserSettings *settings)
 {
+  settings->last_folder_uri = NULL;
   settings->location_mode = LOCATION_MODE_PATH_BAR;
   settings->sort_order = GTK_SORT_ASCENDING;
   settings->sort_column = FILE_LIST_COL_NAME;
   settings->show_hidden = FALSE;
-  settings->expand_folders = FALSE;
   settings->show_size_column = TRUE;
   settings->geometry_x	    = -1;
   settings->geometry_y	    = -1;
@@ -259,6 +254,19 @@ GtkFileChooserSettings *
 _gtk_file_chooser_settings_new (void)
 {
   return g_object_new (GTK_FILE_CHOOSER_SETTINGS_TYPE, NULL);
+}
+
+char *
+_gtk_file_chooser_settings_get_last_folder_uri (GtkFileChooserSettings *settings)
+{
+  return g_strdup (settings->last_folder_uri);
+}
+
+void
+_gtk_file_chooser_settings_set_last_folder_uri (GtkFileChooserSettings *settings, const char *uri)
+{
+  g_free (settings->last_folder_uri);
+  settings->last_folder_uri = g_strdup (uri);
 }
 
 LocationMode
@@ -289,13 +297,6 @@ _gtk_file_chooser_settings_set_show_hidden (GtkFileChooserSettings *settings,
   settings->show_hidden = show_hidden != FALSE;
 }
 
-gboolean
-_gtk_file_chooser_settings_get_expand_folders (GtkFileChooserSettings *settings)
-{
-  ensure_settings_read (settings);
-  return settings->expand_folders;
-}
-
 void
 _gtk_file_chooser_settings_set_show_size_column (GtkFileChooserSettings *settings,
 					         gboolean show_column)
@@ -308,13 +309,6 @@ _gtk_file_chooser_settings_get_show_size_column (GtkFileChooserSettings *setting
 {
   ensure_settings_read (settings);
   return settings->show_size_column;
-}
-
-void
-_gtk_file_chooser_settings_set_expand_folders (GtkFileChooserSettings *settings,
-					       gboolean expand_folders)
-{
-  settings->expand_folders = expand_folders != FALSE;
 }
 
 void
@@ -444,11 +438,11 @@ _gtk_file_chooser_settings_save (GtkFileChooserSettings *settings,
   g_key_file_load_from_file (key_file, filename, 0, NULL);
 
   g_key_file_set_string (key_file, SETTINGS_GROUP,
+			 LAST_FOLDER_URI_KEY, settings->last_folder_uri);
+  g_key_file_set_string (key_file, SETTINGS_GROUP,
 			 LOCATION_MODE_KEY, location_mode_str);
   g_key_file_set_boolean (key_file, SETTINGS_GROUP,
 			  SHOW_HIDDEN_KEY, settings->show_hidden);
-  g_key_file_set_boolean (key_file, SETTINGS_GROUP,
-			  EXPAND_FOLDERS_KEY, settings->expand_folders);
   g_key_file_set_boolean (key_file, SETTINGS_GROUP,
 			  SHOW_SIZE_COLUMN_KEY, settings->show_size_column);
   g_key_file_set_integer (key_file, SETTINGS_GROUP,
