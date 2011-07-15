@@ -1182,12 +1182,16 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 	  }
     }
 
+  nswindow = get_toplevel_nswindow (widget);
+  info->nsevent = [nswindow currentEvent];
+  [info->nsevent retain];
 
   /* drag will begin in an idle handler to avoid nested run loops */
 
   g_idle_add_full (G_PRIORITY_HIGH_IDLE, gtk_drag_begin_idle, context, NULL);
 
-  gdk_pointer_ungrab (0);
+  pointer = gdk_drag_context_get_device (info->context);
+  gdk_device_ungrab (pointer, 0);
 
   return context;
 }

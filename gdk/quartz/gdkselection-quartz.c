@@ -125,10 +125,7 @@ make_list (const gchar  *text,
     }
 
   if (list)
-    {
-      *list = g_new (gchar *, n_strings + 1);
-      memset (*list, 0, sizeof (*list));
-    }
+    *list = g_new0 (gchar *, n_strings + 1);
 
   i = n_strings;
   tmp_list = strings;
@@ -170,7 +167,7 @@ _gdk_quartz_display_text_property_to_utf8_list (GdkDisplay    *display,
     {
       gchar *enc_name = gdk_atom_name (encoding);
 
-      g_warning ("gdk_text_property_to_utf8_list: encoding %s not handled\n", enc_name);
+      g_warning ("gdk_text_property_to_utf8_list_for_display: encoding %s not handled\n", enc_name);
       g_free (enc_name);
 
       if (list)
