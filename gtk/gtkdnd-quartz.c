@@ -1119,6 +1119,7 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 {
   GtkDragSourceInfo *info;
   GdkDragContext *context;
+  GdkDevice *pointer;
   NSWindow *nswindow = get_toplevel_nswindow (widget);
   NSPoint point = {(double)event->motion.x, (double)event->motion.y};
   NSEvent *nsevent = [NSEvent mouseEventWithType: NSLeftMouseDown
