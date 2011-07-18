@@ -37,20 +37,18 @@ static void atk_component_interface_init (AtkComponentIface *iface);
 G_DEFINE_TYPE_WITH_CODE (GtkWidgetAccessible, _gtk_widget_accessible, GTK_TYPE_ACCESSIBLE,
                          G_IMPLEMENT_INTERFACE (ATK_TYPE_COMPONENT, atk_component_interface_init))
 
-/* Translate GtkWidget::focus-in/out-event to the focus_gtk vfunc */
+/* Translate GtkWidget::focus-in/out-event to AtkObject::focus-event */
 static gboolean
 focus_cb (GtkWidget     *widget,
           GdkEventFocus *event)
 {
-  GtkWidgetAccessible *accessible;
-  GtkWidgetAccessibleClass *klass;
+  AtkObject *obj;
 
-  accessible = GTK_WIDGET_ACCESSIBLE (gtk_widget_get_accessible (widget));
-  klass = GTK_WIDGET_ACCESSIBLE_GET_CLASS (accessible);
-  if (klass->focus_gtk)
-    return klass->focus_gtk (widget, event);
-  else
-    return FALSE;
+  obj = gtk_widget_get_accessible (widget);
+
+  g_signal_emit_by_name (obj, "focus-event", event->in);
+
+  return FALSE;
 }
 
 /* Translate GtkWidget property change notification to the notify_gtk vfunc */
@@ -82,7 +80,7 @@ size_allocate_cb (GtkWidget     *widget,
       rect.y = allocation->y;
       rect.width = allocation->width;
       rect.height = allocation->height;
-      g_signal_emit_by_name (accessible, "bounds_changed", &rect);
+      g_signal_emit_by_name (accessible, "bounds-changed", &rect);
     }
 }
 
@@ -99,8 +97,8 @@ map_cb (GtkWidget *widget)
 }
 
 static void
-focus_event (AtkObject *obj,
-             gboolean   focus_in)
+gtk_widget_accessible_focus_event (AtkObject *obj,
+                                   gboolean   focus_in)
 {
   AtkObject *focus_obj;
 
@@ -129,8 +127,7 @@ gtk_widget_accessible_initialize (AtkObject *obj,
   g_signal_connect (widget, "map", G_CALLBACK (map_cb), NULL);
   g_signal_connect (widget, "unmap", G_CALLBACK (map_cb), NULL);
 
-  g_signal_connect (accessible, "focus-event", G_CALLBACK (focus_event), NULL);
-
+  GTK_WIDGET_ACCESSIBLE (obj)->layer = ATK_LAYER_WIDGET;
   obj->role = ATK_ROLE_UNKNOWN;
 }
 
@@ -512,25 +509,6 @@ gtk_widget_accessible_notify_gtk (GObject    *obj,
     atk_object_notify_state_change (atk_obj, ATK_STATE_VERTICAL, !value);
 }
 
-/* This function is the default implementation for the focus_gtk
- * vfunc which gets called for focus_in/out_event.
- *
- * It emits a focus-event signal on the GtkWidgetAccessible.
- */
-static gboolean
-gtk_widget_accessible_focus_gtk (GtkWidget     *widget,
-                                 GdkEventFocus *event)
-{
-  AtkObject* accessible;
-  gboolean return_val;
-  return_val = FALSE;
-
-  accessible = gtk_widget_get_accessible (widget);
-
-  g_signal_emit_by_name (accessible, "focus_event", event->in, &return_val);
-  return FALSE;
-}
-
 static AtkAttributeSet *
 gtk_widget_accessible_get_attributes (AtkObject *obj)
 {
@@ -553,7 +531,6 @@ _gtk_widget_accessible_class_init (GtkWidgetAccessibleClass *klass)
   GtkAccessibleClass *accessible_class = GTK_ACCESSIBLE_CLASS (klass);
 
   klass->notify_gtk = gtk_widget_accessible_notify_gtk;
-  klass->focus_gtk = gtk_widget_accessible_focus_gtk;
 
   accessible_class->connect_widget_destroyed = gtk_widget_accessible_connect_widget_destroyed;
 
@@ -564,6 +541,7 @@ _gtk_widget_accessible_class_init (GtkWidgetAccessibleClass *klass)
   class->get_index_in_parent = gtk_widget_accessible_get_index_in_parent;
   class->initialize = gtk_widget_accessible_initialize;
   class->get_attributes = gtk_widget_accessible_get_attributes;
+  class->focus_event = gtk_widget_accessible_focus_event;
 }
 
 static void
@@ -643,21 +621,9 @@ gtk_widget_accessible_get_size (AtkComponent *component,
 static AtkLayer
 gtk_widget_accessible_get_layer (AtkComponent *component)
 {
-  gint layer;
+  GtkWidgetAccessible *accessible = GTK_WIDGET_ACCESSIBLE (component);
 
-  layer = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (component), "atk-component-layer"));
-
-  if (layer == 0)
-    return ATK_LAYER_WIDGET;
-  else
-    return (AtkLayer) layer;
-}
-
-void
-_gtk_widget_accessible_set_layer (GtkWidgetAccessible *accessible,
-                                 AtkLayer             layer)
-{
-  g_object_set_data (G_OBJECT (accessible), "atk-component-layer", GINT_TO_POINTER (layer));
+  return accessible->layer;
 }
 
 static gboolean

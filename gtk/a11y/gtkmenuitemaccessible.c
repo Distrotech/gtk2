@@ -63,7 +63,7 @@ gtk_menu_item_accessible_initialize (AtkObject *obj,
         atk_object_set_parent (obj, gtk_widget_get_accessible (parent_widget));
     }
 
-  _gtk_widget_accessible_set_layer (GTK_WIDGET_ACCESSIBLE (obj), ATK_LAYER_POPUP);
+  GTK_WIDGET_ACCESSIBLE (obj)->layer = ATK_LAYER_POPUP;
 
   if (GTK_IS_TEAROFF_MENU_ITEM (data))
     obj->role = ATK_ROLE_TEAR_OFF_MENU_ITEM;
@@ -215,7 +215,7 @@ gtk_menu_item_accessible_notify_gtk (GObject    *obj,
     {
       if (atk_obj->name == NULL)
         g_object_notify (G_OBJECT (atk_obj), "accessible-name");
-      g_signal_emit_by_name (atk_obj, "visible_data_changed");
+      g_signal_emit_by_name (atk_obj, "visible-data-changed");
     }
   else
     GTK_WIDGET_ACCESSIBLE_CLASS (_gtk_menu_item_accessible_parent_class)->notify_gtk (obj, pspec);
@@ -372,7 +372,7 @@ gtk_menu_item_accessible_do_action (AtkAction *action,
   /* This is what is called when <Return> is pressed for a menu item.
    * The last argument means 'force hide'.
    */
-  g_signal_emit_by_name (item_parent, "activate_current", 1);
+  g_signal_emit_by_name (item_parent, "activate-current", 1);
   if (!item_mapped)
     ensure_menus_unposted (GTK_MENU_ITEM_ACCESSIBLE (action));
 
@@ -614,7 +614,7 @@ menu_item_selection (GtkMenuItem  *item,
       g_object_unref (child);
     }
   parent = atk_object_get_parent (obj);
-  g_signal_emit_by_name (parent, "selection_changed");
+  g_signal_emit_by_name (parent, "selection-changed");
 }
 
 static void
