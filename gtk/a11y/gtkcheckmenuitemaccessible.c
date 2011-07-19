@@ -1,5 +1,5 @@
 /* GAIL - The GNOME Accessibility Implementation Library
- * Copyright 2002, 2003 Sun Microsystems Inc.
+ * Copyright 2002 Sun Microsystems Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include <string.h>
+#include <gtk/gtk.h>
 #include "gtkcheckmenuitemaccessible.h"
 
 
@@ -41,7 +42,7 @@ toggled_cb (GtkWidget *widget)
 
 static void
 gtk_check_menu_item_accessible_initialize (AtkObject *obj,
-                                           gpointer   data)
+                                              gpointer   data)
 {
   ATK_OBJECT_CLASS (_gtk_check_menu_item_accessible_parent_class)->initialize (obj, data);
 
@@ -79,7 +80,7 @@ gtk_check_menu_item_accessible_ref_state_set (AtkObject *accessible)
 
 static void
 gtk_check_menu_item_accessible_notify_gtk (GObject    *obj,
-                                           GParamSpec *pspec)
+                                              GParamSpec *pspec)
 {
   GtkCheckMenuItem *check_menu_item = GTK_CHECK_MENU_ITEM (obj);
   AtkObject *atk_obj;
@@ -108,8 +109,8 @@ gtk_check_menu_item_accessible_notify_gtk (GObject    *obj,
 static void
 _gtk_check_menu_item_accessible_class_init (GtkCheckMenuItemAccessibleClass *klass)
 {
-  GtkWidgetAccessibleClass *widget_class = (GtkWidgetAccessibleClass*)klass;
   AtkObjectClass *class = ATK_OBJECT_CLASS (klass);
+  GtkWidgetAccessibleClass *widget_class = (GtkWidgetAccessibleClass*)klass;
 
   widget_class->notify_gtk = gtk_check_menu_item_accessible_notify_gtk;
 

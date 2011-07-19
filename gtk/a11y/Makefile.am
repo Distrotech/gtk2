@@ -11,7 +11,6 @@ gail_c_sources =			\
 	gtkcellaccessible.c		\
 	gtkcellaccessibleparent.c	\
 	gtkcheckmenuitemaccessible.c	\
-	gtkchecksubmenuitemaccessible.c	\
 	gtkcomboboxaccessible.c		\
 	gtkcontaineraccessible.c	\
 	gtkcontainercellaccessible.c	\
@@ -31,7 +30,6 @@ gail_c_sources =			\
 	gtkprogressbaraccessible.c	\
 	gtkradiobuttonaccessible.c	\
 	gtkradiomenuitemaccessible.c	\
-	gtkradiosubmenuitemaccessible.c	\
 	gtkrangeaccessible.c		\
 	gtkrenderercellaccessible.c	\
 	gtkscaleaccessible.c		\
@@ -41,7 +39,6 @@ gail_c_sources =			\
 	gtkspinbuttonaccessible.c	\
 	gtkspinneraccessible.c		\
 	gtkstatusbaraccessible.c	\
-	gtksubmenuitemaccessible.c	\
 	gtkswitchaccessible.c		\
 	gtktextcellaccessible.c		\
 	gtktextviewaccessible.c		\
@@ -61,7 +58,6 @@ gail_private_h_sources =		\
 	gtkcellaccessible.h		\
 	gtkcellaccessibleparent.h	\
 	gtkcheckmenuitemaccessible.h	\
-	gtkchecksubmenuitemaccessible.h	\
 	gtkcomboboxaccessible.h		\
 	gtkcontaineraccessible.h	\
 	gtkcontainercellaccessible.h	\
@@ -81,7 +77,6 @@ gail_private_h_sources =		\
 	gtkprogressbaraccessible.h	\
 	gtkradiobuttonaccessible.h	\
 	gtkradiomenuitemaccessible.h	\
-	gtkradiosubmenuitemaccessible.h	\
 	gtkrangeaccessible.h		\
 	gtkrenderercellaccessible.h	\
 	gtkscaleaccessible.h		\
@@ -91,7 +86,6 @@ gail_private_h_sources =		\
 	gtkspinbuttonaccessible.h	\
 	gtkspinneraccessible.h		\
 	gtkstatusbaraccessible.h	\
-	gtksubmenuitemaccessible.h	\
 	gtkswitchaccessible.h		\
 	gtktextcellaccessible.h		\
 	gtktextviewaccessible.h		\

@@ -21,10 +21,10 @@
 
 #include <gtk/gtk.h>
 #include "gtkradiomenuitemaccessible.h"
-#include "gtkradiosubmenuitemaccessible.h"
 
 
 G_DEFINE_TYPE (GtkRadioMenuItemAccessible, _gtk_radio_menu_item_accessible, GTK_TYPE_CHECK_MENU_ITEM_ACCESSIBLE)
+
 
 static AtkRelationSet *
 gtk_radio_menu_item_accessible_ref_relation_set (AtkObject *obj)
@@ -42,8 +42,9 @@ gtk_radio_menu_item_accessible_ref_relation_set (AtkObject *obj)
 
   relation_set = ATK_OBJECT_CLASS (_gtk_radio_menu_item_accessible_parent_class)->ref_relation_set (obj);
 
-  /* If the radio menu_item'group has changed remove the relation */
+  /* If the radio menu_item's group has changed remove the relation */
   list = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (widget));
+
   if (radio_menu_item->old_group != list)
     {
       AtkRelation *relation;
@@ -55,7 +56,6 @@ gtk_radio_menu_item_accessible_ref_relation_set (AtkObject *obj)
   if (!atk_relation_set_contains (relation_set, ATK_RELATION_MEMBER_OF))
     {
       /* Get the members of the menu_item group */
-
       radio_menu_item->old_group = list;
       if (list)
         {
@@ -80,7 +80,7 @@ gtk_radio_menu_item_accessible_ref_relation_set (AtkObject *obj)
 
           atk_relation_set_add (relation_set, relation);
 
-          /* Unref the relation so that it is not leaked  */
+          /* Unref the relation so that it is not leaked */
           g_object_unref (relation);
         }
     }
@@ -90,7 +90,7 @@ gtk_radio_menu_item_accessible_ref_relation_set (AtkObject *obj)
 
 static void
 gtk_radio_menu_item_accessible_initialize (AtkObject *obj,
-                                           gpointer   data)
+                                              gpointer   data)
 {
   ATK_OBJECT_CLASS (_gtk_radio_menu_item_accessible_parent_class)->initialize (obj, data);
 
@@ -109,4 +109,5 @@ _gtk_radio_menu_item_accessible_class_init (GtkRadioMenuItemAccessibleClass *kla
 static void
 _gtk_radio_menu_item_accessible_init (GtkRadioMenuItemAccessible *radio_menu_item)
 {
+  radio_menu_item->old_group = NULL;
 }
