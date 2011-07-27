@@ -2586,17 +2586,19 @@ gdk_quartz_window_set_decorations (GdkWindow       *window,
        * recreating the toplevel. There might be bad side-effects of doing
        * that, but it seems alright.
        */
+#if MAC_OS_X_VERSION_MIN_ALLOWED > MAC_OS_X_VERSION_10_5
       if ([impl->toplevel respondsToSelector:@selector(setStyleMask:)])
         {
           [impl->toplevel setStyleMask:new_mask];
         }
       else
+#endif
         {
           [impl->toplevel release];
           impl->toplevel = [[GdkQuartzNSWindow alloc] initWithContentRect:rect
-                                                              styleMask:new_mask
-                                                                backing:NSBackingStoreBuffered
-                                                                  defer:NO];
+                                                                styleMask:new_mask
+                                                                  backing:NSBackingStoreBuffered
+                                                                    defer:NO];
           [impl->toplevel setHasShadow: window_type_hint_to_shadow (impl->type_hint)];
           [impl->toplevel setLevel: window_type_hint_to_level (impl->type_hint)];
           [impl->toplevel setContentView:old_view];
