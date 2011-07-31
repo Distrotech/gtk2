@@ -49,8 +49,8 @@
 static GdkWindow   *current_keyboard_window;
 
 /* This is the event mask and button state from the last event */
-static GdkEventMask current_event_mask;
-static int          current_button_state;
+static GdkModifierType current_keyboard_modifiers;
+static GdkModifierType current_button_state;
 
 static void append_event                        (GdkEvent  *event,
                                                  gboolean   windowing);
@@ -1060,10 +1060,16 @@ synthesize_crossing_event (GdkWindow *window,
   return FALSE;
 }
 
-GdkEventMask 
-_gdk_quartz_events_get_current_event_mask (void)
+GdkModifierType
+_gdk_quartz_events_get_current_keyboard_modifiers (void)
 {
-  return current_event_mask;
+  return current_keyboard_modifiers;
+}
+
+GdkModifierType
+_gdk_quartz_events_get_current_mouse_modifiers (void)
+{
+  return current_button_state;
 }
 
 static gboolean
@@ -1198,7 +1204,7 @@ gdk_event_translate (GdkEvent *event,
         }
     }
 
-  current_event_mask = get_event_mask_from_ns_event (nsevent);
+  current_keyboard_modifiers = get_keyboard_modifiers_from_ns_event (nsevent);
 
   return_val = TRUE;
 
