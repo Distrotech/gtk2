@@ -217,6 +217,8 @@ gtk_public_h_sources = 		\
 	gtkfixed.h		\
 	gtkfontbutton.h		\
 	gtkfontsel.h		\
+	gtkfontchooser.h        \
+	gtkfontchooserdialog.h  \
 	gtkframe.h		\
 	gtkgradient.h		\
 	gtkgrid.h		\
@@ -547,6 +549,8 @@ gtk_base_c_sources = 		\
 	gtkfixed.c		\
 	gtkfontbutton.c		\
 	gtkfontsel.c		\
+	gtkfontchooser.c        \
+	gtkfontchooserdialog.c  \
 	gtkframe.c		\
 	gtkgradient.c		\
 	gtkgrid.c		\
