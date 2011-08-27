@@ -198,6 +198,7 @@ gtk_public_h_sources = 		\
 	gtkcomboboxtext.h	\
 	gtkcontainer.h		\
 	gtkcssprovider.h	\
+	gtkcsssection.h 	\
 	gtkdebug.h		\
 	gtkdialog.h		\
 	gtkdnd.h		\
@@ -393,6 +394,7 @@ gtk_private_h_sources =		\
 	gtkcontainerprivate.h   \
 	gtkcssparserprivate.h	\
 	gtkcssproviderprivate.h	\
+	gtkcsssectionprivate.h 	\
 	gtkcssselectorprivate.h	\
 	gtkcsstypesprivate.h	\
 	gtkcustompaperunixdialog.h \
@@ -525,6 +527,7 @@ gtk_base_c_sources = 		\
 	gtkcontainer.c		\
 	gtkcssparser.c		\
 	gtkcssprovider.c	\
+	gtkcsssection.c 	\
 	gtkcssselector.c	\
 	gtkcsstypes.c		\
 	gtkdialog.c		\
