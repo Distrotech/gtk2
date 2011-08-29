@@ -212,6 +212,12 @@ check_application (GtkAppChooserDialog  *self,
   command = NULL;
 
   info = gtk_app_chooser_get_app_info (GTK_APP_CHOOSER (self->priv->app_chooser_widget));
+  if (info == NULL)
+    {
+      *app_out = NULL;
+      return FALSE;
+    }
+
   command = g_app_info_get_executable (info);
 
   g_shell_parse_argv (command, &argc, &argv, &error);
@@ -258,13 +264,15 @@ add_or_find_application (GtkAppChooserDialog *self)
 
   app = gtk_app_chooser_get_app_info (GTK_APP_CHOOSER (self));
 
-  /* we don't care about reporting errors here */
-  if (self->priv->content_type)
-    g_app_info_set_as_last_used_for_type (app,
-					  self->priv->content_type,
-					  NULL);
-
-  g_object_unref (app);
+  if (app)
+    {
+      /* we don't care about reporting errors here */
+      if (self->priv->content_type)
+        g_app_info_set_as_last_used_for_type (app,
+                                              self->priv->content_type,
+                                              NULL);
+      g_object_unref (app);
+    }
 }
 
 static void
@@ -478,6 +486,7 @@ build_dialog_ui (GtkAppChooserDialog *self)
   GtkWidget *vbox;
   GtkWidget *vbox2;
   GtkWidget *button, *w;
+  GAppInfo *info;
 
   gtk_container_set_border_width (GTK_CONTAINER (self), 5);
 
@@ -491,7 +500,8 @@ build_dialog_ui (GtkAppChooserDialog *self)
   gtk_widget_show (vbox2);
 
   self->priv->label = gtk_label_new ("");
-  gtk_misc_set_alignment (GTK_MISC (self->priv->label), 0, 0.5);
+  gtk_widget_set_halign (self->priv->label, GTK_ALIGN_START);
+  gtk_widget_set_valign (self->priv->label, GTK_ALIGN_CENTER);
   gtk_label_set_line_wrap (GTK_LABEL (self->priv->label), TRUE);
   gtk_box_pack_start (GTK_BOX (vbox2), self->priv->label,
                       FALSE, FALSE, 0);
@@ -529,6 +539,11 @@ build_dialog_ui (GtkAppChooserDialog *self)
   self->priv->button = gtk_dialog_add_button (GTK_DIALOG (self),
                                               _("_Select"),
                                               GTK_RESPONSE_OK);
+
+  info = gtk_app_chooser_get_app_info (GTK_APP_CHOOSER (self->priv->app_chooser_widget));
+  gtk_widget_set_sensitive (self->priv->button, info != NULL);
+  if (info)
+    g_object_unref (info);
 
   gtk_dialog_set_default_response (GTK_DIALOG (self),
                                    GTK_RESPONSE_OK);
