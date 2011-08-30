@@ -132,7 +132,7 @@ struct _GtkDragFindData
 
 
 @interface GtkDragSourceOwner : NSObject {
-  GtkDragSourceInfo *info;
+  GdkDragContext *context;
 }
 
 @end
@@ -142,6 +142,10 @@ struct _GtkDragFindData
 {
   guint target_info;
   GtkSelectionData selection_data;
+  GtkDragSourceInfo *info;
+  g_return_if_fail (context != NULL);
+  info = gtk_drag_get_source_info (context, FALSE);
+  g_return_if_fail (info != NULL);
   g_return_if_fail(info->source_widget != NULL);
   g_return_if_fail(info->target_list != NULL);
   selection_data.selection = GDK_NONE;
@@ -169,18 +173,29 @@ struct _GtkDragFindData
 
 - (void)pasteboardChangedOwner: (NSPasteboard*)sender
 {
+  GtkDragSourceInfo *info;
+
+  if (context != gdk_quartz_drag_source_context())
+    {
+      context = NULL;
+      return;
+    }
+  info = gtk_drag_get_source_info (context, FALSE);
+
+  if (!info) return;
+
     info->target_list = NULL;
     info->widget = NULL;
     info->source_widget = NULL;
 }
 
-- (id)initWithInfo:(GtkDragSourceInfo *)anInfo
+- (id)initWithContext:(GdkDragContext *)aContext;
 {
   self = [super init];
 
   if (self) 
     {
-      info = anInfo;
+      context = aContext;
     }
 
   return self;
@@ -1070,10 +1085,11 @@ gtk_drag_begin_idle (gpointer arg)
   g_assert (info != NULL);
 
   pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  owner = [[GtkDragSourceOwner alloc] initWithInfo:info];
+  owner = [[GtkDragSourceOwner alloc] initWithContext:context];
 
   types = _gtk_quartz_target_list_to_pasteboard_types (info->target_list);
 
+  /* This sends a pasteboardChangedOwner: notification to the old owner */
   [pasteboard declareTypes:[types allObjects] owner:owner];
 
   [owner release];
@@ -1800,6 +1816,7 @@ gtk_drag_set_icon_default (GdkDragContext    *context)
 static void
 gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
 {
+
   if (info->icon_pixbuf)
     g_object_unref (info->icon_pixbuf);
 
@@ -1818,6 +1835,7 @@ gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
   g_object_unref (info->context);
 
   g_free (info);
+  info = NULL;
 }
 
 static gboolean
