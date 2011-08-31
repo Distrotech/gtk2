@@ -849,7 +849,12 @@ gtk_extra_sources =				\
 #
 # setup GTK+ sources and their dependencies
 #
-MAINTAINERCLEANFILES = $(gtk_built_sources) $(stamp_files) $(GENERATED_ICONS) stock-icons/icon-theme.cache
+MAINTAINERCLEANFILES = \
+	$(gtk_built_sources) 			\
+	$(stamp_files) 				\
+	$(GENERATED_ICONS) 			\
+	stock-icons/icon-theme.cache
+
 EXTRA_HEADERS =
 EXTRA_DIST += $(gtk_private_h_sources) $(gtk_extra_sources)
 EXTRA_DIST += $(gtk_built_sources)
@@ -898,7 +903,7 @@ gtktypebuiltins.c: @REBUILD@ $(gtk_public_h_sources) gtktypebuiltins.c.template
 
 gtktypefuncs.c: @REBUILD@ stamp-gtktypebuiltins.h $(top_srcdir)/gtk/*.h $(top_srcdir)/gdk/*.h Makefile
 	$(AM_V_GEN) echo '#include <gtk/gtkx.h>' > xgen-gtfsrc.c && \
-	  ${CPP} $(DEFS) $(AM_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) xgen-gtfsrc.c | \
+	  ${CPP} $(DEFS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) xgen-gtfsrc.c | \
 	  $(GREP) -o '\bg[td]k_[a-zA-Z0-9_]*_get_type\b' | \
 	  sort | uniq | \
 	  $(SED) '{ s/^/*tp++ = /; s/$$/();/; s/^.*\(gdk_x11\|gtk_plug_\|gtk_socket_\).*$$/#ifdef GDK_WINDOWING_X11\n&\n#endif/; }' > xgen-gtf \
@@ -993,6 +998,7 @@ uninstall-local: uninstall-ms-lib uninstall-def-file uninstall-mac-key-theme
 distclean-local:
 	if test $(srcdir) != .; then \
 	  rm -f $(MAINTAINERCLEANFILES); \
+	  rm -rf stock-icons; \
 	fi
 
 DEPS = libgtk-3.la $(top_builddir)/gdk/libgdk-3.la
