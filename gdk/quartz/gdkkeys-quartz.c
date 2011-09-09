@@ -206,6 +206,7 @@ const static struct {
   { 0x001e, GDK_KEY_Up },
   { 0x001f, GDK_KEY_Down },
   { 0x007f, GDK_KEY_Delete },
+  { 0xf027, GDK_KEY_dead_acute },
   { 0xf060, GDK_KEY_dead_grave },
   { 0xf300, GDK_KEY_dead_grave },
   { 0xf0b4, GDK_KEY_dead_acute },
@@ -227,6 +228,7 @@ const static struct {
   { 0xf308, GDK_KEY_dead_diaeresis },
   { 0xf2da, GDK_KEY_dead_abovering },
   { 0xf30A, GDK_KEY_dead_abovering },
+  { 0xf022, GDK_KEY_dead_doubleacute },
   { 0xf2dd, GDK_KEY_dead_doubleacute },
   { 0xf30B, GDK_KEY_dead_doubleacute },
   { 0xf2c7, GDK_KEY_dead_caron },
@@ -258,211 +260,254 @@ const static struct {
   { 0xf02c, GDK_KEY_dead_belowcomma },
   { 0xf326, GDK_KEY_dead_belowcomma }
 };
-typedef struct _KBLayout KBLayout;
-static UniChar get_keyvalue_uchr(KBLayout *layout, int key, UInt32 modifiers);
-static UniChar get_keyvalue_kchr(KBLayout *layout, int key, UInt32 modifiers);
-struct _KBLayout
-{
-    gpointer ref;
-    UniChar (*get_keyvalue)(KBLayout*, int, UInt32);
-    gpointer data;
-};
-
-#ifdef __LP64__
-
-static KBLayout
-get_keyboard_layout (void)
-{
-  KBLayout layout;
-  CFDataRef layout_data_ref;
-
-  layout.get_keyvalue = &get_keyvalue_uchr;
-  layout.ref = (gpointer)TISCopyCurrentKeyboardLayoutInputSource ();
-
-  layout_data_ref = (CFDataRef) TISGetInputSourceProperty
-    ((TISInputSourceRef)layout.ref, kTISPropertyUnicodeKeyLayoutData);
-
-  if (layout_data_ref)
-    layout.data = CFDataGetBytePtr (layout_data_ref);
-
-  if (layout.data == NULL)
-    {
-      g_error ("cannot get keyboard layout data");
-    }
-  return layout;
-}
-
-#else
-
-static KBLayout
-get_keyboard_layout (void)
-{
-  KBLayout layout;
-  UInt32 data_type;
-  SInt32 layout_kind;
-
-  KLGetCurrentKeyboardLayout ((KeyboardLayoutRef*)&layout.ref);
-  /* Get the layout kind */
-  KLGetKeyboardLayoutProperty (layout.ref, kKLKind, (const void **)&layout_kind);
-  if (layout_kind == kKLKCHRKind)
-    {
-      data_type = kKLKCHRData;
-      layout.get_keyvalue = &get_keyvalue_kchr;
-    }
-  else
-    {
-      data_type = kKLuchrData;
-      layout.get_keyvalue = &get_keyvalue_uchr;
-    }
-  /* Get chr data */
-  KLGetKeyboardLayoutProperty (layout.ref, data_type, (const void **)&layout.data);
-  return layout;
-}
-#endif
-
-static UniChar
-get_keyvalue_kchr(KBLayout *layout, int key, UInt32 modifiers)
-{
-#ifndef __LP64__
-  UInt32 state = 0;
-  UInt32 c;
-  UInt16 key_code = modifiers | key;
-  c = KeyTranslate (layout->data, key_code, &state);
-
-  if (state != 0)
-    {
-      UInt32 state2 = 0;
-      c = KeyTranslate (layout->data, key_code | 128, &state2);
-    }
-
-  if (c == 0 && c == 0x10)
-    {
-      return (UniChar)0;
-    }
-  return macroman2ucs (c);
-#endif
-}
-
-static UniChar
-get_keyvalue_uchr(KBLayout *layout, int key, UInt32 modifiers)
-{
-  UInt32 state = 0;
-  OSStatus err;
-  UniChar chars[4];
-  UniCharCount nChars;
-
-  err = UCKeyTranslate (layout->data, key,
-                       kUCKeyActionDisplay,
-                       (modifiers >> 8) & 0xFF,
-                       LMGetKbdType(),
-                       0,
-                       &state, 4, &nChars, chars);
-
-  if (err != noErr)
-    return 0;
-  /* A few <Shift><Option>keys return two characters, the first of
-   * which is U+00a0, which isn't interesting; so we return the
-   * second. More sophisticated handling is the job of a GtkIMContext.
-   */
-  /* If state isn't zero, it means that it's a dead key of some
-     sort. Some of those are enumerated in the special_ucs_table with
-     the high nibble set to f to push it into the private use
-     range. Here we do the same.
-  */
-  if (state != 0)
-    chars[nChars - 1] |= 0xf000;
-  return chars[nChars -1];
-}
 
 static void
 maybe_update_keymap (void)
 {
-  KBLayout new_layout = get_keyboard_layout();
+  const void *chr_data = NULL;
 
-  if (new_layout.ref == current_layout || new_layout.data == NULL)
-    return;
+#ifdef __LP64__
+  TISInputSourceRef new_layout = TISCopyCurrentKeyboardLayoutInputSource ();
+  CFDataRef layout_data_ref;
 
-  guint *p;
-  int i;
+#else
+  KeyboardLayoutRef new_layout;
+  KeyboardLayoutKind layout_kind;
 
-  g_free (keyval_array);
-  keyval_array = g_new0 (guint, NUM_KEYCODES * KEYVALS_PER_KEYCODE);
+  KLGetCurrentKeyboardLayout (&new_layout);
+#endif
 
-  for (i = 0; i < NUM_KEYCODES; i++)
+  if (new_layout != current_layout)
     {
-      int j;
-      UInt32 modifiers[] = {0, shiftKey, optionKey, shiftKey | optionKey};
+      guint *p;
+      int i;
 
-      p = keyval_array + i * KEYVALS_PER_KEYCODE;
-	      
-      for (j = 0; j < KEYVALS_PER_KEYCODE; j++)
+      g_free (keyval_array);
+      keyval_array = g_new0 (guint, NUM_KEYCODES * KEYVALS_PER_KEYCODE);
+
+#ifdef __LP64__
+      layout_data_ref = (CFDataRef) TISGetInputSourceProperty
+	(new_layout, kTISPropertyUnicodeKeyLayoutData);
+
+      if (layout_data_ref)
+	chr_data = CFDataGetBytePtr (layout_data_ref);
+
+      if (chr_data == NULL)
 	{
-	  UniChar uc;
-	  gboolean found = FALSE;
-	  int k;
+	  g_error ("cannot get keyboard layout data");
+	  return;
+	}
+#else
+      /* Get the layout kind */
+      KLGetKeyboardLayoutProperty (new_layout, kKLKind, (const void **)&layout_kind);
 
-	  uc = new_layout.get_keyvalue(&new_layout, i, modifiers[j]);
-
-
-	  for (k = 0; k < G_N_ELEMENTS (special_ucs_table); k++)
+      /* 8-bit-only keyabord layout */
+      if (layout_kind == kKLKCHRKind)
+	{ 
+	  /* Get chr data */
+	  KLGetKeyboardLayoutProperty (new_layout, kKLKCHRData, (const void **)&chr_data);
+	  
+	  for (i = 0; i < NUM_KEYCODES; i++) 
 	    {
-	      if (special_ucs_table[k].ucs_value == uc)
+	      int j;
+	      UInt32 modifiers[] = {0, shiftKey, optionKey, shiftKey | optionKey};
+
+	      p = keyval_array + i * KEYVALS_PER_KEYCODE;
+	      
+	      for (j = 0; j < KEYVALS_PER_KEYCODE; j++)
 		{
-		  p[j] = special_ucs_table[k].keyval;
-		  found = TRUE;
-		  break;
-		}
-	    }
-		      
-	  /* Special-case shift-tab since GTK+ expects
-	   * GDK_KEY_ISO_Left_Tab for that.
-	   */
-	  if (found && p[j] == GDK_KEY_Tab && modifiers[j] == shiftKey)
-	    p[j] = GDK_KEY_ISO_Left_Tab;
+		  UInt32 c, state = 0;
+		  UInt16 key_code;
+		  UniChar uc;
+		  
+		  key_code = modifiers[j] | i;
+		  c = KeyTranslate (chr_data, key_code, &state);
 
-	  if (!found)
-	    {
-	      guint tmp;
+		  if (state != 0)
+		    {
+		      UInt32 state2 = 0;
+		      c = KeyTranslate (chr_data, key_code | 128, &state2);
+		    }
+
+		  if (c != 0 && c != 0x10)
+		    {
+		      int k;
+		      gboolean found = FALSE;
+
+		      /* FIXME: some keyboard layouts (e.g. Russian) use
+                       * a different 8-bit character set. We should
+                       * check for this. Not a serious problem, because
+		       * most (all?) of these layouts also have a
+		       * uchr version. 
+		       */
+		      uc = macroman2ucs (c);
+
+		      for (k = 0; k < G_N_ELEMENTS (special_ucs_table); k++) 
+			{
+			  if (special_ucs_table[k].ucs_value == uc)
+			    {
+			      p[j] = special_ucs_table[k].keyval;
+			      found = TRUE;
+			      break;
+			    }
+			}
+		      
+		      /* Special-case shift-tab since GTK+ expects
+		       * GDK_KEY_ISO_Left_Tab for that.
+		       */
+		      if (found && p[j] == GDK_KEY_Tab && modifiers[j] == shiftKey)
+			p[j] = GDK_KEY_ISO_Left_Tab;
+
+		      if (!found)
+                        {
+                          guint tmp;
                           
-	      tmp = gdk_unicode_to_keyval (uc);
-	      if (tmp != (uc | 0x01000000))
-		p[j] = tmp;
-	      else
-		p[j] = 0;
+                          tmp = gdk_unicode_to_keyval (uc);
+                          if (tmp != (uc | 0x01000000))
+                            p[j] = tmp;
+                          else
+                            p[j] = 0;
+                        }
+		    }
+		}
+	      
+	      if (p[3] == p[2])
+		p[3] = 0;
+	      if (p[2] == p[1])
+		p[2] = 0;
+	      if (p[1] == p[0])
+		p[1] = 0;
+	      if (p[0] == p[2] && 
+		  p[1] == p[3])
+		p[2] = p[3] = 0;
 	    }
 	}
+      /* unicode keyboard layout */
+      else if (layout_kind == kKLKCHRuchrKind || layout_kind == kKLuchrKind)
+	{ 
+	  /* Get chr data */
+	  KLGetKeyboardLayoutProperty (new_layout, kKLuchrData, (const void **)&chr_data);
+#endif
+	  
+	  for (i = 0; i < NUM_KEYCODES; i++) 
+	    {
+	      int j;
+	      UInt32 modifiers[] = {0, shiftKey, optionKey, shiftKey | optionKey};
+              UniChar chars[4];
+              UniCharCount nChars;
 
-      if (p[3] == p[2])
-	p[3] = 0;
-      if (p[2] == p[1])
-	p[2] = 0;
-      if (p[1] == p[0])
-	p[1] = 0;
-      if (p[0] == p[2] &&
-	  p[1] == p[3])
-	p[2] = p[3] = 0;
-    }
-  for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
-    {
-      p = keyval_array + known_keys[i].keycode * KEYVALS_PER_KEYCODE;
+	      p = keyval_array + i * KEYVALS_PER_KEYCODE;
 
-      if (p[0] == 0 && p[1] == 0 && 
-	  p[2] == 0 && p[3] == 0)
-	p[0] = known_keys[i].keyval;
-    }
+	      for (j = 0; j < KEYVALS_PER_KEYCODE; j++)
+		{
+		  UInt32 state = 0;
+		  OSStatus err;
+		  UInt16 key_code;
+		  UniChar uc;
+		  
+		  key_code = modifiers[j] | i;
+		  err = UCKeyTranslate (chr_data, i, kUCKeyActionDisplay,
+		                        (modifiers[j] >> 8) & 0xFF,
+		                        LMGetKbdType(),
+		                        0,
+		                        &state, 4, &nChars, chars);
 
-  for (i = 0; i < G_N_ELEMENTS (known_numeric_keys); i++)
-    {
-      p = keyval_array + known_numeric_keys[i].keycode * KEYVALS_PER_KEYCODE;
 
-      if (p[0] == known_numeric_keys[i].normal_keyval)
-	p[0] = known_numeric_keys[i].keypad_keyval;
-    }
+                  /* FIXME: Theoretically, we can get multiple UTF-16 values;
+		   * we should convert them to proper unicode and figure
+		   * out whether there are really keyboard layouts that
+		   * give us more than one character for one keypress. */
+		  if (err == noErr && nChars == 1)
+		    {
+		      int k;
+		      gboolean found = FALSE;
+
+		      /* A few <Shift><Option>keys return two
+		       * characters, the first of which is U+00a0,
+		       * which isn't interesting; so we return the
+		       * second. More sophisticated handling is the
+		       * job of a GtkIMContext.
+		       *
+		       * If state isn't zero, it means that it's a
+		       * dead key of some sort. Some of those are
+		       * enumerated in the special_ucs_table with the
+		       * high nibble set to f to push it into the
+		       * private use range. Here we do the same.
+		       */
+		      if (state != 0)
+			chars[nChars - 1] |= 0xf000;
+		      uc = chars[nChars - 1];
+
+		      for (k = 0; k < G_N_ELEMENTS (special_ucs_table); k++) 
+			{
+			  if (special_ucs_table[k].ucs_value == uc)
+			    {
+			      p[j] = special_ucs_table[k].keyval;
+			      found = TRUE;
+			      break;
+			    }
+			}
+
+		      /* Special-case shift-tab since GTK+ expects
+		       * GDK_KEY_ISO_Left_Tab for that.
+		       */
+		      if (found && p[j] == GDK_KEY_Tab && modifiers[j] == shiftKey)
+			p[j] = GDK_KEY_ISO_Left_Tab;
+		      
+		      if (!found)
+                        {
+                          guint tmp;
+                          
+                          tmp = gdk_unicode_to_keyval (uc);
+                          if (tmp != (uc | 0x01000000))
+                            p[j] = tmp;
+                          else
+                            p[j] = 0;
+                        }
+		    }
+		}
+	      
+	      if (p[3] == p[2])
+		p[3] = 0;
+	      if (p[2] == p[1])
+		p[2] = 0;
+	      if (p[1] == p[0])
+		p[1] = 0;
+	      if (p[0] == p[2] && 
+		  p[1] == p[3])
+		p[2] = p[3] = 0;
+	    }
+#ifndef __LP64__
+	}
+      else
+	{
+	  g_error ("unknown type of keyboard layout (neither KCHR nor uchr)"
+	           " - not supported right now");
+	}
+#endif
+
+      for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
+	{
+	  p = keyval_array + known_keys[i].keycode * KEYVALS_PER_KEYCODE;
+
+	  if (p[0] == 0 && p[1] == 0 && 
+	      p[2] == 0 && p[3] == 0)
+	    p[0] = known_keys[i].keyval;
+	}
+
+      for (i = 0; i < G_N_ELEMENTS (known_numeric_keys); i++)
+	{
+	  p = keyval_array + known_numeric_keys[i].keycode * KEYVALS_PER_KEYCODE;
+
+	  if (p[0] == known_numeric_keys[i].normal_keyval)
+            p[0] = known_numeric_keys[i].keypad_keyval;
+	}
       
-  if (current_layout)
-    g_signal_emit_by_name (default_keymap, "keys_changed");
+      if (current_layout)
+	g_signal_emit_by_name (default_keymap, "keys_changed");
 
-  current_layout = new_layout.ref;
+      current_layout = new_layout;
+    }
 }
 
 static PangoDirection

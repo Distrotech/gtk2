@@ -1680,6 +1680,8 @@ shortcuts_insert_file (GtkFileChooserDefault *impl,
           else
 	    label_copy = _gtk_file_chooser_label_for_file (file);
 
+	  if (!g_utf8_validate(label_copy, -1, NULL))
+	    return;
           /* If we switch to a better bookmarks file format (XBEL), we
            * should use mime info to get a better icon.
            */
