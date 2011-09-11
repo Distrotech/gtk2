@@ -287,6 +287,35 @@ gtk_drag_dest_info_destroy (gpointer data)
   g_free (info);
 }
 
+static void
+gtk_drag_source_info_destroy (gpointer data)
+{
+  GtkDragSourceInfo *info = data;
+  g_return_if_fail (info != NULL);
+
+  if (info->icon_pixbuf)
+    g_object_unref (info->icon_pixbuf);
+
+  g_signal_emit_by_name (info->widget, "drag-end", 
+			 info->context);
+
+  if (info->source_widget)
+    g_object_unref (info->source_widget);
+
+  if (info->widget)
+    g_object_unref (info->widget);
+
+  if (info->target_list)
+    gtk_target_list_unref (info->target_list);
+
+  [info->nsevent release];
+
+  g_object_unref (info->context);
+
+  g_free (info);
+  info = NULL;
+}
+
 static GtkDragDestInfo *
 gtk_drag_get_dest_info (GdkDragContext *context,
 			gboolean        create)
@@ -326,16 +355,12 @@ gtk_drag_get_source_info (GdkDragContext *context,
     {
       info = g_new0 (GtkDragSourceInfo, 1);
       info->context = context;
-      g_object_set_qdata (G_OBJECT (context), dest_info_quark, info);
+      g_object_ref (info->context);
+      g_object_set_qdata_full (G_OBJECT (context), dest_info_quark,
+			       info, gtk_drag_source_info_destroy);
     }
 
   return info;
-}
-
-static void
-gtk_drag_clear_source_info (GdkDragContext *context)
-{
-  g_object_set_qdata (G_OBJECT (context), dest_info_quark, NULL);
 }
 
 GtkWidget *
@@ -371,7 +396,7 @@ gtk_drag_highlight_draw (GtkWidget *widget,
 {
   int width = gtk_widget_get_allocated_width (widget);
   int height = gtk_widget_get_allocated_height (widget);
-  GtkStyleContext *context = NULL;
+  GtkStyleContext *context = gtk_widget_get_style_context (widget);
 
   gtk_style_context_save (context);
   gtk_style_context_add_class (context, GTK_STYLE_CLASS_DND);
@@ -1095,7 +1120,8 @@ gtk_drag_begin_idle (gpointer arg)
   [owner release];
   [types release];
 
-  if ((nswindow = get_toplevel_nswindow (info->source_widget)) == NULL)
+  if (info->source_widget == NULL
+	|| (nswindow = get_toplevel_nswindow (info->source_widget)) == NULL)
      return FALSE;
   
   /* Ref the context. It's unreffed when the drag has been aborted */
@@ -1117,7 +1143,6 @@ gtk_drag_begin_idle (gpointer arg)
                source:nswindow
             slideBack:YES];
 
-  [info->nsevent release];
   [drag_image release];
 
   [pool release];
@@ -1814,49 +1839,11 @@ gtk_drag_set_icon_default (GdkDragContext    *context)
 }
 
 static void
-gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
-{
-
-  if (info->icon_pixbuf)
-    g_object_unref (info->icon_pixbuf);
-
-  g_signal_emit_by_name (info->widget, "drag-end", 
-			 info->context);
-
-  if (info->source_widget)
-    g_object_unref (info->source_widget);
-
-  if (info->widget)
-    g_object_unref (info->widget);
-
-  gtk_target_list_unref (info->target_list);
-
-  gtk_drag_clear_source_info (info->context);
-  g_object_unref (info->context);
-
-  g_free (info);
-  info = NULL;
-}
-
-static gboolean
-drag_drop_finished_idle_cb (gpointer data)
-{
-  gtk_drag_source_info_destroy (data);
-  return FALSE;
-}
-
-static void
 gtk_drag_drop_finished (GtkDragSourceInfo *info)
 {
   if (info->success && info->delete)
     g_signal_emit_by_name (info->source_widget, "drag-data-delete",
                            info->context);
-
-  /* Workaround for the fact that the NS API blocks until the drag is
-   * over. This way the context is still valid when returning from
-   * drag_begin, even if it will still be quite useless. See bug #501588.
-  */
-  g_idle_add (drag_drop_finished_idle_cb, info);
 }
 
 /*************************************************************

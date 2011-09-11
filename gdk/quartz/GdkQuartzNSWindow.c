@@ -575,24 +575,7 @@ update_context_from_dragging_info (id <NSDraggingInfo> sender)
 
 - (void)draggedImage:(NSImage *)anImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)operation
 {
-  GdkEvent *event;
-
-  g_assert (_gdk_quartz_drag_source_context != NULL);
-
-  event = gdk_event_new (GDK_DROP_FINISHED);
-  event->dnd.window = g_object_ref ([[self contentView] gdkWindow]);
-  event->dnd.send_event = FALSE;
-  event->dnd.context = g_object_ref (_gdk_quartz_drag_source_context);
-
-  gdk_event_set_device (event,
-                        gdk_drag_context_get_device (_gdk_quartz_drag_source_context));
-
-  _gdk_event_emit (event);
-
-  gdk_event_free (event);
-
-  g_object_unref (_gdk_quartz_drag_source_context);
-  _gdk_quartz_drag_source_context = NULL;
+  gdk_drag_drop (_gdk_quartz_drag_source_context, 0);
 }
 
 @end

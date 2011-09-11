@@ -39,16 +39,20 @@ _gdk_quartz_window_drag_begin (GdkWindow *window,
                                GdkDevice *device,
                                GList     *targets)
 {
-  /* If the context isn't NULL, then we're in a drag already and the
-     calling application didn't notice. Return NULL to prevent
-     queueing up another gdk_drag_begin_idle. */
-  g_return_val_if_fail (_gdk_quartz_drag_source_context == NULL, NULL);
+  if (_gdk_quartz_drag_source_context != NULL)
+    {
+      /* Something is amiss with the existing drag, so log a message
+	 and abort it */
+      g_warning ("Drag begun with existing context; aborting the preexisting drag");
+      gdk_drag_abort (_gdk_quartz_drag_source_context,
+		      (guint32)g_get_real_time());
+    }
 
   /* Create fake context */
   _gdk_quartz_drag_source_context = g_object_new (GDK_TYPE_QUARTZ_DRAG_CONTEXT,
                                                   NULL);
   _gdk_quartz_drag_source_context->is_source = TRUE;
-
+  _gdk_quartz_drag_source_context->source_window = window;
   gdk_drag_context_set_device (_gdk_quartz_drag_source_context, device);
 
   return _gdk_quartz_drag_source_context;
@@ -81,17 +85,39 @@ gdk_quartz_drag_context_find_window (GdkDragContext  *context,
 }
 
 static void
+gdk_quartz_drag_context_drag_end (GdkDragContext *context)
+{
+  GdkEvent *event;
+
+  g_assert (context != NULL);
+  event = gdk_event_new (GDK_DROP_FINISHED);
+  event->dnd.window = g_object_ref (context->source_window);
+  event->dnd.send_event = FALSE;
+  event->dnd.context = context;
+
+  gdk_event_set_device (event, gdk_drag_context_get_device(context));
+  _gdk_event_emit (event);
+  gdk_event_free (event);
+
+  /* Remove any idles which might be depending on this context
+  if (g_idle_remove_by_data ((gpointer)context))
+  g_warning ("Deleted context had pending idle event"); */
+  g_object_run_dispose (G_OBJECT (_gdk_quartz_drag_source_context));
+  _gdk_quartz_drag_source_context = NULL;
+}
+
+static void
 gdk_quartz_drag_context_drag_drop (GdkDragContext *context,
                                    guint32         time)
 {
-  /* FIXME: Implement */
+  gdk_quartz_drag_context_drag_end (context);
 }
 
 static void
 gdk_quartz_drag_context_drag_abort (GdkDragContext *context,
                                     guint32         time)
 {
-  /* FIXME: Implement */
+  gdk_quartz_drag_context_drag_end (context);
 }
 
 static void
