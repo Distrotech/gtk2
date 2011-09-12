@@ -765,11 +765,10 @@ gtk_use_win32_c_sources = 	\
 	gtkmountoperation-stub.c
 gtk_use_quartz_c_sources = 	\
 	gtksearchenginequartz.c	\
-	gtkquartz.c		\
 	gtkmountoperation-stub.c
 gtk_use_stub_c_sources = 	\
 	gtkmountoperation-stub.c
-gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_stub_c_sources)
+gtk_all_c_sources += $(gtk_use_x11_c_sources) $(gtk_use_win32_c_sources) $(gtk_use_quartz_c_sources) $(gtk_use_stub_c_sources)
 if USE_X11
 gtk_private_h_sources += 	\
 	gtkxembed.h		\
@@ -788,6 +787,7 @@ gtk_private_h_sources += 	\
 	gtksearchenginequartz.h
 gtk_c_sources += $(gtk_use_quartz_c_sources)
 libgtk_3_la_CFLAGS = "-xobjective-c"
+
 else
 gtk_c_sources += $(gtk_use_stub_c_sources)
 endif
@@ -798,6 +798,7 @@ if USE_QUARTZ
 gtk_clipboard_dnd_c_sources = 	\
 	gtkclipboard-quartz.c	\
 	gtkdnd-quartz.c		\
+	gtkquartz.c		\
 	gtkselection-quartz.c
 
 gtk_clipboard_dnd_h_sources = gtkquartz.h
