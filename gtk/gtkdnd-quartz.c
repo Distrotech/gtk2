@@ -184,9 +184,9 @@ struct _GtkDragFindData
 
   if (!info) return;
 
-    info->target_list = NULL;
-    info->widget = NULL;
-    info->source_widget = NULL;
+  info->target_list = NULL;
+  info->widget = NULL;
+  info->source_widget = NULL;
 }
 
 - (id)initWithContext:(GdkDragContext *)aContext;
@@ -1174,18 +1174,15 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 		      pressure: 0.0 ];
   g_return_val_if_fail(nsevent != NULL, NULL);
   context = gdk_drag_begin (gtk_widget_get_window (widget), NULL);
-/* If we've already started a drag, gdk_drag_begin will return NULL;
- * we don't want to do anything in that event. */
-  g_return_val_if_fail( context != NULL, NULL);
 
   info = gtk_drag_get_source_info (context, TRUE);
-  info->nsevent = nsevent;
-  [info->nsevent retain];
 
   info->source_widget = g_object_ref (widget);
   info->widget = g_object_ref (widget);
   info->target_list = target_list;
   gtk_target_list_ref (target_list);
+  info->nsevent = nsevent;
+  [info->nsevent retain];
 
   info->possible_actions = actions;
   
@@ -1223,10 +1220,6 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 	    break;
 	  }
     }
-
-  nswindow = get_toplevel_nswindow (widget);
-  info->nsevent = [nswindow currentEvent];
-  [info->nsevent retain];
 
   /* drag will begin in an idle handler to avoid nested run loops */
 
@@ -1844,6 +1837,7 @@ gtk_drag_drop_finished (GtkDragSourceInfo *info)
   if (info->success && info->delete)
     g_signal_emit_by_name (info->source_widget, "drag-data-delete",
                            info->context);
+
 }
 
 /*************************************************************
