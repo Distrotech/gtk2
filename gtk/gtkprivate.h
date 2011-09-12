@@ -33,7 +33,7 @@
 
 G_BEGIN_DECLS
 
-#ifdef G_OS_WIN32
+#if defined G_OS_WIN32 || defined GDK_WINDOWING_QUARTZ
 
 const gchar *_gtk_get_datadir ();
 const gchar *_gtk_get_libdir ();
@@ -57,28 +57,6 @@ const gchar *_gtk_get_data_prefix ();
 #define GTK_PARAM_READABLE G_PARAM_READABLE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
 #define GTK_PARAM_WRITABLE G_PARAM_WRITABLE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
 #define GTK_PARAM_READWRITE G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
-
-/* Likewise for quartz */
-#ifdef  GDK_WINDOWING_QUARTZ
-
-const gchar *_gtk_quartz_get_datadir ();
-const gchar *_gtk_quartz_get_libdir ();
-const gchar *_gtk_quartz_get_sysconfdir ();
-const gchar *_gtk_quartz_get_localedir ();
-const gchar *_gtk_quartz_get_data_prefix ();
-
-#undef GTK_DATADIR
-#define GTK_DATADIR _gtk_quartz_get_datadir ()
-#undef GTK_LIBDIR
-#define GTK_LIBDIR _gtk_quartz_get_libdir ()
-#undef GTK_LOCALEDIR
-#define GTK_LOCALEDIR _gtk_quartz_get_localedir ()
-#undef GTK_SYSCONFDIR
-#define GTK_SYSCONFDIR _gtk_quartz_get_sysconfdir ()
-#undef GTK_DATA_PREFIX
-#define GTK_DATA_PREFIX _gtk_quartz_get_data_prefix ()
-
-#endif /*  GDK_WINDOWING_QUARTZ */
 
 /* Many keyboard shortcuts for Mac are the same as for X
  * except they use Command key instead of Control (e.g. Cut,
