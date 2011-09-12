@@ -32,7 +32,7 @@ _gdk_quartz_display_set_selection_owner (GdkDisplay *display,
                                          guint32     time,
                                          gint        send_event)
 {
-  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_warning ("Not a valid interface on Quartz. Use GtkSelection.\n");
   g_return_val_if_reached(TRUE);
   return TRUE;
 }
@@ -52,7 +52,7 @@ _gdk_quartz_display_convert_selection (GdkDisplay *display,
                                        GdkAtom     target,
                                        guint32     time)
 {
-  g_print ("Not a valid interface on Quartz. Use GtkSelection.\n");
+  g_warning ("Not a valid interface on Quartz. Use GtkSelection.\n");
   g_return_if_reached();
 
 }
@@ -64,8 +64,8 @@ _gdk_quartz_display_get_selection_property (GdkDisplay *display,
                                             GdkAtom    *ret_type,
                                             gint       *ret_format)
 {
-  g_print ("Quartz windows do not support properties.\n");
-  g_return_val_if_reached(-1);
+  g_warning ("Quartz windows do not support properties.\n");
+  g_return_val_if_reached (-1);
   return 0;
 }
 
@@ -127,6 +127,8 @@ make_list (const gchar  *text,
   if (list)
     *list = g_new0 (gchar *, n_strings + 1);
 
+  (*list)[n_strings] = NULL;
+
   i = n_strings;
   tmp_list = strings;
   while (tmp_list)
@@ -167,7 +169,7 @@ _gdk_quartz_display_text_property_to_utf8_list (GdkDisplay    *display,
     {
       gchar *enc_name = gdk_atom_name (encoding);
 
-      g_warning ("gdk_text_property_to_utf8_list_for_display: encoding %s not handled\n", enc_name);
+      g_warning ("gdk_text_property_to_utf8_list: encoding %s not handled\n", enc_name);
       g_free (enc_name);
 
       if (list)

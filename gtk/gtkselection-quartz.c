@@ -541,7 +541,7 @@ gtk_selection_info_get (GdkAtom selection)
     }
   return NULL;
 }
- 
+
 static void
 gtk_selection_info_remove (GdkAtom selection, GtkWidget *owner)
 {
