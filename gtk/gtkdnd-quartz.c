@@ -138,7 +138,7 @@ struct _GtkDragFindData
 
 
 @interface GtkDragSourceOwner : NSObject {
-  GtkDragSourceInfo *info;
+  GdkDragContext *context;
 }
 
 @end
@@ -148,13 +148,16 @@ struct _GtkDragFindData
 {
   guint target_info;
   GtkSelectionData selection_data;
+  GtkDragSourceInfo *info;
+  g_return_if_fail (context != NULL);
+  info = gtk_drag_get_source_info (context, FALSE);
+  g_return_if_fail (info != NULL);
   g_return_if_fail(info->source_widget != NULL);
   g_return_if_fail(info->target_list != NULL);
   selection_data.selection = GDK_NONE;
   selection_data.data = NULL;
   selection_data.length = -1;
   selection_data.target = _gtk_quartz_pasteboard_type_to_atom (type);
-  selection_data.display = gdk_display_get_default ();
 
   if (gtk_target_list_find (info->target_list, 
 			    selection_data.target, 
@@ -175,18 +178,27 @@ struct _GtkDragFindData
 
 - (void)pasteboardChangedOwner: (NSPasteboard*)sender
 {
+  GtkDragSourceInfo *info;
+  if (context != gdk_quartz_drag_source_context())
+    {
+      context = NULL;
+      return;
+    }
+  info = gtk_drag_get_source_info (context, FALSE);
+  if (!info) return;
+
     info->target_list = NULL;
     info->widget = NULL;
     info->source_widget = NULL;
 }
 
-- (id)initWithInfo:(GtkDragSourceInfo *)anInfo
+- (id)initWithContext:(GdkDragContext *)aContext
 {
   self = [super init];
 
   if (self) 
     {
-      info = anInfo;
+      context = aContext;
     }
 
   return self;
@@ -500,6 +512,7 @@ gtk_drag_dest_site_destroy (gpointer data)
     gtk_target_list_unref (site->target_list);
 
   g_free (site);
+  site = NULL;
 }
 
 void 
@@ -1089,7 +1102,7 @@ gtk_drag_begin_idle (gpointer arg)
   g_assert (info != NULL);
 
   pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  owner = [[GtkDragSourceOwner alloc] initWithInfo:info];
+  owner = [[GtkDragSourceOwner alloc] initWithContext:context];
 
   types = _gtk_quartz_target_list_to_pasteboard_types (info->target_list);
 
@@ -1146,11 +1159,11 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 		      eventNumber: 0
 		      clickCount: 1
 		      pressure: 0.0 ];
+  GdkWindow *window = [[nswindow contentView] gdkWindow];
   g_return_val_if_fail(nsevent != NULL, NULL);
 
-  context = gdk_drag_begin (NULL, NULL);
+  context = gdk_drag_begin (window, NULL);
   g_return_val_if_fail( context != NULL, NULL);
-
   context->is_source = TRUE;
 
   info = gtk_drag_get_source_info (context, TRUE);
@@ -1218,7 +1231,7 @@ gtk_drag_begin_internal (GtkWidget         *widget,
 	    break;
 	  case GTK_IMAGE_EMPTY:
 	  default:
-	    g_assert_not_reached();
+ 	    g_assert_not_reached();
 	    break;
 	  }
     }
@@ -1874,6 +1887,7 @@ gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
   g_object_unref (info->context);
 
   g_free (info);
+  info = NULL;
 }
 
 static gboolean

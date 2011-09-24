@@ -111,11 +111,20 @@ GdkDragContext *
 gdk_drag_begin (GdkWindow     *window,
 		GList         *targets)
 {
-  g_return_val_if_fail (_gdk_quartz_drag_source_context == NULL, NULL);
+  if (_gdk_quartz_drag_source_context != NULL)
+    {
+      /* Something is amiss with the existing drag, so log a message
+	 and abort it */
+      g_warning ("Drag begun with existing context; aborting the preexisting drag");
+      gdk_drag_abort (_gdk_quartz_drag_source_context,
+		      (guint32)g_get_real_time ());
+    }
+
   
   /* Create fake context */
   _gdk_quartz_drag_source_context = gdk_drag_context_new ();
   _gdk_quartz_drag_source_context->is_source = TRUE;
+  _gdk_quartz_drag_source_context->source_window = window;
   
   return _gdk_quartz_drag_source_context;
 }
@@ -155,20 +164,39 @@ gdk_drag_find_window_for_screen (GdkDragContext  *context,
   /* FIXME: Implement */
 }
 
+static void
+gdk_quartz_drag_end (GdkDragContext *context)
+{
+  GdkEvent event;
+
+  g_assert (context != NULL);
+  g_warning ("Gdk-quartz-drag-end\n");
+  event.dnd.type = GDK_DROP_FINISHED;
+  event.dnd.window = g_object_ref (context->source_window);
+  event.dnd.send_event = FALSE;
+  event.dnd.context = context;
+
+  (*_gdk_event_func) (&event, _gdk_event_data);
+
+  g_object_unref (event.dnd.window);
+
+  g_object_unref (_gdk_quartz_drag_source_context);
+  _gdk_quartz_drag_source_context = NULL;
+}
+
 void
 gdk_drag_drop (GdkDragContext *context,
 	       guint32         time)
 {
-  /* FIXME: Implement */
+  g_warning ("Gdk-quartz-drag-drop, ending\n");
+  gdk_quartz_drag_end (context);
 }
 
 void
 gdk_drag_abort (GdkDragContext *context,
 		guint32         time)
 {
-  g_return_if_fail (context != NULL);
-  
-  /* FIXME: Implement */
+  gdk_quartz_drag_end (context);
 }
 
 void             
