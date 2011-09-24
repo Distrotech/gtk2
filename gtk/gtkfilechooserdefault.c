@@ -3419,7 +3419,7 @@ shortcuts_button_press_event_cb (GtkWidget             *widget,
   if (in_press)
     return FALSE;
 
-  if (event->button != 3)
+  if (!_gtk_button_event_triggers_context_menu (event))
     return FALSE;
 
   in_press = TRUE;
@@ -3687,18 +3687,15 @@ browse_files_key_press_event_cb (GtkWidget   *widget,
 				 gpointer     data)
 {
   GtkFileChooserDefault *impl;
-  int modifiers;
 
   impl = (GtkFileChooserDefault *) data;
-
-  modifiers = gtk_accelerator_get_default_mod_mask ();
 
   if ((event->keyval == GDK_KEY_slash
        || event->keyval == GDK_KEY_KP_Divide
 #ifdef G_OS_UNIX
        || event->keyval == GDK_KEY_asciitilde
 #endif
-       ) && ! (event->state & (~GDK_SHIFT_MASK & modifiers)))
+       ) && !(event->state & GTK_NO_TEXT_INPUT_MOD_MASK))
     {
       location_popup_handler (impl, event->string);
       return TRUE;
@@ -3715,7 +3712,7 @@ browse_files_key_press_event_cb (GtkWidget   *widget,
        || event->keyval == GDK_KEY_KP_Enter
        || event->keyval == GDK_KEY_space
        || event->keyval == GDK_KEY_KP_Space)
-      && ((event->state & modifiers) == 0)
+      && !(event->state & gtk_accelerator_get_default_mod_mask ())
       && !(impl->action == GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER ||
 	   impl->action == GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER))
     {
@@ -4100,7 +4097,7 @@ list_button_press_event_cb (GtkWidget             *widget,
   if (in_press)
     return FALSE;
 
-  if (event->button != 3)
+  if (!_gtk_button_event_triggers_context_menu (event))
     return FALSE;
 
   in_press = TRUE;
@@ -8825,7 +8822,8 @@ gtk_file_chooser_default_initial_focus (GtkFileChooserEmbed *chooser_embed)
   if (impl->action == GTK_FILE_CHOOSER_ACTION_OPEN ||
       impl->action == GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER)
     {
-      if (impl->location_mode == LOCATION_MODE_PATH_BAR)
+      if (impl->location_mode == LOCATION_MODE_PATH_BAR
+	  || impl->operation_mode == OPERATION_MODE_RECENT)
 	widget = impl->browse_files_tree_view;
       else
 	widget = impl->location_entry;
