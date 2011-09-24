@@ -350,7 +350,7 @@ get_bundle_path()
 }
 
 const gchar *
-_gtk_quartz_get_datadir (void)
+_gtk_get_datadir (void)
 {
   gchar *resource_dir = get_bundle_path();
   gchar *retval = g_build_filename(resource_dir, "share", NULL);
@@ -359,7 +359,7 @@ _gtk_quartz_get_datadir (void)
 }
 
 const gchar *
-_gtk_quartz_get_libdir (void)
+_gtk_get_libdir (void)
 {
   gchar *resource_dir = get_bundle_path();
   gchar *retval = g_build_filename(resource_dir, "lib", NULL);
@@ -368,7 +368,7 @@ _gtk_quartz_get_libdir (void)
 }
 
 const gchar *
-_gtk_quartz_get_localedir (void)
+_gtk_get_localedir (void)
 {
 
   gchar *resource_dir = get_bundle_path();
@@ -378,7 +378,7 @@ _gtk_quartz_get_localedir (void)
 }
 
 const gchar *
-_gtk_quartz_get_sysconfdir (void)
+_gtk_get_sysconfdir (void)
 {
   gchar *resource_dir = get_bundle_path();
   gchar *retval = g_build_filename(resource_dir, "etc", NULL);
@@ -387,7 +387,7 @@ _gtk_quartz_get_sysconfdir (void)
 }
 
 const gchar *
-_gtk_quartz_get_data_prefix (void)
+_gtk_get_data_prefix (void)
 {
   return get_bundle_path();
 }
