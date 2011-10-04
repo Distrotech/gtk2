@@ -668,13 +668,6 @@
  * map intuitively in a widget based environment).
  * </para>
  * <para>
- * There is also a difference in shorthand properties, for
- * example in common CSS it is fine to define a font through
- * the different @font-family, @font-style, @font-size
- * properties, meanwhile in GTK+'s CSS only the canonical
- * @font property is supported.
- * </para>
- * <para>
  * The currently supported properties are:
  * </para>
  * <informaltable>
@@ -979,32 +972,6 @@ struct _GtkCssProviderPrivate
   GHashTable *symbolic_colors;
 
   GArray *rulesets;
-};
-
-enum ParserScope {
-  SCOPE_SELECTOR,
-  SCOPE_PSEUDO_CLASS,
-  SCOPE_NTH_CHILD,
-  SCOPE_DECLARATION,
-  SCOPE_VALUE,
-  SCOPE_BINDING_SET
-};
-
-/* Extend GtkStateType, since these
- * values are also used as symbols
- */
-enum ParserSymbol {
-  /* Scope: pseudo-class */
-  SYMBOL_NTH_CHILD = GTK_STATE_FOCUSED + 1,
-  SYMBOL_FIRST_CHILD,
-  SYMBOL_LAST_CHILD,
-  SYMBOL_SORTED_CHILD,
-
-  /* Scope: nth-child */
-  SYMBOL_NTH_CHILD_EVEN,
-  SYMBOL_NTH_CHILD_ODD,
-  SYMBOL_NTH_CHILD_FIRST,
-  SYMBOL_NTH_CHILD_LAST
 };
 
 enum {

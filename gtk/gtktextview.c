@@ -4545,7 +4545,12 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
     {
       gtk_text_view_reset_im_context (text_view);
 
-      if (event->button == 1)
+      if (_gtk_button_event_triggers_context_menu (event))
+        {
+	  gtk_text_view_do_popup (text_view, event);
+	  return TRUE;
+        }
+      else if (event->button == 1)
         {
           /* If we're in the selection, start a drag copy/move of the
            * selection; otherwise, start creating a new selection.
@@ -4561,7 +4566,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
           if (gtk_text_buffer_get_selection_bounds (get_buffer (text_view),
                                                     &start, &end) &&
               gtk_text_iter_in_range (&iter, &start, &end) &&
-              !(event->state & GDK_SHIFT_MASK))
+              !(event->state & GTK_EXTEND_SELECTION_MOD_MASK))
             {
               priv->drag_start_x = event->x;
               priv->drag_start_y = event->y;
@@ -4592,11 +4597,6 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
 					   &iter,
 					   priv->editable);
           return TRUE;
-        }
-      else if (event->button == 3)
-        {
-	  gtk_text_view_do_popup (text_view, event);
-	  return TRUE;
         }
     }
   else if ((event->type == GDK_2BUTTON_PRESS ||
@@ -5324,7 +5324,7 @@ gtk_text_view_move_cursor_internal (GtkTextView     *text_view,
       old_xpos = priv->xoffset;
       old_ypos = priv->yoffset;
       gtk_text_view_move_viewport (text_view, scroll_step, count);
-      if ((old_xpos != priv->xoffset || old_ypos != priv->yoffset) &&
+      if ((old_xpos == priv->xoffset && old_ypos == priv->yoffset) &&
           leave_direction != -1 &&
           !gtk_widget_keynav_failed (GTK_WIDGET (text_view),
                                      leave_direction))
@@ -6491,7 +6491,7 @@ gtk_text_view_start_selection_drag (GtkTextView       *text_view,
   orig_start = ins;
   orig_end = bound;
 
-  if (button->state & GDK_SHIFT_MASK)
+  if (button->state & GTK_EXTEND_SELECTION_MOD_MASK)
     {
       /* Extend selection */
       GtkTextIter old_ins, old_bound;

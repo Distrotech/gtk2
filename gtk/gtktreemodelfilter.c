@@ -1007,6 +1007,11 @@ gtk_tree_model_filter_free_level (GtkTreeModelFilter *filter,
         filter->priv->zero_ref_count--;
     }
 
+#ifdef MODEL_FILTER_DEBUG
+  if (filter_level == filter->priv->root)
+    g_assert (filter->priv->zero_ref_count == 0);
+#endif
+
   if (filter_level->parent_elt)
     {
       /* Release reference on parent */
@@ -1650,7 +1655,10 @@ gtk_tree_model_filter_remove_elt_from_level (GtkTreeModelFilter *filter,
   iter.user_data = level;
   iter.user_data2 = elt;
 
-  if (orig_level_ext_ref_count > 0)
+  parent = level->parent_elt;
+  parent_level = level->parent_level;
+
+  if (!parent || orig_level_ext_ref_count > 0)
     path = gtk_tree_model_get_path (GTK_TREE_MODEL (filter), &iter);
   else
     /* If the level is not visible, the parent is potentially invisible
@@ -1658,9 +1666,6 @@ gtk_tree_model_filter_remove_elt_from_level (GtkTreeModelFilter *filter,
      * for a path.
      */
     path = NULL;
-
-  parent = level->parent_elt;
-  parent_level = level->parent_level;
 
   length = g_sequence_get_length (level->seq);
 
@@ -3189,7 +3194,6 @@ static gboolean
 gtk_tree_model_filter_iter_next (GtkTreeModel *model,
                                  GtkTreeIter  *iter)
 {
-  FilterLevel *level;
   FilterElt *elt;
   GSequenceIter *siter;
 
@@ -3197,7 +3201,6 @@ gtk_tree_model_filter_iter_next (GtkTreeModel *model,
   g_return_val_if_fail (GTK_TREE_MODEL_FILTER (model)->priv->child_model != NULL, FALSE);
   g_return_val_if_fail (GTK_TREE_MODEL_FILTER (model)->priv->stamp == iter->stamp, FALSE);
 
-  level = iter->user_data;
   elt = iter->user_data2;
 
   siter = g_sequence_iter_next (elt->visible_siter);
@@ -3493,6 +3496,8 @@ gtk_tree_model_filter_real_ref_node (GtkTreeModel *model,
 
 #ifdef MODEL_FILTER_DEBUG
           g_assert (filter->priv->zero_ref_count >= 0);
+          if (filter->priv->zero_ref_count > 0)
+            g_assert (filter->priv->root != NULL);
 #endif
         }
     }
@@ -3569,6 +3574,8 @@ gtk_tree_model_filter_real_unref_node (GtkTreeModel *model,
 
 #ifdef MODEL_FILTER_DEBUG
           g_assert (filter->priv->zero_ref_count >= 0);
+          if (filter->priv->zero_ref_count > 0)
+            g_assert (filter->priv->root != NULL);
 #endif
         }
     }

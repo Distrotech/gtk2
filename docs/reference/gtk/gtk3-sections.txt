@@ -305,6 +305,7 @@ gtk_adjustment_get_lower
 gtk_adjustment_get_page_increment
 gtk_adjustment_get_page_size
 gtk_adjustment_get_step_increment
+gtk_adjustment_get_minimum_increment
 gtk_adjustment_get_upper
 gtk_adjustment_set_lower
 gtk_adjustment_set_page_increment
@@ -902,6 +903,7 @@ gtk_container_child_get_property
 gtk_container_child_set_property
 gtk_container_child_get_valist
 gtk_container_child_set_valist
+gtk_container_child_notify
 gtk_container_forall
 gtk_container_get_border_width
 gtk_container_set_border_width
@@ -1480,12 +1482,13 @@ gtk_font_selection_dialog_get_type
 <FILE>gtkfontchooser</FILE>
 <TITLE>GtkFontChooser</TITLE>
 GtkFontChooser
-gtk_font_chooser_new
-gtk_font_chooser_get_family
-gtk_font_chooser_get_face
-gtk_font_chooser_get_size
-gtk_font_chooser_get_font_name
-gtk_font_chooser_set_font_name
+gtk_font_chooser_get_font_family
+gtk_font_chooser_get_font_face
+gtk_font_chooser_get_font_size
+gtk_font_chooser_get_font
+gtk_font_chooser_set_font
+gtk_font_chooser_get_font_desc
+gtk_font_chooser_set_font_desc
 gtk_font_chooser_get_preview_text
 gtk_font_chooser_set_preview_text
 gtk_font_chooser_get_show_preview_entry
@@ -1494,17 +1497,36 @@ GtkFontFilterFunc
 gtk_font_chooser_set_filter_func
 
 <SUBSECTION Standard>
-GtkFontChooserClass
+GtkFontChooserIface
 GTK_TYPE_FONT_CHOOSER
 GTK_FONT_CHOOSER
-GTK_FONT_CHOOSER_CLASS
+GTK_FONT_CHOOSER_IFACE
 GTK_IS_FONT_CHOOSER
-GTK_IS_FONT_CHOOSER_CLASS
-GTK_FONT_CHOOSER_GET_CLASS
+GTK_IS_FONT_CHOOSER_IFACE
+GTK_FONT_CHOOSER_GET_IFACE
 
 <SUBSECTION Private>
-GtkFontChooserPrivate
 gtk_font_chooser_get_type
+</SECTION>
+
+<SECTION>
+<FILE>gtkfontchooserwidget</FILE>
+<TITLE>GtkFontChooserWidget</TITLE>
+GtkFontChooserWidget
+gtk_font_chooser_widget_new
+
+<SUBSECTION Standard>
+GtkFontChooserWidgetClass
+GTK_TYPE_FONT_CHOOSER_WIDGET
+GTK_FONT_CHOOSER_WIDGET
+GTK_FONT_CHOOSER_WIDGET_CLASS
+GTK_IS_FONT_CHOOSER_WIDGET
+GTK_IS_FONT_CHOOSER_WIDGET_CLASS
+GTK_FONT_CHOOSER_WIDGET_GET_CLASS
+
+<SUBSECTION Private>
+GtkFontChooserWidgetPrivate
+gtk_font_chooser_widget_get_type
 </SECTION>
 
 <SECTION>
@@ -1512,11 +1534,6 @@ gtk_font_chooser_get_type
 <TITLE>GtkFontChooserDialog</TITLE>
 GtkFontChooserDialog
 gtk_font_chooser_dialog_new
-gtk_font_chooser_dialog_get_font_chooser
-gtk_font_chooser_dialog_get_font_name
-gtk_font_chooser_dialog_set_font_name
-gtk_font_chooser_dialog_get_preview_text
-gtk_font_chooser_dialog_set_preview_text
 
 <SUBSECTION Standard>
 GtkFontChooserDialogClass
@@ -3325,6 +3342,7 @@ gtk_text_buffer_get_type
 GtkTextIter
 gtk_text_iter_get_buffer
 gtk_text_iter_copy
+gtk_text_iter_assign
 gtk_text_iter_free
 gtk_text_iter_get_offset
 gtk_text_iter_get_line
@@ -4285,6 +4303,7 @@ gtk_tree_view_column_cell_is_visible
 gtk_tree_view_column_focus_cell
 gtk_tree_view_column_queue_resize
 gtk_tree_view_column_get_tree_view
+gtk_tree_view_column_get_x_offset
 <SUBSECTION Standard>
 GTK_TREE_VIEW_COLUMN
 GTK_IS_TREE_VIEW_COLUMN
@@ -5479,6 +5498,7 @@ GTK_CHECK_VERSION
 GtkWidgetPath
 gtk_widget_path_append_type
 gtk_widget_path_append_with_siblings
+gtk_widget_path_append_for_widget
 gtk_widget_path_copy
 gtk_widget_path_ref
 gtk_widget_path_unref
@@ -7175,6 +7195,7 @@ GtkLockButtonPrivate
 GtkOverlay
 
 gtk_overlay_new
+gtk_overlay_add_overlay
 
 <SUBSECTION Standard>
 GTK_TYPE_OVERLAY

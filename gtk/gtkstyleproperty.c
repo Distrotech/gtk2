@@ -1662,9 +1662,9 @@ border_radius_value_print (const GValue *value,
 }
 
 static gboolean 
-border_color_value_parse (GtkCssParser *parser,
-                          GFile        *base,
-                          GValue       *value)
+transparent_color_value_parse (GtkCssParser *parser,
+                               GFile        *base,
+                               GValue       *value)
 {
   if (_gtk_css_parser_try (parser, "transparent", TRUE))
     {
@@ -2157,6 +2157,16 @@ border_image_width_default_value (GtkStyleProperties *props,
 }
 
 static void
+background_color_default_value (GtkStyleProperties *props,
+                                GtkStateFlags       state,
+                                GValue             *value)
+{
+  GdkRGBA transparent_black = { 0, 0, 0, 0 };
+
+  g_value_set_boxed (value, &transparent_black);
+}
+
+static void
 border_color_default_value (GtkStyleProperties *props,
                             GtkStateFlags       state,
                             GValue             *value)
@@ -2551,12 +2561,18 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL,
                                           NULL);
-
-  gtk_style_properties_register_property (NULL,
-                                          g_param_spec_boxed ("background-color",
-                                                              "Background color",
-                                                              "Background color",
-                                                              GDK_TYPE_RGBA, 0));
+  _gtk_style_property_register           (g_param_spec_boxed ("background-color",
+                                          "Background color",
+                                          "Background color",
+                                          GDK_TYPE_RGBA, 0),
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          transparent_color_value_parse,
+                                          NULL,
+                                          background_color_default_value,
+                                          NULL);
 
   _gtk_style_property_register           (g_param_spec_boxed ("font-family",
                                                               "Font family",
@@ -2838,7 +2854,7 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL,
                                           NULL,
-                                          border_color_value_parse,
+                                          transparent_color_value_parse,
                                           NULL,
                                           border_color_default_value,
                                           NULL);
@@ -2850,7 +2866,7 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL,
                                           NULL,
-                                          border_color_value_parse,
+                                          transparent_color_value_parse,
                                           NULL,
                                           border_color_default_value,
                                           NULL);
@@ -2862,7 +2878,7 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL,
                                           NULL,
-                                          border_color_value_parse,
+                                          transparent_color_value_parse,
                                           NULL,
                                           border_color_default_value,
                                           NULL);
@@ -2874,7 +2890,7 @@ gtk_style_property_init (void)
                                           NULL,
                                           NULL,
                                           NULL,
-                                          border_color_value_parse,
+                                          transparent_color_value_parse,
                                           NULL,
                                           border_color_default_value,
                                           NULL);

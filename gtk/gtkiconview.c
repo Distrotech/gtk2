@@ -82,6 +82,7 @@ struct _GtkIconViewItem
   
   gint row, col;
 
+  guint prelight : 1;
   guint selected : 1;
   guint selected_before_rubberbanding : 1;
 
@@ -134,6 +135,7 @@ struct _GtkIconViewPrivate
   GtkIconViewItem *cursor_item;
 
   GtkIconViewItem *last_single_clicked;
+  GtkIconViewItem *last_prelight;
 
   GtkOrientation item_orientation;
 
@@ -176,8 +178,8 @@ struct _GtkIconViewPrivate
   guint reorderable : 1;
   guint empty_view_drop :1;
 
-  guint ctrl_pressed : 1;
-  guint shift_pressed : 1;
+  guint modify_selection_pressed : 1;
+  guint extend_selection_pressed : 1;
 
   guint draw_focus : 1;
 
@@ -1683,9 +1685,7 @@ gtk_icon_view_draw (GtkWidget *widget,
 
   cairo_restore (cr);
 
-  GTK_WIDGET_CLASS (gtk_icon_view_parent_class)->draw (widget, cr);
-
-  return TRUE;
+  return GTK_WIDGET_CLASS (gtk_icon_view_parent_class)->draw (widget, cr);
 }
 
 static gboolean
@@ -1741,6 +1741,33 @@ gtk_icon_view_motion (GtkWidget      *widget,
  	}
       else 
 	remove_scroll_timeout (icon_view);
+    }
+  else
+    {
+      GtkIconViewItem *item, *last_prelight_item;
+      GtkCellRenderer *cell = NULL;
+
+      last_prelight_item = icon_view->priv->last_prelight;
+      item = gtk_icon_view_get_item_at_coords (icon_view,
+                                               event->x, event->y,
+                                               FALSE,
+                                               &cell);
+
+      if (item != NULL)
+        {
+          item->prelight = TRUE;
+          gtk_icon_view_queue_draw_item (icon_view, item);
+        }
+
+      if (last_prelight_item != NULL &&
+          last_prelight_item != item)
+        {
+          last_prelight_item->prelight = FALSE;
+          gtk_icon_view_queue_draw_item (icon_view,
+                                         icon_view->priv->last_prelight);
+        }
+
+      icon_view->priv->last_prelight = item;
     }
   
   return TRUE;
@@ -2016,7 +2043,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
 	      gtk_icon_view_set_cursor_item (icon_view, item, cursor_cell);
 	    }
 	  else if (icon_view->priv->selection_mode == GTK_SELECTION_MULTIPLE &&
-		   (event->state & GDK_SHIFT_MASK))
+		   (event->state & GTK_EXTEND_SELECTION_MOD_MASK))
 	    {
 	      gtk_icon_view_unselect_all_internal (icon_view);
 
@@ -2033,7 +2060,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
 	    {
 	      if ((icon_view->priv->selection_mode == GTK_SELECTION_MULTIPLE ||
 		  ((icon_view->priv->selection_mode == GTK_SELECTION_SINGLE) && item->selected)) &&
-		  (event->state & GDK_CONTROL_MASK))
+		  (event->state & GTK_MODIFY_SELECTION_MOD_MASK))
 		{
 		  item->selected = !item->selected;
 		  gtk_icon_view_queue_draw_item (icon_view, item);
@@ -2080,7 +2107,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
       else
 	{
 	  if (icon_view->priv->selection_mode != GTK_SELECTION_BROWSE &&
-	      !(event->state & GDK_CONTROL_MASK))
+	      !(event->state & GTK_MODIFY_SELECTION_MOD_MASK))
 	    {
 	      dirty = gtk_icon_view_unselect_all_internal (icon_view);
 	    }
@@ -2949,9 +2976,18 @@ gtk_icon_view_paint_item (GtkIconView     *icon_view,
 
       state |= GTK_STATE_FLAG_SELECTED;
       flags |= GTK_CELL_RENDERER_SELECTED;
+    }
 
-      gtk_style_context_set_state (style_context, state);
+  if (item->prelight)
+    {
+      state |= GTK_STATE_FLAG_PRELIGHT;
+      flags |= GTK_CELL_RENDERER_PRELIT;
+    }
 
+  gtk_style_context_set_state (style_context, state);
+
+  if (item->selected)
+    {
       gtk_render_background (style_context, cr,
                              x - icon_view->priv->item_padding,
                              y - icon_view->priv->item_padding,
@@ -3370,6 +3406,9 @@ gtk_icon_view_row_deleted (GtkTreeModel *model,
   if (item == icon_view->priv->cursor_item)
     icon_view->priv->cursor_item = NULL;
 
+  if (item == icon_view->priv->last_prelight)
+    icon_view->priv->last_prelight = NULL;
+
   if (item->selected)
     emit = TRUE;
   
@@ -3527,10 +3566,10 @@ gtk_icon_view_real_move_cursor (GtkIconView     *icon_view,
 
   if (gtk_get_current_event_state (&state))
     {
-      if ((state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
-        icon_view->priv->ctrl_pressed = TRUE;
-      if ((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
-        icon_view->priv->shift_pressed = TRUE;
+      if ((state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+        icon_view->priv->modify_selection_pressed = TRUE;
+      if ((state & GTK_EXTEND_SELECTION_MOD_MASK) == GTK_EXTEND_SELECTION_MOD_MASK)
+        icon_view->priv->extend_selection_pressed = TRUE;
     }
   /* else we assume not pressed */
 
@@ -3553,8 +3592,8 @@ gtk_icon_view_real_move_cursor (GtkIconView     *icon_view,
       g_assert_not_reached ();
     }
 
-  icon_view->priv->ctrl_pressed = FALSE;
-  icon_view->priv->shift_pressed = FALSE;
+  icon_view->priv->modify_selection_pressed = FALSE;
+  icon_view->priv->extend_selection_pressed = FALSE;
 
   icon_view->priv->draw_focus = TRUE;
 
@@ -3753,8 +3792,8 @@ gtk_icon_view_move_cursor_up_down (GtkIconView *icon_view,
       return;
     }
 
-  if (icon_view->priv->ctrl_pressed ||
-      !icon_view->priv->shift_pressed ||
+  if (icon_view->priv->modify_selection_pressed ||
+      !icon_view->priv->extend_selection_pressed ||
       !icon_view->priv->anchor_item ||
       icon_view->priv->selection_mode != GTK_SELECTION_MULTIPLE)
     icon_view->priv->anchor_item = item;
@@ -3762,7 +3801,7 @@ gtk_icon_view_move_cursor_up_down (GtkIconView *icon_view,
   cell = gtk_cell_area_get_focus_cell (icon_view->priv->cell_area);
   gtk_icon_view_set_cursor_item (icon_view, item, cell);
 
-  if (!icon_view->priv->ctrl_pressed &&
+  if (!icon_view->priv->modify_selection_pressed &&
       icon_view->priv->selection_mode != GTK_SELECTION_NONE)
     {
       dirty = gtk_icon_view_unselect_all_internal (icon_view);
@@ -3809,15 +3848,15 @@ gtk_icon_view_move_cursor_page_up_down (GtkIconView *icon_view,
   if (!item)
     return;
 
-  if (icon_view->priv->ctrl_pressed ||
-      !icon_view->priv->shift_pressed ||
+  if (icon_view->priv->modify_selection_pressed ||
+      !icon_view->priv->extend_selection_pressed ||
       !icon_view->priv->anchor_item ||
       icon_view->priv->selection_mode != GTK_SELECTION_MULTIPLE)
     icon_view->priv->anchor_item = item;
 
   gtk_icon_view_set_cursor_item (icon_view, item, NULL);
 
-  if (!icon_view->priv->ctrl_pressed &&
+  if (!icon_view->priv->modify_selection_pressed &&
       icon_view->priv->selection_mode != GTK_SELECTION_NONE)
     {
       dirty = gtk_icon_view_unselect_all_internal (icon_view);
@@ -3898,8 +3937,8 @@ gtk_icon_view_move_cursor_left_right (GtkIconView *icon_view,
       return;
     }
 
-  if (icon_view->priv->ctrl_pressed ||
-      !icon_view->priv->shift_pressed ||
+  if (icon_view->priv->modify_selection_pressed ||
+      !icon_view->priv->extend_selection_pressed ||
       !icon_view->priv->anchor_item ||
       icon_view->priv->selection_mode != GTK_SELECTION_MULTIPLE)
     icon_view->priv->anchor_item = item;
@@ -3907,7 +3946,7 @@ gtk_icon_view_move_cursor_left_right (GtkIconView *icon_view,
   cell = gtk_cell_area_get_focus_cell (icon_view->priv->cell_area);
   gtk_icon_view_set_cursor_item (icon_view, item, cell);
 
-  if (!icon_view->priv->ctrl_pressed &&
+  if (!icon_view->priv->modify_selection_pressed &&
       icon_view->priv->selection_mode != GTK_SELECTION_NONE)
     {
       dirty = gtk_icon_view_unselect_all_internal (icon_view);
@@ -3946,15 +3985,15 @@ gtk_icon_view_move_cursor_start_end (GtkIconView *icon_view,
   if (!item)
     return;
 
-  if (icon_view->priv->ctrl_pressed ||
-      !icon_view->priv->shift_pressed ||
+  if (icon_view->priv->modify_selection_pressed ||
+      !icon_view->priv->extend_selection_pressed ||
       !icon_view->priv->anchor_item ||
       icon_view->priv->selection_mode != GTK_SELECTION_MULTIPLE)
     icon_view->priv->anchor_item = item;
 
   gtk_icon_view_set_cursor_item (icon_view, item, NULL);
 
-  if (!icon_view->priv->ctrl_pressed &&
+  if (!icon_view->priv->modify_selection_pressed &&
       icon_view->priv->selection_mode != GTK_SELECTION_NONE)
     {
       dirty = gtk_icon_view_unselect_all_internal (icon_view);
@@ -4847,6 +4886,7 @@ gtk_icon_view_set_model (GtkIconView *icon_view,
       icon_view->priv->anchor_item = NULL;
       icon_view->priv->cursor_item = NULL;
       icon_view->priv->last_single_clicked = NULL;
+      icon_view->priv->last_prelight = NULL;
       icon_view->priv->width = 0;
       icon_view->priv->height = 0;
     }

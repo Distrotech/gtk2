@@ -561,8 +561,8 @@ gdk_quartz_keymap_get_entries_for_keyval (GdkKeymap     *keymap,
       (*n_keys)++;
 
       key.keycode = i / KEYVALS_PER_KEYCODE;
-      key.group = 0;
-      key.level = i % KEYVALS_PER_KEYCODE;
+      key.group = (i % KEYVALS_PER_KEYCODE) >= 2;
+      key.level = i % 2;
 
       g_array_append_val (keys_array, key);
     }
@@ -617,7 +617,7 @@ gdk_quartz_keymap_get_entries_for_keycode (GdkKeymap     *keymap,
 	  GdkKeymapKey key;
 
 	  key.keycode = hardware_keycode;
-	  key.group = i / 2;
+	  key.group = i >= 2;
 	  key.level = i % 2;
 
 	  g_array_append_val (keys_array, key);
@@ -673,6 +673,11 @@ translate_keysym (guint           hardware_keycode,
         tmp_keyval = upper;
     }
 
+  if (effective_group)
+    *effective_group = group;
+  if (effective_level)
+    *effective_level = level;
+
   return tmp_keyval;
 }
 
@@ -727,11 +732,8 @@ static void
 gdk_quartz_keymap_add_virtual_modifiers (GdkKeymap       *keymap,
                                          GdkModifierType *state)
 {
-  if (*state & GDK_MOD1_MASK)
+  if (*state & GDK_MOD2_MASK)
     *state |= GDK_META_MASK;
-  if (*state & GDK_MOD5_MASK)
-    *state |= GDK_SUPER_MASK;
-
 }
 
 static gboolean
@@ -739,9 +741,7 @@ gdk_quartz_keymap_map_virtual_modifiers (GdkKeymap       *keymap,
                                          GdkModifierType *state)
 {
   if (*state & GDK_META_MASK)
-    *state |= GDK_MOD1_MASK;
-  if (*state & GDK_SUPER_MASK)
-    *state |= GDK_MOD5_MASK;
+    *state |= GDK_MOD2_MASK;
 
   return TRUE;
 }

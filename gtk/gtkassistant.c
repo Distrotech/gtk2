@@ -1018,6 +1018,13 @@ gtk_assistant_init (GtkAssistant *assistant)
   gtk_size_group_add_widget (priv->button_size_group, priv->cancel);
   gtk_size_group_add_widget (priv->button_size_group, priv->last);
 
+  gtk_widget_set_no_show_all (priv->close, TRUE);
+  gtk_widget_set_no_show_all (priv->apply, TRUE);
+  gtk_widget_set_no_show_all (priv->forward, TRUE);
+  gtk_widget_set_no_show_all (priv->back, TRUE);
+  gtk_widget_set_no_show_all (priv->cancel, TRUE);
+  gtk_widget_set_no_show_all (priv->last, TRUE);
+
   if (!alternative_button_order (assistant))
     {
       gtk_box_pack_end (GTK_BOX (priv->action_area), priv->apply, FALSE, FALSE, 0);
@@ -1608,7 +1615,9 @@ gtk_assistant_insert_page (GtkAssistant *assistant,
   page_info = g_slice_new0 (GtkAssistantPage);
   page_info->page  = page;
   page_info->regular_title = gtk_label_new (NULL);
+  gtk_widget_set_no_show_all (page_info->regular_title, TRUE);
   page_info->current_title = gtk_label_new (NULL);
+  gtk_widget_set_no_show_all (page_info->current_title, TRUE);
 
   /* Note: we need to use misc alignment here as long as GtkLabel
    * pays attention to it. GtkWiget::halign is ineffective, since
@@ -1657,7 +1666,7 @@ gtk_assistant_insert_page (GtkAssistant *assistant,
  * gtk_assistant_remove_page:
  * @assistant: a #GtkAssistant
  * @page_num: the index of a page in the @assistant,
- *     or -1 to get the last page
+ *     or -1 to remove the last page
  *
  * Removes the @page_num's page from @assistant.
  *
