@@ -104,7 +104,6 @@
 #include "gtkmenuprivate.h"
 #include "gtkmenuitemprivate.h"
 #include "gtkmenushellprivate.h"
-#include "gtktearoffmenuitem.h"
 #include "gtkwindow.h"
 #include "gtkbox.h"
 #include "gtkscrollbar.h"
@@ -113,6 +112,10 @@
 #include "gtkwidgetprivate.h"
 #include "gtkintl.h"
 #include "gtktypebuiltins.h"
+
+#include "deprecated/gtktearoffmenuitem.h"
+
+
 #include "a11y/gtkmenuaccessible.h"
 
 #define NAVIGATION_REGION_OVERSHOOT 50  /* How much the navigation region

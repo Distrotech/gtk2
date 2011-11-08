@@ -2018,6 +2018,15 @@ gtk_icon_view_button_press (GtkWidget      *widget,
 
   if (event->button == 1 && event->type == GDK_BUTTON_PRESS)
     {
+      GdkModifierType extend_mod_mask;
+      GdkModifierType modify_mod_mask;
+
+      extend_mod_mask =
+        gtk_widget_get_modifier_mask (widget, GDK_MODIFIER_INTENT_EXTEND_SELECTION);
+
+      modify_mod_mask =
+        gtk_widget_get_modifier_mask (widget, GDK_MODIFIER_INTENT_MODIFY_SELECTION);
+
       item = gtk_icon_view_get_item_at_coords (icon_view, 
 					       event->x, event->y,
 					       FALSE,
@@ -2043,7 +2052,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
 	      gtk_icon_view_set_cursor_item (icon_view, item, cursor_cell);
 	    }
 	  else if (icon_view->priv->selection_mode == GTK_SELECTION_MULTIPLE &&
-		   (event->state & GTK_EXTEND_SELECTION_MOD_MASK))
+		   (event->state & extend_mod_mask))
 	    {
 	      gtk_icon_view_unselect_all_internal (icon_view);
 
@@ -2060,7 +2069,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
 	    {
 	      if ((icon_view->priv->selection_mode == GTK_SELECTION_MULTIPLE ||
 		  ((icon_view->priv->selection_mode == GTK_SELECTION_SINGLE) && item->selected)) &&
-		  (event->state & GTK_MODIFY_SELECTION_MOD_MASK))
+		  (event->state & modify_mod_mask))
 		{
 		  item->selected = !item->selected;
 		  gtk_icon_view_queue_draw_item (icon_view, item);
@@ -2107,7 +2116,7 @@ gtk_icon_view_button_press (GtkWidget      *widget,
       else
 	{
 	  if (icon_view->priv->selection_mode != GTK_SELECTION_BROWSE &&
-	      !(event->state & GTK_MODIFY_SELECTION_MOD_MASK))
+	      !(event->state & modify_mod_mask))
 	    {
 	      dirty = gtk_icon_view_unselect_all_internal (icon_view);
 	    }
@@ -3566,9 +3575,19 @@ gtk_icon_view_real_move_cursor (GtkIconView     *icon_view,
 
   if (gtk_get_current_event_state (&state))
     {
-      if ((state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+      GdkModifierType extend_mod_mask;
+      GdkModifierType modify_mod_mask;
+
+      extend_mod_mask =
+        gtk_widget_get_modifier_mask (GTK_WIDGET (icon_view),
+                                      GDK_MODIFIER_INTENT_EXTEND_SELECTION);
+      modify_mod_mask =
+        gtk_widget_get_modifier_mask (GTK_WIDGET (icon_view),
+                                      GDK_MODIFIER_INTENT_MODIFY_SELECTION);
+
+      if ((state & modify_mod_mask) == modify_mod_mask)
         icon_view->priv->modify_selection_pressed = TRUE;
-      if ((state & GTK_EXTEND_SELECTION_MOD_MASK) == GTK_EXTEND_SELECTION_MOD_MASK)
+      if ((state & extend_mod_mask) == extend_mod_mask)
         icon_view->priv->extend_selection_pressed = TRUE;
     }
   /* else we assume not pressed */
@@ -4915,7 +4934,7 @@ gtk_icon_view_set_model (GtkIconView *icon_view,
 
       gtk_icon_view_build_items (icon_view);
 
-      gtk_icon_view_queue_layout (icon_view);
+      gtk_icon_view_layout (icon_view);
     }
 
   g_object_notify (G_OBJECT (icon_view), "model");  
@@ -6055,7 +6074,8 @@ remove_scroll_timeout (GtkIconView *icon_view)
 }
 
 static void
-gtk_icon_view_autoscroll (GtkIconView *icon_view)
+gtk_icon_view_autoscroll (GtkIconView *icon_view,
+                          GdkDevice   *device)
 {
   GdkWindow *window;
   gint px, py, x, y, width, height;
@@ -6063,7 +6083,7 @@ gtk_icon_view_autoscroll (GtkIconView *icon_view)
 
   window = gtk_widget_get_window (GTK_WIDGET (icon_view));
 
-  gdk_window_get_pointer (window, &px, &py, NULL);
+  gdk_window_get_device_position (window, device, &px, &py, NULL);
   gdk_window_get_geometry (window, &x, &y, &width, &height);
 
   /* see if we are near the edge. */
@@ -6084,13 +6104,17 @@ gtk_icon_view_autoscroll (GtkIconView *icon_view)
                               gtk_adjustment_get_value (icon_view->priv->hadjustment) + hoffset);
 }
 
+typedef struct {
+  GtkIconView *icon_view;
+  GdkDevice   *device;
+} DragScrollData;
 
 static gboolean
-drag_scroll_timeout (gpointer data)
+drag_scroll_timeout (gpointer datap)
 {
-  GtkIconView *icon_view = GTK_ICON_VIEW (data);
+  DragScrollData *data = datap;
 
-  gtk_icon_view_autoscroll (icon_view);
+  gtk_icon_view_autoscroll (data->icon_view, data->device);
 
   return TRUE;
 }
@@ -6487,8 +6511,12 @@ gtk_icon_view_drag_motion (GtkWidget      *widget,
     {
       if (icon_view->priv->scroll_timeout_id == 0)
 	{
+          DragScrollData *data = g_slice_new (DragScrollData);
+          data->icon_view = icon_view;
+          data->device = gdk_drag_context_get_device (context);
+
 	  icon_view->priv->scroll_timeout_id =
-	    gdk_threads_add_timeout (50, drag_scroll_timeout, icon_view);
+	    gdk_threads_add_timeout_full (G_PRIORITY_DEFAULT, 50, drag_scroll_timeout, data, g_free);
 	}
 
       if (target == gdk_atom_intern_static_string ("GTK_TREE_MODEL_ROW"))

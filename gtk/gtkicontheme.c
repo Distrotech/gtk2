@@ -48,6 +48,7 @@
 #include "gtknumerableiconprivate.h"
 #include "gtksettings.h"
 #include "gtkprivate.h"
+#include "deprecated/gtkstyle.h"
 
 
 /**
@@ -979,7 +980,7 @@ insert_theme (GtkIconTheme *icon_theme, const char *theme_name)
   GKeyFile *theme_file;
   GError *error = NULL;
   IconThemeDirMtime *dir_mtime;
-  struct stat stat_buf;
+  GStatBuf stat_buf;
   
   priv = icon_theme->priv;
 
@@ -1123,7 +1124,7 @@ load_themes (GtkIconTheme *icon_theme)
   IconSuffix old_suffix, new_suffix;
   GTimeVal tv;
   IconThemeDirMtime *dir_mtime;
-  struct stat stat_buf;
+  GStatBuf stat_buf;
   
   priv = icon_theme->priv;
 
@@ -1948,7 +1949,7 @@ rescan_themes (GtkIconTheme *icon_theme)
   IconThemeDirMtime *dir_mtime;
   GList *d;
   int stat_res;
-  struct stat stat_buf;
+  GStatBuf stat_buf;
   GTimeVal tv;
 
   priv = icon_theme->priv;

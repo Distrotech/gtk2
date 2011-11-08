@@ -1352,13 +1352,14 @@ palette_set_color (GtkWidget         *drawing_area,
                    gdouble           *color)
 {
   gdouble *new_color = g_new (double, 4);
-  GdkColor gdk_color;
+  GdkRGBA rgba;
 
-  gdk_color.red = UNSCALE (color[0]);
-  gdk_color.green = UNSCALE (color[1]);
-  gdk_color.blue = UNSCALE (color[2]);
+  rgba.red = color[0];
+  rgba.green = color[1];
+  rgba.blue = color[2];
+  rgba.alpha = 1;
 
-  gtk_widget_modify_bg (drawing_area, GTK_STATE_NORMAL, &gdk_color);
+  gtk_widget_override_background_color (drawing_area, GTK_STATE_FLAG_NORMAL, &rgba);
 
   if (GPOINTER_TO_INT (g_object_get_data (G_OBJECT (drawing_area), "color_set")) == 0)
     {
@@ -1505,7 +1506,7 @@ palette_press (GtkWidget      *drawing_area,
 
   gtk_widget_grab_focus (drawing_area);
 
-  if (_gtk_button_event_triggers_context_menu (event))
+  if (gdk_event_triggers_context_menu ((GdkEvent *) event))
     {
       do_popup (colorsel, drawing_area, event->time);
       return TRUE;

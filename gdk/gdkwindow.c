@@ -4981,31 +4981,6 @@ gdk_window_get_device_position (GdkWindow       *window,
 }
 
 /**
- * gdk_window_at_pointer:
- * @win_x: (out) (allow-none): return location for origin of the window under the pointer
- * @win_y: (out) (allow-none): return location for origin of the window under the pointer
- *
- * Obtains the window underneath the mouse pointer, returning the
- * location of that window in @win_x, @win_y. Returns %NULL if the
- * window under the mouse pointer is not known to GDK (if the window
- * belongs to another application and a #GdkWindow hasn't been created
- * for it with gdk_window_foreign_new())
- *
- * NOTE: For multihead-aware widgets or applications use
- * gdk_display_get_window_at_pointer() instead.
- *
- * Return value: (transfer none): window under the mouse pointer
- *
- * Deprecated: 3.0: Use gdk_device_get_window_at_position() instead.
- **/
-GdkWindow*
-gdk_window_at_pointer (gint *win_x,
-		       gint *win_y)
-{
-  return gdk_display_get_window_at_pointer (gdk_display_get_default (), win_x, win_y);
-}
-
-/**
  * gdk_get_default_root_window:
  *
  * Obtains the root window (parent all other windows are inside)
@@ -6930,10 +6905,8 @@ gdk_window_get_root_coords (GdkWindow *window,
 
   if (GDK_WINDOW_DESTROYED (window))
     {
-      if (x)
-	*root_x = x;
-      if (y)
-	*root_y = y;
+      *root_x = 0;
+      *root_y = 0;
       return;
     }
   
@@ -10475,9 +10448,10 @@ gdk_window_set_functions (GdkWindow    *window,
 }
 
 /**
- * gdk_window_begin_resize_drag:
+ * gdk_window_begin_resize_drag_for_device:
  * @window: a toplevel #GdkWindow
  * @edge: the edge or corner from which the drag is started
+ * @device: the device used for the operation
  * @button: the button being used to drag
  * @root_x: root window X coordinate of mouse click that began the drag
  * @root_y: root window Y coordinate of mouse click that began the drag
@@ -10489,7 +10463,35 @@ gdk_window_set_functions (GdkWindow    *window,
  * with window managers that support the <ulink url="http://www.freedesktop.org/Standards/wm-spec">Extended Window Manager Hints</ulink>, but has a
  * fallback implementation for other window managers.
  *
- **/
+ * Since: 3.4
+ */
+void
+gdk_window_begin_resize_drag_for_device (GdkWindow     *window,
+                                         GdkWindowEdge  edge,
+                                         GdkDevice     *device,
+                                         gint           button,
+                                         gint           root_x,
+                                         gint           root_y,
+                                         guint32        timestamp)
+{
+  GDK_WINDOW_IMPL_GET_CLASS (window->impl)->begin_resize_drag (window, edge, device, button, root_x, root_y, timestamp);
+}
+
+/**
+ * gdk_window_begin_resize_drag:
+ * @window: a toplevel #GdkWindow
+ * @edge: the edge or corner from which the drag is started
+ * @button: the button being used to drag
+ * @root_x: root window X coordinate of mouse click that began the drag
+ * @root_y: root window Y coordinate of mouse click that began the drag
+ * @timestamp: timestamp of mouse click that began the drag (use gdk_event_get_time())
+ *
+ * Begins a window resize operation (for a toplevel window).
+ *
+ * This function assumes that the drag is controlled by the
+ * client pointer device, use gdk_window_begin_resize_drag_for_device()
+ * to begin a drag with a different device.
+ */
 void
 gdk_window_begin_resize_drag (GdkWindow     *window,
                               GdkWindowEdge  edge,
@@ -10498,7 +10500,43 @@ gdk_window_begin_resize_drag (GdkWindow     *window,
                               gint           root_y,
                               guint32        timestamp)
 {
-  GDK_WINDOW_IMPL_GET_CLASS (window->impl)->begin_resize_drag (window, edge, button, root_x, root_y, timestamp);
+  GdkDeviceManager *device_manager;
+  GdkDevice *device;
+
+  device_manager = gdk_display_get_device_manager (gdk_window_get_display (window));
+  device = gdk_device_manager_get_client_pointer (device_manager);
+  gdk_window_begin_resize_drag_for_device (window, edge,
+                                           device, button, root_x, root_y, timestamp);
+}
+
+/**
+ * gdk_window_begin_move_drag_for_device:
+ * @window: a toplevel #GdkWindow
+ * @device: the device used for the operation
+ * @button: the button being used to drag
+ * @root_x: root window X coordinate of mouse click that began the drag
+ * @root_y: root window Y coordinate of mouse click that began the drag
+ * @timestamp: timestamp of mouse click that began the drag
+ *
+ * Begins a window move operation (for a toplevel window).
+ * You might use this function to implement a "window move grip," for
+ * example. The function works best with window managers that support
+ * the <ulink url="http://www.freedesktop.org/Standards/wm-spec">Extended
+ * Window Manager Hints</ulink>, but has a fallback implementation for
+ * other window managers.
+ *
+ * Since: 3.4
+ */
+void
+gdk_window_begin_move_drag_for_device (GdkWindow *window,
+                                       GdkDevice *device,
+                                       gint       button,
+                                       gint       root_x,
+                                       gint       root_y,
+                                       guint32    timestamp)
+{
+  GDK_WINDOW_IMPL_GET_CLASS (window->impl)->begin_move_drag (window,
+                                                             device, button, root_x, root_y, timestamp);
 }
 
 /**
@@ -10509,14 +10547,12 @@ gdk_window_begin_resize_drag (GdkWindow     *window,
  * @root_y: root window Y coordinate of mouse click that began the drag
  * @timestamp: timestamp of mouse click that began the drag
  *
- * Begins a window move operation (for a toplevel window).  You might
- * use this function to implement a "window move grip," for
- * example. The function works best with window managers that support
- * the <ulink url="http://www.freedesktop.org/Standards/wm-spec">Extended
- * Window Manager Hints</ulink>, but has a fallback implementation for
- * other window managers.
+ * Begins a window move operation (for a toplevel window).
  *
- **/
+ * This function assumes that the drag is controlled by the
+ * client pointer device, use gdk_window_begin_move_drag_for_device()
+ * to begin a drag with a different device.
+ */
 void
 gdk_window_begin_move_drag (GdkWindow *window,
                             gint       button,
@@ -10524,7 +10560,12 @@ gdk_window_begin_move_drag (GdkWindow *window,
                             gint       root_y,
                             guint32    timestamp)
 {
-  GDK_WINDOW_IMPL_GET_CLASS (window->impl)->begin_move_drag (window, button, root_x, root_y, timestamp);
+  GdkDeviceManager *device_manager;
+  GdkDevice *device;
+
+  device_manager = gdk_display_get_device_manager (gdk_window_get_display (window));
+  device = gdk_device_manager_get_client_pointer (device_manager);
+  gdk_window_begin_move_drag_for_device (window, device, button, root_x, root_y, timestamp);
 }
 
 /**
@@ -10826,7 +10867,6 @@ gdk_test_simulate_button (GdkWindow      *window,
  * <note>
  * <para>
  * The XGetWindowProperty() function that gdk_property_get()
- * uses has a very confusing and complicated set of semantics.
  * uses has a very confusing and complicated set of semantics.
  * Unfortunately, gdk_property_get() makes the situation
  * worse instead of better (the semantics should be considered

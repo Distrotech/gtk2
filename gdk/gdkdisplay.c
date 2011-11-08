@@ -405,42 +405,6 @@ gdk_display_pointer_ungrab (GdkDisplay *display,
 }
 
 /**
- * gdk_pointer_ungrab:
- * @time_: a timestamp from a #GdkEvent, or %GDK_CURRENT_TIME if no 
- *  timestamp is available.
- *
- * Ungrabs the pointer on the default display, if it is grabbed by this 
- * application.
- *
- * Deprecated: 3.0: Use gdk_device_ungrab(), together with gdk_device_grab()
- *             instead.
- **/
-void
-gdk_pointer_ungrab (guint32 time)
-{
-  gdk_display_pointer_ungrab (gdk_display_get_default (), time);
-}
-
-/**
- * gdk_pointer_is_grabbed:
- * 
- * Returns %TRUE if the pointer on the default display is currently 
- * grabbed by this application.
- *
- * Note that this does not take the inmplicit pointer grab on button
- * presses into account.
- *
- * Return value: %TRUE if the pointer is currently grabbed by this application.
- *
- * Deprecated: 3.0: Use gdk_display_device_is_grabbed() instead.
- **/
-gboolean
-gdk_pointer_is_grabbed (void)
-{
-  return gdk_display_pointer_is_grabbed (gdk_display_get_default ());
-}
-
-/**
  * gdk_display_keyboard_ungrab:
  * @display: a #GdkDisplay.
  * @time_: a timestap (e.g #GDK_CURRENT_TIME).
@@ -478,23 +442,6 @@ gdk_display_keyboard_ungrab (GdkDisplay *display,
     }
 
   g_list_free (devices);
-}
-
-/**
- * gdk_keyboard_ungrab:
- * @time_: a timestamp from a #GdkEvent, or %GDK_CURRENT_TIME if no
- *        timestamp is available.
- * 
- * Ungrabs the keyboard on the default display, if it is grabbed by this 
- * application.
- *
- * Deprecated: 3.0: Use gdk_device_ungrab(), together with gdk_device_grab()
- *             instead.
- **/
-void
-gdk_keyboard_ungrab (guint32 time)
-{
-  gdk_display_keyboard_ungrab (gdk_display_get_default (), time);
 }
 
 /**
@@ -782,8 +729,9 @@ synthesize_crossing_events (GdkDisplay      *display,
       src_toplevel == dest_toplevel)
     {
       /* Same toplevels */
-      gdk_window_get_pointer (dest_toplevel,
-			      &x, &y, &state);
+      gdk_window_get_device_position (dest_toplevel,
+                                      device,
+			              &x, &y, &state);
       _gdk_synthesize_crossing_events (display,
 				       src_window,
 				       dest_window,
@@ -796,8 +744,9 @@ synthesize_crossing_events (GdkDisplay      *display,
     }
   else if (dest_toplevel == NULL)
     {
-      gdk_window_get_pointer (src_toplevel,
-			      &x, &y, &state);
+      gdk_window_get_device_position (src_toplevel,
+                                      device,
+			              &x, &y, &state);
       _gdk_synthesize_crossing_events (display,
                                        src_window,
                                        NULL,
@@ -811,8 +760,9 @@ synthesize_crossing_events (GdkDisplay      *display,
   else
     {
       /* Different toplevels */
-      gdk_window_get_pointer (src_toplevel,
-			      &x, &y, &state);
+      gdk_window_get_device_position (src_toplevel,
+                                      device,
+			              &x, &y, &state);
       _gdk_synthesize_crossing_events (display,
 				       src_window,
 				       NULL,
@@ -822,8 +772,9 @@ synthesize_crossing_events (GdkDisplay      *display,
 				       time,
 				       NULL,
 				       serial, FALSE);
-      gdk_window_get_pointer (dest_toplevel,
-			      &x, &y, &state);
+      gdk_window_get_device_position (dest_toplevel,
+                                      device,
+			              &x, &y, &state);
       _gdk_synthesize_crossing_events (display,
 				       NULL,
 				       dest_window,
@@ -1275,8 +1226,13 @@ gdk_display_pointer_is_grabbed (GdkDisplay *display)
 
       if (gdk_device_get_source (device) == GDK_SOURCE_MOUSE &&
           gdk_display_device_is_grabbed (display, device))
-        return TRUE;
+        {
+          g_list_free (devices);
+          return TRUE;
+        }
     }
+
+  g_list_free (devices);
 
   return FALSE;
 }

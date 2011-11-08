@@ -3774,7 +3774,7 @@ gtk_entry_button_press (GtkWidget      *widget,
 
   tmp_pos = gtk_entry_find_position (entry, event->x + priv->scroll_offset);
 
-  if (_gtk_button_event_triggers_context_menu (event))
+  if (gdk_event_triggers_context_menu ((GdkEvent *) event))
     {
       gtk_entry_do_popup (entry, event);
       priv->button = 0; /* Don't wait for release, since the menu will gtk_grab_add */
@@ -3784,14 +3784,16 @@ gtk_entry_button_press (GtkWidget      *widget,
   else if (event->button == 1)
     {
       gboolean have_selection = gtk_editable_get_selection_bounds (editable, &sel_start, &sel_end);
-      
+
       priv->select_words = FALSE;
       priv->select_lines = FALSE;
 
-      if (event->state & GTK_EXTEND_SELECTION_MOD_MASK)
+      if (event->state &
+          gtk_widget_get_modifier_mask (widget,
+                                        GDK_MODIFIER_INTENT_EXTEND_SELECTION))
 	{
 	  _gtk_entry_reset_im_context (entry);
-	  
+
 	  if (!have_selection) /* select from the current position to the clicked position */
 	    sel_start = sel_end = priv->current_pos;
 	  
@@ -8880,6 +8882,7 @@ typedef struct
   GtkEntry *entry;
   gint button;
   guint time;
+  GdkDevice *device;
 } PopupInfo;
 
 static void
@@ -8987,15 +8990,15 @@ popup_targets_received (GtkClipboard     *clipboard,
 		     info_entry_priv->popup_menu);
 
 
-      if (info->button)
-	gtk_menu_popup (GTK_MENU (info_entry_priv->popup_menu), NULL, NULL,
-			NULL, NULL,
+      if (info->device)
+	gtk_menu_popup_for_device (GTK_MENU (info_entry_priv->popup_menu),
+                        info->device, NULL, NULL, NULL, NULL, NULL,
 			info->button, info->time);
       else
 	{
 	  gtk_menu_popup (GTK_MENU (info_entry_priv->popup_menu), NULL, NULL,
 			  popup_position_func, entry,
-			  info->button, info->time);
+			  0, gtk_get_current_event_time ());
 	  gtk_menu_shell_select_first (GTK_MENU_SHELL (info_entry_priv->popup_menu), FALSE);
 	}
     }
@@ -9020,11 +9023,13 @@ gtk_entry_do_popup (GtkEntry       *entry,
     {
       info->button = event->button;
       info->time = event->time;
+      info->device = event->device;
     }
   else
     {
       info->button = 0;
       info->time = gtk_get_current_event_time ();
+      info->device = NULL;
     }
 
   gtk_clipboard_request_contents (gtk_widget_get_clipboard (GTK_WIDGET (entry), GDK_SELECTION_CLIPBOARD),

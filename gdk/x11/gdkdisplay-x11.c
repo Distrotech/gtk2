@@ -385,7 +385,6 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
   GdkToplevelX11 *toplevel = NULL;
   GdkX11Display *display_x11 = GDK_X11_DISPLAY (display);
   gboolean return_val;
-  Window xwindow = None;
 
   /* Find the GdkWindow that this event relates to.
    * Basically this means substructure events
@@ -405,7 +404,6 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
       x11_screen = GDK_X11_SCREEN (screen);
       toplevel = _gdk_x11_window_get_toplevel (window);
       window_impl = GDK_WINDOW_IMPL_X11 (window->impl);
-      xwindow = GDK_WINDOW_XID (window);
 
       g_object_ref (window);
     }
@@ -432,7 +430,7 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
           screen = gdk_display_get_screen (display, i);
           x11_screen = GDK_X11_SCREEN (screen);
 
-          if (x11_screen->wmspec_check_window == xwindow)
+          if (x11_screen->wmspec_check_window == xevent->xdestroywindow.window)
             {
               x11_screen->wmspec_check_window = None;
               x11_screen->last_wmspec_check_time = 0;
@@ -2360,8 +2358,8 @@ _gdk_x11_display_error_event (GdkDisplay  *display,
                          "  (Details: serial %ld error_code %d request_code %d minor_code %d)\n"
                          "  (Note to programmers: normally, X errors are reported asynchronously;\n"
                          "   that is, you will receive the error a while after causing it.\n"
-                         "   To debug your program, run it with the --sync command line\n"
-                         "   option to change this behavior. You can then get a meaningful\n"
+                         "   To debug your program, run it with the GDK_SYNCHRONIZE environment\n"
+                         "   variable to change this behavior. You can then get a meaningful\n"
                          "   backtrace from your debugger if you break on the gdk_x_error() function.)",
                          g_get_prgname (),
                          buf,

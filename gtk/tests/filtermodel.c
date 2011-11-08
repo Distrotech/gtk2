@@ -2419,6 +2419,10 @@ insert_before (void)
 
   signal_monitor_assert_is_empty (monitor);
   check_level_length (GTK_TREE_MODEL_FILTER (filter), NULL, 3);
+
+  g_object_unref (filter);
+  g_object_unref (store);
+  gtk_widget_destroy (tree_view);
 }
 
 static void
@@ -2478,6 +2482,10 @@ insert_child (void)
 
   signal_monitor_assert_is_empty (monitor);
   check_level_length (GTK_TREE_MODEL_FILTER (filter), NULL, 1);
+
+  g_object_unref (filter);
+  g_object_unref (store);
+  gtk_widget_destroy (tree_view);
 }
 
 
@@ -5005,6 +5013,10 @@ specific_has_child_filter (void)
   set_path_visibility (&fixture, "0", FALSE);
   /* check_filter_model (&fixture); */
   signal_monitor_assert_is_empty (fixture.monitor);
+
+  g_object_unref (fixture.filter);
+  g_object_unref (fixture.store);
+  gtk_widget_destroy (tree_view);
 }
 
 
@@ -5165,6 +5177,10 @@ specific_root_has_child_filter (void)
   set_path_visibility (&fixture, "0", FALSE);
   /* check_filter_model (&fixture); */
   signal_monitor_assert_is_empty (fixture.monitor);
+
+  g_object_unref (fixture.filter);
+  g_object_unref (fixture.store);
+  gtk_widget_destroy (tree_view);
 }
 
 static void
@@ -5271,6 +5287,10 @@ specific_has_child_filter_on_sort_model (void)
   set_path_visibility (&fixture, "0", FALSE);
   /* check_filter_model (&fixture); */
   signal_monitor_assert_is_empty (fixture.monitor);
+
+  g_object_unref (fixture.filter);
+  g_object_unref (fixture.store);
+  gtk_widget_destroy (tree_view);
 }
 
 static gboolean
@@ -5388,11 +5408,16 @@ specific_at_least_2_children_filter (void)
   set_path_visibility (&fixture, "0", FALSE);
   /* check_filter_model (&fixture); */
   signal_monitor_assert_is_empty (fixture.monitor);
+
+  g_object_unref (fixture.filter);
+  g_object_unref (fixture.store);
+  gtk_widget_destroy (tree_view);
 }
 
 static void
 specific_at_least_2_children_filter_on_sort_model (void)
 {
+  GtkTreeRowReference *ref;
   GtkTreeModel *filter;
   GtkTreeModel *sort_model;
   GtkTreeIter iter, root;
@@ -5429,7 +5454,6 @@ specific_at_least_2_children_filter_on_sort_model (void)
 
     {
       GtkTreePath *path = gtk_tree_path_new_from_indices (0, 0, -1);
-      GtkTreeRowReference *ref;
 
       ref = gtk_tree_row_reference_new (sort_model, path);
       gtk_tree_path_free (path);
@@ -5464,6 +5488,11 @@ specific_at_least_2_children_filter_on_sort_model (void)
   gtk_tree_store_append (fixture.store, &root, NULL);
   check_level_length (fixture.filter, NULL, 1);
   signal_monitor_assert_is_empty (fixture.monitor);
+
+  gtk_tree_row_reference_free (ref);
+  g_object_unref (fixture.filter);
+  g_object_unref (fixture.store);
+  gtk_widget_destroy (tree_view);
 }
 
 
@@ -6491,6 +6520,165 @@ specific_bug_658696 (void)
 
   /* This used to cause a crash in gtk_tree_model_filter_check_ancestors() */
   gtk_tree_store_append (store, &iter, NULL);
+
+  g_object_unref (store);
+  g_object_unref (filter);
+}
+
+static gboolean
+specific_bug_659022_visible_func (GtkTreeModel *model,
+                                  GtkTreeIter  *iter,
+                                  gpointer      data)
+{
+  GtkTreeIter tmp;
+
+  if (!gtk_tree_model_iter_parent (model, &tmp, iter))
+    {
+      if (gtk_tree_model_iter_n_children (model, iter) >= 2)
+        return TRUE;
+      else
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static void
+specific_bug_659022_row_changed_emission (void)
+{
+  GtkTreeModel *filter;
+  GtkTreeModel *model;
+  GtkTreeIter parent, child, child2;
+  GtkTreePath *path;
+  GtkWidget *tree_view;
+
+  model = gtk_tree_model_ref_count_new ();
+
+  filter = gtk_tree_model_filter_new (model, NULL);
+  gtk_tree_model_filter_set_visible_func (GTK_TREE_MODEL_FILTER (filter),
+                                          specific_bug_659022_visible_func,
+                                          NULL, NULL);
+
+  tree_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (filter));
+
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &parent, NULL, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child, &parent, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child2, &parent, 0);
+
+  gtk_tree_view_expand_all (GTK_TREE_VIEW (tree_view));
+
+  gtk_tree_model_filter_refilter (GTK_TREE_MODEL_FILTER (filter));
+
+  gtk_tree_store_remove (GTK_TREE_STORE (model), &child2);
+
+  gtk_tree_model_filter_refilter (GTK_TREE_MODEL_FILTER (filter));
+
+  path = gtk_tree_model_get_path (model, &child);
+  gtk_tree_model_row_changed (model, path, &child);
+  gtk_tree_path_free (path);
+
+  gtk_widget_destroy (tree_view);
+  g_object_unref (filter);
+  g_object_unref (model);
+}
+
+static void
+specific_bug_659022_row_deleted_node_invisible (void)
+{
+  GtkTreeModel *filter;
+  GtkTreeModel *model;
+  GtkTreeIter parent, child;
+  GtkTreeIter parent2, child2, child3;
+  GtkWidget *tree_view;
+
+  model = gtk_tree_model_ref_count_new ();
+
+  filter = gtk_tree_model_filter_new (model, NULL);
+  gtk_tree_model_filter_set_visible_func (GTK_TREE_MODEL_FILTER (filter),
+                                          specific_bug_659022_visible_func,
+                                          NULL, NULL);
+
+  tree_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (filter));
+
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &parent, NULL, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child, &parent, 0);
+
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &parent2, NULL, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child2, &parent2, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child3, &parent2, 0);
+
+  gtk_tree_view_expand_all (GTK_TREE_VIEW (tree_view));
+
+  gtk_tree_model_filter_refilter (GTK_TREE_MODEL_FILTER (filter));
+
+  gtk_tree_store_remove (GTK_TREE_STORE (model), &parent);
+
+  gtk_widget_destroy (tree_view);
+  g_object_unref (filter);
+  g_object_unref (model);
+}
+
+static void
+specific_bug_659022_row_deleted_free_level (void)
+{
+  GtkTreeModel *filter;
+  GtkTreeModel *model;
+  GtkTreeModelRefCount *ref_model;
+  GtkTreeIter parent, child;
+  GtkTreeIter parent2, child2, child3;
+  GtkWidget *tree_view;
+
+  model = gtk_tree_model_ref_count_new ();
+  ref_model = GTK_TREE_MODEL_REF_COUNT (model);
+
+  filter = gtk_tree_model_filter_new (model, NULL);
+  gtk_tree_model_filter_set_visible_func (GTK_TREE_MODEL_FILTER (filter),
+                                          specific_bug_659022_visible_func,
+                                          NULL, NULL);
+
+  tree_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (filter));
+
+  /* Carefully construct a model */
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &parent, NULL, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child, &parent, 0);
+
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &parent2, NULL, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child2, &parent2, 0);
+  gtk_tree_store_insert (GTK_TREE_STORE (model), &child3, &parent2, 0);
+
+  /* Only parent2 is visible, child3 holds first ref count for that level
+   * (Note that above, both child2 as child3 are inserted at position 0).
+   */
+  assert_node_ref_count (ref_model, &parent, 0);
+  assert_node_ref_count (ref_model, &child, 0);
+  assert_node_ref_count (ref_model, &parent2, 3);
+  assert_node_ref_count (ref_model, &child3, 1);
+  assert_node_ref_count (ref_model, &child2, 0);
+
+  /* Make sure child level is cached */
+  gtk_tree_view_expand_all (GTK_TREE_VIEW (tree_view));
+
+  assert_node_ref_count (ref_model, &parent, 0);
+  assert_node_ref_count (ref_model, &child, 0);
+  assert_node_ref_count (ref_model, &parent2, 3);
+  assert_node_ref_count (ref_model, &child3, 2);
+  assert_node_ref_count (ref_model, &child2, 1);
+
+  gtk_tree_view_collapse_all (GTK_TREE_VIEW (tree_view));
+
+  assert_node_ref_count (ref_model, &parent, 0);
+  assert_node_ref_count (ref_model, &child, 0);
+  assert_node_ref_count (ref_model, &parent2, 3);
+  assert_node_ref_count (ref_model, &child3, 1);
+  assert_node_ref_count (ref_model, &child2, 0);
+
+  /* Remove node with longer child level first */
+  gtk_tree_store_remove (GTK_TREE_STORE (model), &parent2);
+  gtk_tree_store_remove (GTK_TREE_STORE (model), &parent);
+
+  gtk_widget_destroy (tree_view);
+  g_object_unref (filter);
+  g_object_unref (model);
 }
 
 /* main */
@@ -6844,4 +7032,10 @@ register_filter_model_tests (void)
                    specific_bug_657353_related);
   g_test_add_func ("/TreeModelFilter/specific/bug-658696",
                    specific_bug_658696);
+  g_test_add_func ("/TreeModelFilter/specific/bug-659022/row-changed-emission",
+                   specific_bug_659022_row_changed_emission);
+  g_test_add_func ("/TreeModelFilter/specific/bug-659022/row-deleted-node-invisible",
+                   specific_bug_659022_row_deleted_node_invisible);
+  g_test_add_func ("/TreeModelFilter/specific/bug-659022/row-deleted-free-level",
+                   specific_bug_659022_row_deleted_free_level);
 }

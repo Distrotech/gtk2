@@ -927,8 +927,13 @@ gtk_grid_request_sum (GtkGridRequest *request,
   linedata = &priv->linedata[orientation];
   lines = &request->lines[orientation];
 
-  min = (nonempty - 1) * linedata->spacing;
-  nat = (nonempty - 1) * linedata->spacing;
+  min = 0;
+  nat = 0;
+  if (nonempty > 0)
+    {
+      min = (nonempty - 1) * linedata->spacing;
+      nat = (nonempty - 1) * linedata->spacing;
+    }
 
   for (i = 0; i < lines->max - lines->min; i++)
     {
@@ -1453,7 +1458,7 @@ gtk_grid_attach (GtkGrid   *grid,
  * gtk_grid_attach_next_to:
  * @grid: a #GtkGrid
  * @child: the widget to add
- * @sibling (allow-none): the child of @grid that @child will be placed
+ * @sibling: (allow-none): the child of @grid that @child will be placed
  *     next to, or %NULL to place @child at the beginning or end
  * @side: the side of @sibling that @child is positioned next to
  * @width: the number of columns that @child will span
@@ -1465,6 +1470,9 @@ gtk_grid_attach (GtkGrid   *grid,
  * @side. When @sibling is %NULL, the widget is placed in row (for
  * left or right placement) or column 0 (for top or bottom placement),
  * at the end indicated by @side.
+ *
+ * Attaching widgets labeled [1], [2], [3] with @sibling == %NULL and
+ * @side == %GTK_POS_LEFT yields a layout of [3][2][1].
  */
 void
 gtk_grid_attach_next_to (GtkGrid         *grid,
@@ -1515,20 +1523,22 @@ gtk_grid_attach_next_to (GtkGrid         *grid,
       switch (side)
         {
         case GTK_POS_LEFT:
-          left = find_attach_position (grid, GTK_ORIENTATION_HORIZONTAL, 0, height, TRUE);
+          left = find_attach_position (grid, GTK_ORIENTATION_HORIZONTAL, 0, height, FALSE);
+          left -= width;
           top = 0;
           break;
         case GTK_POS_RIGHT:
-          left = find_attach_position (grid, GTK_ORIENTATION_HORIZONTAL, 0, height, FALSE);
+          left = find_attach_position (grid, GTK_ORIENTATION_HORIZONTAL, 0, height, TRUE);
           top = 0;
           break;
         case GTK_POS_TOP:
           left = 0;
-          top = find_attach_position (grid, GTK_ORIENTATION_VERTICAL, 0, width, TRUE);
+          top = find_attach_position (grid, GTK_ORIENTATION_VERTICAL, 0, width, FALSE);
+          top -= height;
           break;
         case GTK_POS_BOTTOM:
           left = 0;
-          top = find_attach_position (grid, GTK_ORIENTATION_VERTICAL, 0, width, FALSE);
+          top = find_attach_position (grid, GTK_ORIENTATION_VERTICAL, 0, width, TRUE);
           break;
         default:
           g_assert_not_reached ();

@@ -48,8 +48,6 @@ AM_CPPFLAGS =						\
 	-I$(top_builddir)/gtk				\
 	-I$(top_srcdir) -I../gdk			\
 	-I$(top_srcdir)/gdk				\
-	-DGDK_DISABLE_DEPRECATED			\
-	-DGTK_DISABLE_DEPRECATED			\
 	-DGTK_FILE_SYSTEM_ENABLE_UNSUPPORTED		\
 	-DGTK_PRINT_BACKEND_ENABLE_UNSUPPORTED		\
 	$(GTK_DEBUG_FLAGS)				\
@@ -143,6 +141,27 @@ endif
 
 # GTK+ header files for public installation (non-generated, or generated
 # by configure)
+
+deprecated_h_sources = 			\
+	deprecated/gtkfontsel.h		\
+	deprecated/gtkhandlebox.h	\
+	deprecated/gtkhbbox.h		\
+	deprecated/gtkhbox.h		\
+	deprecated/gtkhpaned.h		\
+	deprecated/gtkhscale.h		\
+	deprecated/gtkhscrollbar.h	\
+	deprecated/gtkhseparator.h	\
+	deprecated/gtkstyle.h		\
+	deprecated/gtkrc.h		\
+	deprecated/gtktable.h		\
+	deprecated/gtktearoffmenuitem.h	\
+	deprecated/gtkvbbox.h		\
+	deprecated/gtkvbox.h		\
+	deprecated/gtkvscale.h		\
+	deprecated/gtkvscrollbar.h	\
+	deprecated/gtkvseparator.h	\
+	deprecated/gtkvpaned.h
+
 gtk_public_h_sources = 		\
 	gtk.h			\
 	gtkx.h			\
@@ -217,20 +236,12 @@ gtk_public_h_sources = 		\
 	gtkfilefilter.h		\
 	gtkfixed.h		\
 	gtkfontbutton.h		\
-	gtkfontsel.h		\
-	gtkfontchooser.h        \
+	gtkfontchooser.h	\
 	gtkfontchooserdialog.h  \
 	gtkfontchooserwidget.h	\
 	gtkframe.h		\
 	gtkgradient.h		\
 	gtkgrid.h		\
-	gtkhandlebox.h		\
-	gtkhbbox.h		\
-	gtkhbox.h		\
-	gtkhpaned.h		\
-	gtkhscale.h		\
-	gtkhscrollbar.h		\
-	gtkhseparator.h		\
 	gtkhsv.h		\
 	gtkiconfactory.h	\
 	gtkicontheme.h		\
@@ -277,7 +288,6 @@ gtk_public_h_sources = 		\
 	gtkradiomenuitem.h	\
 	gtkradiotoolbutton.h	\
 	gtkrange.h		\
-	gtkrc.h			\
 	gtkrecentaction.h	\
 	gtkrecentchooser.h	\
 	gtkrecentchooserdialog.h \
@@ -307,11 +317,8 @@ gtk_public_h_sources = 		\
 	gtkstylecontext.h	\
 	gtkstyleproperties.h	\
 	gtkstyleprovider.h	\
-	gtkstyle.h		\
 	gtkswitch.h		\
 	gtksymboliccolor.h	\
-	gtktable.h		\
-	gtktearoffmenuitem.h	\
 	gtktestutils.h		\
 	gtktextattributes.h	\
 	gtktextbuffer.h		\
@@ -344,14 +351,8 @@ gtk_public_h_sources = 		\
 	gtktreeview.h		\
 	gtktreeviewcolumn.h	\
 	gtkuimanager.h		\
-	gtkvbbox.h		\
-	gtkvbox.h		\
 	gtkviewport.h		\
 	gtkvolumebutton.h	\
-	gtkvpaned.h		\
-	gtkvscale.h		\
-	gtkvscrollbar.h		\
-	gtkvseparator.h		\
 	gtkwidget.h		\
 	gtkwidgetpath.h		\
 	gtkwindow.h
@@ -389,6 +390,7 @@ gtk_private_h_sources =		\
 	gtkappchooseronline.h	\
 	gtkbindingsprivate.h	\
 	gtkborderimageprivate.h \
+	gtkboxprivate.h         \
 	gtkbuilderprivate.h	\
 	gtkbuttonprivate.h	\
 	gtkcellareaboxcontextprivate.h	\
@@ -415,12 +417,12 @@ gtk_private_h_sources =		\
 	gtkimcontextsimpleseqs.h \
 	gtkintl.h		\
 	gtkkeyhash.h		\
-	gtkmainprivate.h	\
 	gtkmenuprivate.h	\
 	gtkmenuitemprivate.h	\
 	gtkmenushellprivate.h	\
 	gtkmnemonichash.h	\
 	gtkmodifierstyle.h	\
+	gtkmodulesprivate.h	\
 	gtkmountoperationprivate.h \
 	gtknumerableiconprivate.h \
 	gtkorientableprivate.h	\
@@ -467,7 +469,28 @@ gtk_private_h_sources =		\
 	$(gtk_appchooser_impl_h_sources)
 
 # GTK+ C sources to build the library from
+deprecated_c_sources = 			\
+	deprecated/gtkfontsel.c		\
+	deprecated/gtkhandlebox.c	\
+	deprecated/gtkhbbox.c		\
+	deprecated/gtkhbox.c		\
+	deprecated/gtkhpaned.c		\
+	deprecated/gtkhscale.c		\
+	deprecated/gtkhscrollbar.c	\
+	deprecated/gtkhseparator.c	\
+	deprecated/gtkrc.c		\
+	deprecated/gtkstyle.c		\
+	deprecated/gtktable.c		\
+	deprecated/gtktearoffmenuitem.c	\
+	deprecated/gtkvbbox.c		\
+	deprecated/gtkvbox.c		\
+	deprecated/gtkvscale.c		\
+	deprecated/gtkvscrollbar.c	\
+	deprecated/gtkvseparator.c	\
+	deprecated/gtkvpaned.c
+
 gtk_base_c_sources = 		\
+	$(deprecated_c_sources)	\
 	gtkquery.c		\
 	gtksearchengine.c	\
 	gtksearchenginesimple.c	\
@@ -497,7 +520,7 @@ gtk_base_c_sources = 		\
 	gtkbin.c		\
 	gtkbindings.c		\
 	gtkborder.c		\
-	gtkborderimage.c        \
+	gtkborderimage.c	\
 	gtkbox.c		\
 	gtkbuildable.c		\
 	gtkbuilder.c		\
@@ -554,21 +577,13 @@ gtk_base_c_sources = 		\
 	gtkfilesystemmodel.c	\
 	gtkfixed.c		\
 	gtkfontbutton.c		\
-	gtkfontsel.c		\
-	gtkfontchooser.c        \
-	gtkfontchooserdialog.c  \
+	gtkfontchooser.c	\
+	gtkfontchooserdialog.c	\
 	gtkfontchooserutils.c	\
 	gtkfontchooserwidget.c	\
 	gtkframe.c		\
 	gtkgradient.c		\
 	gtkgrid.c		\
-	gtkhandlebox.c		\
-	gtkhbbox.c		\
-	gtkhbox.c		\
-	gtkhpaned.c		\
-	gtkhscale.c		\
-	gtkhscrollbar.c		\
-	gtkhseparator.c		\
 	gtkhsv.c		\
 	gtkiconcache.c		\
 	gtkiconcachevalidator.c	\
@@ -617,6 +632,7 @@ gtk_base_c_sources = 		\
 	gtkprintoperationpreview.c \
 	gtkprintsettings.c	\
 	gtkprintutils.c		\
+	gtkprivate.c		\
 	gtkprogressbar.c	\
 	gtkradioaction.c	\
 	gtkradiobutton.c	\
@@ -624,7 +640,6 @@ gtk_base_c_sources = 		\
 	gtkradiotoolbutton.c	\
 	gtkrange.c		\
 	gtkrbtree.c		\
-	gtkrc.c			\
 	gtkrecentaction.c	\
 	gtkrecentchooserdefault.c \
 	gtkrecentchooserdialog.c \
@@ -658,11 +673,8 @@ gtk_base_c_sources = 		\
 	gtkstyleproperties.c	\
 	gtkstyleproperty.c	\
 	gtkstyleprovider.c	\
-	gtkstyle.c		\
 	gtkswitch.c		\
 	gtksymboliccolor.c	\
-	gtktable.c		\
-	gtktearoffmenuitem.c	\
 	gtktestutils.c		\
 	gtktextattributes.c	\
 	gtktextbtree.c		\
@@ -705,14 +717,8 @@ gtk_base_c_sources = 		\
 	gtktreeviewcolumn.c	\
 	gtktypebuiltins.c	\
 	gtkuimanager.c		\
-	gtkvbbox.c		\
-	gtkvbox.c		\
 	gtkvolumebutton.c	\
 	gtkviewport.c		\
-	gtkvpaned.c		\
-	gtkvscale.c		\
-	gtkvscrollbar.c		\
-	gtkvseparator.c		\
 	gtkwidget.c		\
 	gtkwidgetpath.c		\
 	gtkwindow.c		\
@@ -751,7 +757,8 @@ endif
 
 gtk_os_win32_c_sources = \
 	gtkprint-win32.c		\
-	gtkprintoperation-win32.c
+	gtkprintoperation-win32.c	\
+	gtkwin32.c
 gtk_all_c_sources += $(gtk_os_win32_c_sources)
 if OS_WIN32
 gtk_private_h_sources += gtkprint-win32.h
@@ -895,19 +902,19 @@ gtkmarshalers.c: @REBUILD@ gtkmarshalers.list
 
 gtktypebuiltins.h: stamp-gtktypebuiltins.h
 	@true
-stamp-gtktypebuiltins.h: @REBUILD@ $(gtk_public_h_sources) gtktypebuiltins.h.template
+stamp-gtktypebuiltins.h: @REBUILD@ $(gtk_public_h_sources) $(deprecated_h_sources) gtktypebuiltins.h.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.h.template \
-		$(gtk_public_h_sources) ) >> xgen-gtbh \
+		$(gtk_public_h_sources) $(deprecated_h_sources) ) >> xgen-gtbh \
 	&& (cmp -s xgen-gtbh gtktypebuiltins.h || cp xgen-gtbh gtktypebuiltins.h ) \
 	&& rm -f xgen-gtbh \
 	&& echo timestamp > $(@F)
-gtktypebuiltins.c: @REBUILD@ $(gtk_public_h_sources) gtktypebuiltins.c.template
+gtktypebuiltins.c: @REBUILD@ $(gtk_public_h_sources) $(deprecated_h_sources) gtktypebuiltins.c.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template gtktypebuiltins.c.template \
-		$(gtk_public_h_sources) ) > xgen-gtbc \
+		$(gtk_public_h_sources) $(deprecated_h_sources) ) > xgen-gtbc \
 	&& cp xgen-gtbc gtktypebuiltins.c  \
 	&& rm -f xgen-gtbc
 
-gtktypefuncs.c: @REBUILD@ stamp-gtktypebuiltins.h $(top_srcdir)/gtk/*.h $(top_srcdir)/gdk/*.h Makefile
+gtktypefuncs.c: @REBUILD@ stamp-gtktypebuiltins.h $(top_srcdir)/gtk/*.h $(top_srcdir)/gtk/deprecated/*.h $(top_srcdir)/gdk/*.h Makefile
 	$(AM_V_GEN) echo '#include <gtk/gtkx.h>' > xgen-gtfsrc.c && \
 	  ${CPP} $(DEFS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) xgen-gtfsrc.c | \
 	  $(GREP) -o '\bg[td]k_[a-zA-Z0-9_]*_get_type\b' | \
@@ -921,6 +928,9 @@ lib_LTLIBRARIES = libgtk-3.la
 
 gtkincludedir = $(includedir)/gtk-3.0/gtk
 gtkinclude_HEADERS = $(gtk_public_h_sources) $(gtk_semi_private_h_sources) $(gtk_built_public_sources) gtkversion.h
+
+deprecatedincludedir = $(includedir)/gtk-3.0/gtk/deprecated
+deprecatedinclude_HEADERS= $(deprecated_h_sources)
 
 gtkunixprintincludedir = $(includedir)/gtk-3.0/unix-print/gtk
 gtkunixprintinclude_HEADERS = $(gtk_unix_print_public_h_sources)
@@ -964,7 +974,7 @@ dist-hook: ../build/win32/vs9/gtk.vcproj ../build/win32/vs10/gtk.vcxproj ../buil
 	done >libgtk.sourcefiles
 	$(CPP) -P - <$(top_srcdir)/build/win32/vs9/gtk.vcprojin >$@
 	rm libgtk.sourcefiles
-	
+
 ../build/win32/vs10/gtk.vcxproj: ../build/win32/vs10/gtk.vcxprojin
 	for F in $(gtk_base_c_sources) $(gtk_os_win32_c_sources) $(gtk_use_win32_c_sources); do \
 		case $$F in \
@@ -974,7 +984,7 @@ dist-hook: ../build/win32/vs9/gtk.vcproj ../build/win32/vs10/gtk.vcxproj ../buil
 	done >libgtk.vs10.sourcefiles
 	$(CPP) -P - <$(top_srcdir)/build/win32/vs10/gtk.vcxprojin >$@
 	rm libgtk.vs10.sourcefiles
-	
+
 ../build/win32/vs10/gtk.vcxproj.filters: ../build/win32/vs10/gtk.vcxproj.filtersin
 	for F in $(gtk_base_c_sources) $(gtk_os_win32_c_sources) $(gtk_use_win32_c_sources); do \
 		case $$F in \
@@ -1018,7 +1028,7 @@ LDADDS =								\
 
 if HAVE_INTROSPECTION
 introspection_files = \
-    $(filter-out %private.h gtktextdisplay.h gtktextlayout.h, $(gtkinclude_HEADERS)) \
+    $(filter-out %private.h gtktextdisplay.h gtktextlayout.h, $(gtkinclude_HEADERS) $(deprecatedinclude_HEADERS)) \
     $(gtk_base_c_sources) \
     gtkprintoperation-unix.c \
     gtktypebuiltins.h \
@@ -1042,8 +1052,6 @@ endif
 Gtk_3_0_gir_SCANNERFLAGS += --c-include="gtk/gtkx.h"
 Gtk_3_0_gir_CFLAGS = \
 		$(AM_CPPFLAGS) \
-		-UGDK_DISABLE_DEPRECATED \
-		-UGTK_DISABLE_DEPRECATED \
 		-DGTK_TEXT_USE_INTERNAL_UNSUPPORTED_API
 Gtk_3_0_gir_LIBS = libgtk-3.la
 Gtk_3_0_gir_FILES = $(introspection_files)

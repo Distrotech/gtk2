@@ -25,8 +25,8 @@
 #include "gtkmodules.h"
 #include "gtksettings.h"
 #include "gtkdebug.h"
-#include "gtkprivate.h" /* GTK_LIBDIR */
-#include "gtkmainprivate.h"
+#include "gtkprivate.h"
+#include "gtkmodulesprivate.h"
 #include "gtkintl.h"
 
 #include <gmodule.h>
@@ -74,7 +74,7 @@ get_module_path (void)
   if (exe_prefix)
     default_dir = g_build_filename (exe_prefix, "lib", "gtk-3.0", NULL);
   else
-    default_dir = g_build_filename (GTK_LIBDIR, "gtk-3.0", NULL);
+    default_dir = g_build_filename (_gtk_get_libdir (), "gtk-3.0", NULL);
 
   if (module_path_env && home_gtk_dir)
     module_path = g_build_path (G_SEARCHPATH_SEPARATOR_S,
@@ -510,7 +510,7 @@ display_opened_cb (GdkDisplayManager *display_manager,
   
   for (i = 0; i < gdk_display_get_n_screens (display); i++)
     {
-      GValue value = { 0, };
+      GValue value = G_VALUE_INIT;
 
       g_value_init (&value, G_TYPE_STRING);
 
@@ -597,4 +597,30 @@ _gtk_modules_settings_changed (GtkSettings *settings,
 			  I_("gtk-modules"),
 			  new_modules,
 			  settings_destroy_notify);
+}
+
+/* Return TRUE if module_to_check causes version conflicts.
+ * If module_to_check is NULL, check the main module.
+ */
+gboolean
+_gtk_module_has_mixed_deps (GModule *module_to_check)
+{
+  GModule *module;
+  gpointer func;
+  gboolean result;
+
+  if (!module_to_check)
+    module = g_module_open (NULL, 0);
+  else
+    module = module_to_check;
+
+  if (g_module_symbol (module, "gtk_progress_get_type", &func))
+    result = TRUE;
+  else
+    result = FALSE;
+
+  if (!module_to_check)
+    g_module_close (module);
+
+  return result;
 }

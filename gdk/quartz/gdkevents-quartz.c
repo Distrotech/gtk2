@@ -57,6 +57,12 @@ static GdkModifierType current_button_state;
 static void append_event                        (GdkEvent  *event,
                                                  gboolean   windowing);
 
+static GdkWindow *find_toplevel_under_pointer   (GdkDisplay *display,
+                                                 NSPoint     screen_point,
+                                                 gint       *x,
+                                                 gint       *y);
+
+
 void
 _gdk_quartz_events_init (void)
 {
@@ -306,6 +312,61 @@ get_event_mask_from_ns_event (NSEvent *nsevent)
   return 0;
 }
 
+static void
+get_window_point_from_screen_point (GdkWindow *window,
+                                    NSPoint    screen_point,
+                                    gint      *x,
+                                    gint      *y)
+{
+  NSPoint point;
+  NSWindow *nswindow;
+
+  nswindow = ((GdkWindowImplQuartz *)window->impl)->toplevel;
+
+  point = [nswindow convertScreenToBase:screen_point];
+
+  *x = point.x;
+  *y = window->height - point.y;
+}
+
+static GdkWindow *
+get_toplevel_from_ns_event (NSEvent *nsevent,
+                            NSPoint *screen_point,
+                            gint    *x,
+                            gint    *y)
+{
+  GdkWindow *toplevel;
+
+  if ([nsevent window])
+    {
+      GdkQuartzView *view;
+      NSPoint point;
+
+      view = (GdkQuartzView *)[[nsevent window] contentView];
+
+      toplevel = [view gdkWindow];
+
+      point = [nsevent locationInWindow];
+      *screen_point = [[nsevent window] convertBaseToScreen:point];
+
+      *x = point.x;
+      *y = toplevel->height - point.y;
+    }
+  else
+    {
+      /* Fallback used when no NSWindow set.  This happens e.g. when
+       * we allow motion events without a window set in gdk_event_translate()
+       * that occur immediately after the main menu bar was clicked/used.
+       */
+      *screen_point = [NSEvent mouseLocation];
+      toplevel = find_toplevel_under_pointer (_gdk_display,
+                                              *screen_point,
+                                              x, y);
+    }
+
+  return toplevel;
+}
+
 static GdkEvent *
 create_focus_event (GdkWindow *window,
 		    gboolean   in)
@@ -327,31 +388,18 @@ create_focus_event (GdkWindow *window,
 static void
 generate_motion_event (GdkWindow *window)
 {
-  NSPoint point;
   NSPoint screen_point;
-  NSWindow *nswindow;
-  GdkQuartzView *view;
   GdkEvent *event;
   gint x, y, x_root, y_root;
-  GdkDisplay *display;
 
   event = gdk_event_new (GDK_MOTION_NOTIFY);
   event->any.window = NULL;
   event->any.send_event = TRUE;
 
-  nswindow = ((GdkWindowImplQuartz *)window->impl)->toplevel;
-  view = (GdkQuartzView *)[nswindow contentView];
-
-  display = gdk_window_get_display (window);
-
   screen_point = [NSEvent mouseLocation];
 
   _gdk_quartz_window_nspoint_to_gdk_xy (screen_point, &x_root, &y_root);
-
-  point = [nswindow convertScreenToBase:screen_point];
-
-  x = point.x;
-  y = window->height - point.y;
+  get_window_point_from_screen_point (window, screen_point, &x, &y);
 
   event->any.type = GDK_MOTION_NOTIFY;
   event->motion.window = window;
@@ -416,9 +464,7 @@ _gdk_quartz_events_update_focus_window (GdkWindow *window,
 void
 _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
 {
-  NSPoint point;
   NSPoint screen_point;
-  NSWindow *nswindow;
   GdkEvent *event;
   gint x, y, x_root, y_root;
 
@@ -426,16 +472,10 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
   event->any.window = NULL;
   event->any.send_event = FALSE;
 
-  nswindow = ((GdkWindowImplQuartz *)window->impl)->toplevel;
-
   screen_point = [NSEvent mouseLocation];
 
   _gdk_quartz_window_nspoint_to_gdk_xy (screen_point, &x_root, &y_root);
-
-  point = [nswindow convertScreenToBase:screen_point];
-
-  x = point.x;
-  y = window->height - point.y;
+  get_window_point_from_screen_point (window, screen_point, &x, &y);
 
   event->crossing.window = window;
   event->crossing.subwindow = NULL;
@@ -484,17 +524,7 @@ find_toplevel_under_pointer (GdkDisplay *display,
   info = _gdk_display_get_pointer_info (display, display->core_pointer);
   toplevel = info->toplevel_under_pointer;
   if (toplevel && WINDOW_IS_TOPLEVEL (toplevel))
-    {
-      NSWindow *nswindow;
-      NSPoint point;
-
-      nswindow = ((GdkWindowImplQuartz *)toplevel->impl)->toplevel;
-
-      point = [nswindow convertScreenToBase:screen_point];
-
-      *x = point.x;
-      *y = toplevel->height - point.y;
-    }
+    get_window_point_from_screen_point (toplevel, screen_point, x, y);
 
   return toplevel;
 }
@@ -542,22 +572,17 @@ find_toplevel_for_mouse_event (NSEvent    *nsevent,
                                gint       *x,
                                gint       *y)
 {
-  NSPoint point;
   NSPoint screen_point;
   NSEventType event_type;
   GdkWindow *toplevel;
-  GdkQuartzView *view;
   GdkDisplay *display;
   GdkDeviceGrabInfo *grab;
 
-  view = (GdkQuartzView *)[[nsevent window] contentView];
-  toplevel = [view gdkWindow];
+  toplevel = get_toplevel_from_ns_event (nsevent, &screen_point, x, y);
 
   display = gdk_window_get_display (toplevel);
 
   event_type = [nsevent type];
-  point = [nsevent locationInWindow];
-  screen_point = [[nsevent window] convertBaseToScreen:point];
 
   /* From the docs for XGrabPointer:
    *
@@ -605,16 +630,10 @@ find_toplevel_for_mouse_event (NSEvent    *nsevent,
         {
           /* Finally check the grab window. */
           GdkWindow *grab_toplevel;
-          NSWindow *grab_nswindow;
 
           grab_toplevel = gdk_window_get_effective_toplevel (grab->window);
-
-          grab_nswindow = ((GdkWindowImplQuartz *)grab_toplevel->impl)->toplevel;
-          point = [grab_nswindow convertScreenToBase:screen_point];
-
-          /* Note: x_root and y_root are already right. */
-          *x = point.x;
-          *y = grab_toplevel->height - point.y;
+          get_window_point_from_screen_point (grab_toplevel, screen_point,
+                                              x, y);
 
           return grab_toplevel;
         }
@@ -672,20 +691,13 @@ find_window_for_ns_event (NSEvent *nsevent,
                           gint    *y_root)
 {
   GdkQuartzView *view;
-  NSPoint point;
+  GdkWindow *toplevel;
   NSPoint screen_point;
   NSEventType event_type;
-  GdkWindow *toplevel;
 
   view = (GdkQuartzView *)[[nsevent window] contentView];
-  toplevel = [view gdkWindow];
 
-  point = [nsevent locationInWindow];
-  screen_point = [[nsevent window] convertBaseToScreen:point];
-
-  *x = point.x;
-  *y = toplevel->height - point.y;
-
+  toplevel = get_toplevel_from_ns_event (nsevent, &screen_point, x, y);
   _gdk_quartz_window_nspoint_to_gdk_xy (screen_point, x_root, y_root);
 
   event_type = [nsevent type];
@@ -1057,11 +1069,12 @@ test_resize (NSEvent *event, GdkWindow *toplevel, gint x, gint y)
 {
   GdkWindowImplQuartz *toplevel_impl;
   gboolean lion;
+
   /* Resizing only begins if an NSLeftMouseButton event is received in
    * the resizing area. Handle anything else.
    */
   if ([event type] != NSLeftMouseDown)
-      return FALSE;
+    return FALSE;
 
   toplevel_impl = (GdkWindowImplQuartz *)toplevel->impl;
   if ([toplevel_impl->toplevel showsResizeIndicator])
@@ -1079,14 +1092,13 @@ test_resize (NSEvent *event, GdkWindow *toplevel, gint x, gint y)
        * is too important to not make functional.
        */
       frame = [toplevel_impl->view bounds];
-      if (x > frame.size.width - GRIP_WIDTH
-	  && x < frame.size.width
-	  && y > frame.size.height - GRIP_HEIGHT
-	  && y < frame.size.height)
-	{
-	  return TRUE;
-	}
+      if (x > frame.size.width - GRIP_WIDTH &&
+          x < frame.size.width &&
+          y > frame.size.height - GRIP_HEIGHT &&
+          y < frame.size.height)
+        return TRUE;
      }
+
   /* If we're on Lion and within 5 pixels of an edge,
    * then assume that the user wants to resize, and
    * return NULL to let Quartz get on with it. We check
@@ -1094,14 +1106,12 @@ test_resize (NSEvent *event, GdkWindow *toplevel, gint x, gint y)
    * This extra check is in case the user starts
    * dragging before GDK recognizes the grab.
    */
-
-  lion = gdk_quartz_osx_version() >= GDK_OSX_LION;
+  lion = gdk_quartz_osx_version () >= GDK_OSX_LION;
   if (lion && (x < GDK_LION_RESIZE ||
-	       x > toplevel->width - GDK_LION_RESIZE ||
-	       y > toplevel->height - GDK_LION_RESIZE))
-    {
-      return TRUE;
-    }
+               x > toplevel->width - GDK_LION_RESIZE ||
+               y > toplevel->height - GDK_LION_RESIZE))
+    return TRUE;
+
   return FALSE;
 }
 
@@ -1168,9 +1178,32 @@ gdk_event_translate (GdkEvent *event,
 
   nswindow = [nsevent window];
 
-  /* Ignore events for no window or ones not created by GDK. */
-  if (!nswindow || ![[nswindow contentView] isKindOfClass:[GdkQuartzView class]])
+  /* Ignore events for windows not created by GDK. */
+  if (nswindow && ![[nswindow contentView] isKindOfClass:[GdkQuartzView class]])
     return FALSE;
+
+  /* Ignore events for ones with no windows */
+  if (!nswindow)
+    {
+      GdkWindow *toplevel = NULL;
+
+      if (event_type == NSMouseMoved)
+        {
+          /* Motion events received after clicking the menu bar do not have the
+           * window field set.  Instead of giving up on the event immediately,
+           * we first check whether this event is within our window bounds.
+           */
+          NSPoint screen_point = [NSEvent mouseLocation];
+          gint x_tmp, y_tmp;
+
+          toplevel = find_toplevel_under_pointer (_gdk_display,
+                                                  screen_point,
+                                                  &x_tmp, &y_tmp);
+        }
+
+      if (!toplevel)
+        return FALSE;
+    }
 
   /* Ignore events and break grabs while the window is being
    * dragged. This is a workaround for the window getting events for
@@ -1188,8 +1221,9 @@ gdk_event_translate (GdkEvent *event,
   window = find_window_for_ns_event (nsevent, &x, &y, &x_root, &y_root);
   if (!window)
     return FALSE;
+
   /* Quartz handles resizing on its own, so we want to stay out of the way. */
-  if (test_resize(nsevent, window, x, y))
+  if (test_resize (nsevent, window, x, y))
     return FALSE;
 
   /* Apply any window filters. */

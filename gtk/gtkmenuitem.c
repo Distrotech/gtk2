@@ -191,13 +191,6 @@ static void gtk_menu_item_set_related_action         (GtkMenuItem          *menu
 static void gtk_menu_item_set_use_action_appearance  (GtkMenuItem          *menu_item, 
                                                       gboolean              use_appearance);
 
-/* Declare deprecated function that need a declaration */
-#ifdef GTK_DISABLE_DEPRECATED
-void       gtk_menu_item_set_right_justified         (GtkMenuItem          *menu_item,
-                                                      gboolean              right_justified);
-gboolean   gtk_menu_item_get_right_justified         (GtkMenuItem          *menu_item);
-#endif  /* GTK_DISABLE_DEPRECATED */
-
 static guint menu_item_signals[LAST_SIGNAL] = { 0 };
 
 static GtkBuildableIface *parent_buildable_iface;
@@ -2175,21 +2168,7 @@ gtk_menu_item_position_menu (GtkMenu  *menu,
   available_right = monitor.x + monitor.width - (tx + allocation.width);
 
   parent = gtk_widget_get_parent (widget);
-  if (GTK_IS_MENU_BAR (parent))
-    {
-      priv->from_menubar = TRUE;
-    }
-  else if (GTK_IS_MENU (parent))
-    {
-      if (GTK_MENU (parent)->priv->parent_menu_item)
-        priv->from_menubar = GTK_MENU_ITEM (GTK_MENU (parent)->priv->parent_menu_item)->priv->from_menubar;
-      else
-        priv->from_menubar = FALSE;
-    }
-  else
-    {
-      priv->from_menubar = FALSE;
-    }
+  priv->from_menubar = GTK_IS_MENU_BAR (parent);
 
   switch (priv->submenu_placement)
     {

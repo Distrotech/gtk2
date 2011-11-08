@@ -166,23 +166,6 @@ G_DEFINE_TYPE_WITH_CODE (GtkScale, gtk_scale, GTK_TYPE_RANGE,
                                                 gtk_scale_buildable_interface_init))
 
 
-static gboolean
-single_string_accumulator (GSignalInvocationHint *ihint,
-                           GValue                *return_accu,
-                           const GValue          *handler_return,
-                           gpointer               dummy)
-{
-  gboolean continue_emission;
-  const gchar *str;
-  
-  str = g_value_get_string (handler_return);
-  g_value_set_string (return_accu, str);
-  continue_emission = str == NULL;
-  
-  return continue_emission;
-}
-
-
 #define add_slider_binding(binding_set, keyval, mask, scroll)              \
   gtk_binding_entry_add_signal (binding_set, keyval, mask,                 \
                                 I_("move-slider"), 1, \
@@ -243,7 +226,7 @@ gtk_scale_class_init (GtkScaleClass *class)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (GtkScaleClass, format_value),
-                  single_string_accumulator, NULL,
+                  _gtk_single_string_accumulator, NULL,
                   _gtk_marshal_STRING__DOUBLE,
                   G_TYPE_STRING, 1,
                   G_TYPE_DOUBLE);
@@ -1653,7 +1636,7 @@ marks_start_element (GMarkupParseContext *context,
             msg_context = values[i];
           else if (strcmp (names[i], "value") == 0)
             {
-              GValue gvalue = { 0, };
+              GValue gvalue = G_VALUE_INIT;
 
               if (!gtk_builder_value_from_string_type (parser_data->builder, G_TYPE_DOUBLE, values[i], &gvalue, error))
                 return;
@@ -1663,7 +1646,7 @@ marks_start_element (GMarkupParseContext *context,
             }
           else if (strcmp (names[i], "position") == 0)
             {
-              GValue gvalue = { 0, };
+              GValue gvalue = G_VALUE_INIT;
 
               if (!gtk_builder_value_from_string_type (parser_data->builder, GTK_TYPE_POSITION_TYPE, values[i], &gvalue, error))
                 return;

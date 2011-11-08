@@ -1987,6 +1987,7 @@ parse_selector_pseudo_class (GtkCssScanner  *scanner,
   } pseudo_classes[] = {
     { "first-child",  GTK_REGION_FIRST, 0 },
     { "last-child",   GTK_REGION_LAST, 0 },
+    { "only-child",   GTK_REGION_ONLY, 0 },
     { "sorted",       GTK_REGION_SORTED, 0 },
     { "active",       0, GTK_STATE_FLAG_ACTIVE },
     { "prelight",     0, GTK_STATE_FLAG_PRELIGHT },
@@ -3066,7 +3067,7 @@ _gtk_css_provider_get_theme_dir (void)
   if (var)
     path = g_build_filename (var, "share", "themes", NULL);
   else
-    path = g_build_filename (GTK_DATA_PREFIX, "share", "themes", NULL);
+    path = g_build_filename (_gtk_get_data_prefix (), "share", "themes", NULL);
 
   return path;
 }

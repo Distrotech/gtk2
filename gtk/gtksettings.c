@@ -23,7 +23,10 @@
 
 #include <string.h>
 
+#include "gtksettings.h"
+
 #include "gtkmodules.h"
+#include "gtkmodulesprivate.h"
 #include "gtksettingsprivate.h"
 #include "gtkintl.h"
 #include "gtkwidget.h"
@@ -41,6 +44,8 @@
 #ifdef GDK_WINDOWING_QUARTZ
 #include "quartz/gdkquartz.h"
 #endif
+
+#include "deprecated/gtkrc.h"
 
 
 /**
@@ -292,7 +297,7 @@ gtk_settings_init (GtkSettings *settings)
     }
   g_free (pspecs);
 
-  path = g_build_filename (GTK_SYSCONFDIR, "gtk-3.0", "settings.ini", NULL);
+  path = g_build_filename (_gtk_get_sysconfdir (), "gtk-3.0", "settings.ini", NULL);
   if (g_file_test (path, G_FILE_TEST_EXISTS))
     gtk_settings_load_from_key_file (settings, path, GTK_SETTINGS_SOURCE_DEFAULT);
   g_free (path);
@@ -942,6 +947,8 @@ gtk_settings_class_init (GtkSettingsClass *class)
    * Which IM (input method) module should be used by default. This is the
    * input method that will be used if the user has not explicitly chosen
    * another input method from the IM context menu.
+   * This also can be a colon-separated list of input methods, which GTK+
+   * will try in turn until it finds one available on the system.
    *
    * See #GtkIMContext and see the #GtkSettings:gtk-show-input-method-menu property.
    */
@@ -1583,7 +1590,7 @@ gtk_settings_get_property (GObject     *object,
     }
   else
     {
-      GValue val = { 0, };
+      GValue val = G_VALUE_INIT;
 
       /* Try to get xsetting as a string and parse it. */
 
@@ -1596,8 +1603,8 @@ gtk_settings_get_property (GObject     *object,
         }
       else
         {
-          GValue tmp_value = { 0, };
-          GValue gstring_value = { 0, };
+          GValue tmp_value = G_VALUE_INIT;
+          GValue gstring_value = G_VALUE_INIT;
           GtkRcPropertyParser parser = (GtkRcPropertyParser) g_param_spec_get_qdata (pspec, quark_property_parser);
 
           g_value_init (&gstring_value, G_TYPE_GSTRING);
@@ -1759,7 +1766,7 @@ apply_queued_setting (GtkSettings             *settings,
                       GtkSettingsValuePrivate *qvalue)
 {
   GtkSettingsPrivate *priv = settings->priv;
-  GValue tmp_value = { 0, };
+  GValue tmp_value = G_VALUE_INIT;
   GtkRcPropertyParser parser = (GtkRcPropertyParser) g_param_spec_get_qdata (pspec, quark_property_parser);
 
   g_value_init (&tmp_value, G_PARAM_SPEC_VALUE_TYPE (pspec));
@@ -2411,7 +2418,7 @@ _gtk_settings_handle_event (GdkEventSetting *event)
 
       if (property_id == PROP_COLOR_SCHEME)
         {
-          GValue value = { 0, };
+          GValue value = G_VALUE_INIT;
 
           g_value_init (&value, G_TYPE_STRING);
           if (!gdk_screen_get_setting (screen, pspec->name, &value))
@@ -2516,11 +2523,11 @@ settings_update_modules (GtkSettings *settings)
 static void
 settings_update_cursor_theme (GtkSettings *settings)
 {
+#ifdef GDK_WINDOWING_X11
   GdkDisplay *display = gdk_screen_get_display (settings->priv->screen);
   gchar *theme = NULL;
   gint size = 0;
 
-#ifdef GDK_WINDOWING_X11
   if (GDK_IS_X11_DISPLAY (display))
     {
       g_object_get (settings,
@@ -2644,6 +2651,8 @@ settings_update_fontconfig (GtkSettings *settings)
     }
 
   return last_update_needed;
+#else
+  return FALSE;
 #endif /* GDK_WINDOWING_X11 */
 }
 
@@ -2697,7 +2706,7 @@ settings_update_color_scheme (GtkSettings *settings)
     {
       GtkSettingsPrivate *priv = settings->priv;
       ColorSchemeData *data;
-      GValue value = { 0, };
+      GValue value = G_VALUE_INIT;
 
       data = g_slice_new0 (ColorSchemeData);
       data->color_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,

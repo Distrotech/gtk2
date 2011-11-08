@@ -4545,7 +4545,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
     {
       gtk_text_view_reset_im_context (text_view);
 
-      if (_gtk_button_event_triggers_context_menu (event))
+      if (gdk_event_triggers_context_menu ((GdkEvent *) event))
         {
 	  gtk_text_view_do_popup (text_view, event);
 	  return TRUE;
@@ -4566,7 +4566,9 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
           if (gtk_text_buffer_get_selection_bounds (get_buffer (text_view),
                                                     &start, &end) &&
               gtk_text_iter_in_range (&iter, &start, &end) &&
-              !(event->state & GTK_EXTEND_SELECTION_MOD_MASK))
+              !(event->state &
+                gtk_widget_get_modifier_mask (widget,
+                                              GDK_MODIFIER_INTENT_EXTEND_SELECTION)))
             {
               priv->drag_start_x = event->x;
               priv->drag_start_y = event->y;
@@ -6491,7 +6493,9 @@ gtk_text_view_start_selection_drag (GtkTextView       *text_view,
   orig_start = ins;
   orig_end = bound;
 
-  if (button->state & GTK_EXTEND_SELECTION_MOD_MASK)
+  if (button->state &
+      gtk_widget_get_modifier_mask (GTK_WIDGET (text_view),
+                                    GDK_MODIFIER_INTENT_EXTEND_SELECTION))
     {
       /* Extend selection */
       GtkTextIter old_ins, old_bound;
@@ -8153,6 +8157,7 @@ typedef struct
   GtkTextView *text_view;
   gint button;
   guint time;
+  GdkDevice *device;
 } PopupInfo;
 
 static gboolean
@@ -8306,9 +8311,9 @@ popup_targets_received (GtkClipboard     *clipboard,
 		     0,
 		     priv->popup_menu);
       
-      if (info->button)
-	gtk_menu_popup (GTK_MENU (priv->popup_menu), NULL, NULL,
-			NULL, NULL,
+      if (info->device)
+	gtk_menu_popup_for_device (GTK_MENU (priv->popup_menu), 
+      info->device, NULL, NULL, NULL, NULL, NULL,
 			info->button, info->time);
       else
 	{
@@ -8339,11 +8344,13 @@ gtk_text_view_do_popup (GtkTextView    *text_view,
     {
       info->button = event->button;
       info->time = event->time;
+      info->device = event->device;
     }
   else
     {
       info->button = 0;
       info->time = gtk_get_current_event_time ();
+      info->device = NULL;
     }
 
   gtk_clipboard_request_contents (gtk_widget_get_clipboard (GTK_WIDGET (text_view),

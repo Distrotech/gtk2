@@ -26,7 +26,6 @@
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdk.h>
-#include <gtk/gtkstyle.h>
 #include <gtk/gtkstylecontext.h>
 
 G_BEGIN_DECLS
@@ -212,6 +211,7 @@ GdkPixbuf *           gtk_icon_info_load_symbolic_for_context (GtkIconInfo      
                                                                gboolean         *was_symbolic,
                                                                GError          **error);
 #ifndef GTK_DISABLE_DEPRECATED
+GDK_DEPRECATED_FOR(gtk_icon_info_load_symbol_for_context)
 GdkPixbuf *           gtk_icon_info_load_symbolic_for_style  (GtkIconInfo   *icon_info,
                                                               GtkStyle      *style,
                                                               GtkStateType   state,

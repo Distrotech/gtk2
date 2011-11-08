@@ -3450,7 +3450,7 @@ shortcuts_button_press_event_cb (GtkWidget             *widget,
   if (in_press)
     return FALSE;
 
-  if (!_gtk_button_event_triggers_context_menu (event))
+  if (!gdk_event_triggers_context_menu ((GdkEvent *) event))
     return FALSE;
 
   in_press = TRUE;
@@ -3665,6 +3665,7 @@ shortcuts_pane_create (GtkFileChooserDefault *impl,
   /* Box for buttons */
 
   toolbar = gtk_toolbar_new ();
+  gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_ICONS);
   gtk_toolbar_set_icon_size (GTK_TOOLBAR (toolbar), GTK_ICON_SIZE_MENU);
 
   context = gtk_widget_get_style_context (toolbar);
@@ -3726,15 +3727,19 @@ browse_files_key_press_event_cb (GtkWidget   *widget,
 				 gpointer     data)
 {
   GtkFileChooserDefault *impl;
+  GdkModifierType no_text_input_mask;
 
   impl = (GtkFileChooserDefault *) data;
+
+  no_text_input_mask =
+    gtk_widget_get_modifier_mask (widget, GDK_MODIFIER_INTENT_NO_TEXT_INPUT);
 
   if ((event->keyval == GDK_KEY_slash
        || event->keyval == GDK_KEY_KP_Divide
 #ifdef G_OS_UNIX
        || event->keyval == GDK_KEY_asciitilde
 #endif
-       ) && !(event->state & GTK_NO_TEXT_INPUT_MOD_MASK))
+       ) && !(event->state & no_text_input_mask))
     {
       location_popup_handler (impl, event->string);
       return TRUE;
@@ -4298,7 +4303,7 @@ list_button_press_event_cb (GtkWidget             *widget,
   if (in_press)
     return FALSE;
 
-  if (!_gtk_button_event_triggers_context_menu (event))
+  if (!gdk_event_triggers_context_menu ((GdkEvent *) event))
     return FALSE;
 
   in_press = TRUE;

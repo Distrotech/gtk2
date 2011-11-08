@@ -28,7 +28,6 @@
 #include "gtktreednd.h"
 #include "gtktreeprivate.h"
 #include "gtkcellrenderer.h"
-#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkbuildable.h"
 #include "gtkbutton.h"
@@ -663,10 +662,6 @@ static void     gtk_tree_view_drag_data_received (GtkWidget        *widget,
                                                   guint             time);
 
 /* tree_model signals */
-static void     gtk_tree_view_set_hadjustment             (GtkTreeView     *tree_view,
-                                                           GtkAdjustment   *adjustment);
-static void     gtk_tree_view_set_vadjustment             (GtkTreeView     *tree_view,
-                                                           GtkAdjustment   *adjustment);
 static gboolean gtk_tree_view_real_move_cursor            (GtkTreeView     *tree_view,
 							   GtkMovementStep  step,
 							   gint             count);
@@ -2880,6 +2875,8 @@ gtk_tree_view_button_press (GtkWidget      *widget,
       gboolean row_double_click = FALSE;
       gboolean rtl;
       gboolean node_selected;
+      GdkModifierType extend_mod_mask;
+      GdkModifierType modify_mod_mask;
 
       /* Empty tree? */
       if (tree_view->priv->tree == NULL)
@@ -3034,6 +3031,12 @@ gtk_tree_view_button_press (GtkWidget      *widget,
 	    gtk_tree_path_free (anchor);
 	}
 
+      extend_mod_mask =
+        gtk_widget_get_modifier_mask (widget, GDK_MODIFIER_INTENT_EXTEND_SELECTION);
+
+      modify_mod_mask =
+        gtk_widget_get_modifier_mask (widget, GDK_MODIFIER_INTENT_MODIFY_SELECTION);
+
       /* select */
       node_selected = GTK_RBNODE_FLAG_SET (node, GTK_RBNODE_IS_SELECTED);
       pre_val = gtk_adjustment_get_value (tree_view->priv->vadjustment);
@@ -3044,9 +3047,9 @@ gtk_tree_view_button_press (GtkWidget      *widget,
         {
           GtkCellRenderer *focus_cell;
 
-          if ((event->state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+          if ((event->state & modify_mod_mask) == modify_mod_mask)
             tree_view->priv->modify_selection_pressed = TRUE;
-          if ((event->state & GTK_EXTEND_SELECTION_MOD_MASK) == GTK_EXTEND_SELECTION_MOD_MASK)
+          if ((event->state & extend_mod_mask) == extend_mod_mask)
             tree_view->priv->extend_selection_pressed = TRUE;
 
           /* We update the focus cell here, this is also needed if the
@@ -3063,12 +3066,12 @@ gtk_tree_view_button_press (GtkWidget      *widget,
           if (focus_cell)
             gtk_tree_view_column_focus_cell (column, focus_cell);
 
-          if (event->state & GTK_MODIFY_SELECTION_MOD_MASK)
+          if (event->state & modify_mod_mask)
             {
               gtk_tree_view_real_set_cursor (tree_view, path, FALSE, TRUE);
               gtk_tree_view_real_toggle_cursor_row (tree_view);
             }
-          else if (event->state & GTK_EXTEND_SELECTION_MOD_MASK)
+          else if (event->state & extend_mod_mask)
             {
               gtk_tree_view_real_set_cursor (tree_view, path, FALSE, TRUE);
               gtk_tree_view_real_select_cursor_row (tree_view, FALSE);
@@ -3111,9 +3114,9 @@ gtk_tree_view_button_press (GtkWidget      *widget,
 	      tree_view->priv->rubber_band_y = event->y + tree_view->priv->dy;
 	      tree_view->priv->rubber_band_status = RUBBER_BAND_MAYBE_START;
 
-	      if ((event->state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+	      if ((event->state & modify_mod_mask) == modify_mod_mask)
 		tree_view->priv->rubber_band_modify = TRUE;
-	      if ((event->state & GTK_EXTEND_SELECTION_MOD_MASK) == GTK_EXTEND_SELECTION_MOD_MASK)
+	      if ((event->state & extend_mod_mask) == extend_mod_mask)
 		tree_view->priv->rubber_band_extend = TRUE;
 	    }
         }
@@ -3971,13 +3974,16 @@ gtk_tree_view_motion_resize_column (GtkWidget      *widget,
 
 
 static void
-gtk_tree_view_update_current_reorder (GtkTreeView *tree_view)
+gtk_tree_view_update_current_reorder (GtkTreeView *tree_view,
+                                      GdkEvent    *event)
 {
   GtkTreeViewColumnReorder *reorder = NULL;
   GList *list;
   gint mouse_x;
 
-  gdk_window_get_pointer (tree_view->priv->header_window, &mouse_x, NULL, NULL);
+  gdk_window_get_device_position (tree_view->priv->header_window,
+                                  gdk_event_get_device (event),
+                                  &mouse_x, NULL, NULL);
   for (list = tree_view->priv->column_drag_info; list; list = list->next)
     {
       reorder = (GtkTreeViewColumnReorder *) list->data;
@@ -4019,13 +4025,16 @@ gtk_tree_view_vertical_autoscroll (GtkTreeView *tree_view)
 }
 
 static gboolean
-gtk_tree_view_horizontal_autoscroll (GtkTreeView *tree_view)
+gtk_tree_view_horizontal_autoscroll (GtkTreeView *tree_view,
+                                     GdkEvent    *event)
 {
   GdkRectangle visible_rect;
   gint x;
   gint offset;
 
-  gdk_window_get_pointer (tree_view->priv->bin_window, &x, NULL, NULL);
+  gdk_window_get_device_position (tree_view->priv->bin_window,
+                                  gdk_event_get_device (event),
+                                  &x, NULL, NULL);
 
   gtk_tree_view_get_visible_rect (tree_view, &visible_rect);
 
@@ -4072,9 +4081,9 @@ gtk_tree_view_motion_drag_column (GtkWidget      *widget,
   gdk_window_move (tree_view->priv->drag_window, x, y);
   
   /* autoscroll, if needed */
-  gtk_tree_view_horizontal_autoscroll (tree_view);
+  gtk_tree_view_horizontal_autoscroll (tree_view, event);
   /* Update the current reorder position and arrow; */
-  gtk_tree_view_update_current_reorder (tree_view);
+  gtk_tree_view_update_current_reorder (tree_view, event);
 
   return TRUE;
 }
@@ -8572,9 +8581,20 @@ gtk_tree_view_real_move_cursor (GtkTreeView       *tree_view,
 
   if (gtk_get_current_event_state (&state))
     {
-      if ((state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+      GdkModifierType extend_mod_mask;
+      GdkModifierType modify_mod_mask;
+
+      extend_mod_mask =
+        gtk_widget_get_modifier_mask (GTK_WIDGET (tree_view),
+                                      GDK_MODIFIER_INTENT_EXTEND_SELECTION);
+
+      modify_mod_mask =
+        gtk_widget_get_modifier_mask (GTK_WIDGET (tree_view),
+                                      GDK_MODIFIER_INTENT_MODIFY_SELECTION);
+
+      if ((state & modify_mod_mask) == modify_mod_mask)
         tree_view->priv->modify_selection_pressed = TRUE;
-      if ((state & GTK_EXTEND_SELECTION_MOD_MASK) == GTK_EXTEND_SELECTION_MOD_MASK)
+      if ((state & extend_mod_mask) == extend_mod_mask)
         tree_view->priv->extend_selection_pressed = TRUE;
     }
   /* else we assume not pressed */
@@ -10803,7 +10823,13 @@ gtk_tree_view_real_select_cursor_parent (GtkTreeView *tree_view)
 
       if (gtk_get_current_event_state (&state))
 	{
-	  if ((state & GTK_MODIFY_SELECTION_MOD_MASK) == GTK_MODIFY_SELECTION_MOD_MASK)
+          GdkModifierType modify_mod_mask;
+
+          modify_mod_mask =
+            gtk_widget_get_modifier_mask (GTK_WIDGET (tree_view),
+                                          GDK_MODIFIER_INTENT_MODIFY_SELECTION);
+
+	  if ((state & modify_mod_mask) == modify_mod_mask)
 	    tree_view->priv->modify_selection_pressed = TRUE;
 	}
 
@@ -15132,7 +15158,8 @@ gtk_tree_view_search_key_press_event (GtkWidget *widget,
 				      GdkEventKey *event,
 				      GtkTreeView *tree_view)
 {
-  gboolean retval = FALSE;
+  GdkModifierType default_accel;
+  gboolean        retval = FALSE;
 
   g_return_val_if_fail (GTK_IS_WIDGET (widget), FALSE);
   g_return_val_if_fail (GTK_IS_TREE_VIEW (tree_view), FALSE);
@@ -15149,6 +15176,9 @@ gtk_tree_view_search_key_press_event (GtkWidget *widget,
       return TRUE;
     }
 
+  default_accel = gtk_widget_get_modifier_mask (widget,
+                                                GDK_MODIFIER_INTENT_PRIMARY_ACCELERATOR);
+
   /* select previous matching iter */
   if (event->keyval == GDK_KEY_Up || event->keyval == GDK_KEY_KP_Up)
     {
@@ -15158,7 +15188,7 @@ gtk_tree_view_search_key_press_event (GtkWidget *widget,
       retval = TRUE;
     }
 
-  if (((event->state & (GTK_DEFAULT_ACCEL_MOD_MASK | GDK_SHIFT_MASK)) == (GTK_DEFAULT_ACCEL_MOD_MASK | GDK_SHIFT_MASK))
+  if (((event->state & (default_accel | GDK_SHIFT_MASK)) == (default_accel | GDK_SHIFT_MASK))
       && (event->keyval == GDK_KEY_g || event->keyval == GDK_KEY_G))
     {
       if (!gtk_tree_view_search_move (widget, tree_view, TRUE))
@@ -15176,7 +15206,7 @@ gtk_tree_view_search_key_press_event (GtkWidget *widget,
       retval = TRUE;
     }
 
-  if (((event->state & (GTK_DEFAULT_ACCEL_MOD_MASK | GDK_SHIFT_MASK)) == GTK_DEFAULT_ACCEL_MOD_MASK)
+  if (((event->state & (default_accel | GDK_SHIFT_MASK)) == default_accel)
       && (event->keyval == GDK_KEY_g || event->keyval == GDK_KEY_G))
     {
       if (!gtk_tree_view_search_move (widget, tree_view, FALSE))
@@ -15271,8 +15301,8 @@ gtk_tree_view_search_equal_func (GtkTreeModel *model,
   gchar *normalized_key;
   gchar *case_normalized_string = NULL;
   gchar *case_normalized_key = NULL;
-  GValue value = {0,};
-  GValue transformed = {0,};
+  GValue value = G_VALUE_INIT;
+  GValue transformed = G_VALUE_INIT;
 
   gtk_tree_model_get_value (model, iter, column, &value);
 
@@ -15603,7 +15633,7 @@ gtk_tree_view_stop_editing (GtkTreeView *tree_view,
  * @tree_view: a #GtkTreeView
  * @hover: %TRUE to enable hover selection mode
  *
- * Enables of disables the hover selection mode of @tree_view.
+ * Enables or disables the hover selection mode of @tree_view.
  * Hover selection makes the selected row follow the pointer.
  * Currently, this works only for the selection modes 
  * %GTK_SELECTION_SINGLE and %GTK_SELECTION_BROWSE.
@@ -16300,8 +16330,8 @@ gtk_tree_view_set_tooltip_query_cb (GtkWidget  *widget,
 				    GtkTooltip *tooltip,
 				    gpointer    data)
 {
-  GValue value = { 0, };
-  GValue transformed = { 0, };
+  GValue value = G_VALUE_INIT;
+  GValue transformed = G_VALUE_INIT;
   GtkTreeIter iter;
   GtkTreePath *path;
   GtkTreeModel *model;

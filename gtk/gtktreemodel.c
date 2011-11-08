@@ -874,9 +874,9 @@ gtk_tree_path_get_indices_with_depth (GtkTreePath *path,
 
 /**
  * gtk_tree_path_free:
- * @path: a #GtkTreePath
+ * @path: (allow-none): a #GtkTreePath
  *
- * Frees @path.
+ * Frees @path. If @path is %NULL, it simply returns.
  */
 void
 gtk_tree_path_free (GtkTreePath *path)
@@ -1754,7 +1754,7 @@ gtk_tree_model_get_valist (GtkTreeModel *tree_model,
 
   while (column != -1)
     {
-      GValue value = { 0, };
+      GValue value = G_VALUE_INIT;
       gchar *error = NULL;
 
       if (column >= gtk_tree_model_get_n_columns (tree_model))

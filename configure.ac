@@ -9,9 +9,9 @@
 # set GTK_BINARY_AGE and GTK_INTERFACE_AGE to 0.
 
 m4_define([gtk_major_version], [3])
-m4_define([gtk_minor_version], [2])
-m4_define([gtk_micro_version], [1])
-m4_define([gtk_interface_age], [1])
+m4_define([gtk_minor_version], [3])
+m4_define([gtk_micro_version], [3])
+m4_define([gtk_interface_age], [0])
 m4_define([gtk_binary_age],
           [m4_eval(100 * gtk_minor_version + gtk_micro_version)])
 m4_define([gtk_version],
@@ -39,7 +39,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 m4_define([gtk_binary_version], [3.0.0])
 
 # required versions of other packages
-m4_define([glib_required_version], [2.29.14])
+m4_define([glib_required_version], [2.31.0])
 m4_define([pango_required_version], [1.29.0])
 m4_define([atk_required_version], [2.1.5])
 m4_define([cairo_required_version], [1.10.0])
@@ -164,9 +164,6 @@ AC_SUBST(EXE_MANIFEST_ARCHITECTURE)
 case $host in
   *-*-linux*)
     os_linux=yes
-    ;;
-  *-*-openbsd*)
-    os_openbsd=yes
     ;;
 esac
 
@@ -318,6 +315,11 @@ if test -z "$backend_set"; then
   fi
 fi
 
+AC_ARG_ENABLE(quartz-relocation,
+              [AS_HELP_STRING([--enable-quartz-relocation],
+                              [enable bundle-based relocation functions])],
+                              [quartz_relocation=yes])
+
 cairo_backends=
 backend_immodules=
 GDK_BACKENDS=
@@ -360,6 +362,10 @@ if test "x$enable_quartz_backend" = xyes; then
 #define GDK_WINDOWING_QUARTZ"
   GDK_EXTRA_LIBS="$GDK_EXTRA_LIBS -framework Cocoa"
   AM_CONDITIONAL(USE_QUARTZ, true)
+  if test "x$quartz_relocation" = xyes; then
+    AC_DEFINE([QUARTZ_RELOCATION], [1], [Use NSBundle functions to determine load paths for libraries, translations, etc.])
+  fi
+
 else
   AM_CONDITIONAL(USE_QUARTZ, false)
 fi
@@ -437,8 +443,6 @@ if test "x$GCC" = "xyes"; then
   fi
 fi
 changequote([,])dnl
-
-CPPFLAGS="$CPPFLAGS -DG_DISABLE_SINGLE_INCLUDES -DATK_DISABLE_SINGLE_INCLUDES"
 
 # Ensure MSVC-compatible struct packing convention is used when
 # compiling for Win32 with gcc.
@@ -688,16 +692,6 @@ AM_PATH_GLIB_2_0(glib_required_version, :,
 *** GLIB glib_required_version or better is required. The latest version of
 *** GLIB is always available from ftp://ftp.gtk.org/pub/gtk/.]),
   gobject gmodule-no-export gthread)
-
-# See if it's safe to turn G_DISABLE_DEPRECATED on.
-GLIB_VERSION_MAJOR_MINOR=`$PKG_CONFIG --modversion glib-2.0 | sed "s/\.@<:@^.@:>@*\$//"`
-GLIB_REQUIRED_VERSION_MAJOR_MINOR=`echo glib_required_version | sed "s/\.@<:@^.@:>@*\$//"`
-if test "x$GLIB_VERSION_MAJOR_MINOR" = "x$GLIB_REQUIRED_VERSION_MAJOR_MINOR"; then
-  CFLAGS="-DG_DISABLE_DEPRECATED $CFLAGS"
-fi
-
-CFLAGS="-DGDK_PIXBUF_DISABLE_DEPRECATED $CFLAGS"
-
 
 dnl
 dnl Check for bind_textdomain_codeset, including -lintl if GLib brings it in.
@@ -1315,9 +1309,6 @@ if test "x$enable_x11_backend" = xyes; then
   GTK_PACKAGES="$GTK_PACKAGES pangoft2"
 fi
 GTK_EXTRA_LIBS=
-if test x"$os_openbsd" = xyes; then
-  GTK_EXTRA_LIBS="$GTK_EXTRA_LIBS -lkvm"
-fi
 
 GTK_EXTRA_CFLAGS=
 GTK_DEP_LIBS="$GDK_EXTRA_LIBS $GTK_DEP_LIBS_FOR_X `$PKG_CONFIG --libs $PANGO_PACKAGES $GTK_PACKAGES_FOR_X $GTK_PACKAGES` $GTK_EXTRA_LIBS $MATH_LIB"
@@ -1663,6 +1654,20 @@ AC_CONFIG_COMMANDS([gdk/gdkconfig.h], [
 #include <glib.h>
 
 G_BEGIN_DECLS
+
+/* These macros are used to mark deprecated functions in GDK and
+ * GTK+ headers, and thus have to be exposed in installed headers.
+ * But please do *not* use them in other projects. Instead, use
+ * G_DEPRECATED or define your own wrappers around it.
+ */
+
+#ifdef GDK_DISABLE_DEPRECATION_WARNINGS
+#define GDK_DEPRECATED
+#define GDK_DEPRECATED_FOR(f)
+#else
+#define GDK_DEPRECATED G_DEPRECATED
+#define GDK_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f)
+#endif
 
 _______EOF
 

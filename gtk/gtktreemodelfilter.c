@@ -1264,7 +1264,7 @@ gtk_tree_model_filter_real_visible (GtkTreeModelFilter *filter,
     }
   else if (filter->priv->visible_column >= 0)
    {
-     GValue val = {0, };
+     GValue val = G_VALUE_INIT;
 
      gtk_tree_model_get_value (child_model, child_iter,
                                filter->priv->visible_column, &val);
@@ -2073,17 +2073,17 @@ gtk_tree_model_filter_row_changed (GtkTreeModel *c_model,
 
   if (current_state == TRUE && requested_state == TRUE)
     {
-      /* propagate the signal; also get a path taking only visible
-       * nodes into account.
-       */
-      gtk_tree_path_free (path);
-      path = gtk_tree_model_get_path (GTK_TREE_MODEL (filter), &iter);
-
       level = FILTER_LEVEL (iter.user_data);
       elt = FILTER_ELT (iter.user_data2);
 
       if (gtk_tree_model_filter_elt_is_visible_in_target (level, elt))
         {
+          /* propagate the signal; also get a path taking only visible
+           * nodes into account.
+           */
+          gtk_tree_path_free (path);
+          path = gtk_tree_model_get_path (GTK_TREE_MODEL (filter), &iter);
+
           if (level->ext_ref_count > 0)
             gtk_tree_model_row_changed (GTK_TREE_MODEL (filter), path, &iter);
 
@@ -2614,20 +2614,21 @@ gtk_tree_model_filter_row_deleted (GtkTreeModel *c_model,
     gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
                                            TRUE, FALSE);
 
+  if (elt->children)
+    /* If this last node has children, then the recursion in free_level
+     * will release this reference.
+     */
+    while (elt->ref_count > 1)
+      gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
+                                             FALSE, FALSE);
+  else
+    while (elt->ref_count > 0)
+      gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
+                                             FALSE, FALSE);
+
+
   if (g_sequence_get_length (level->seq) == 1)
     {
-      if (elt->children)
-        /* If this last node has children, then the recursion in free_level
-         * will release this reference.
-         */
-        while (elt->ref_count > 1)
-          gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
-                                                 FALSE, FALSE);
-      else
-        while (elt->ref_count > 0)
-          gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
-                                                 FALSE, FALSE);
-
       /* kill level */
       gtk_tree_model_filter_free_level (filter, level, FALSE, TRUE, FALSE);
     }
@@ -2636,16 +2637,16 @@ gtk_tree_model_filter_row_deleted (GtkTreeModel *c_model,
       GSequenceIter *tmp;
       gboolean is_first;
 
-      /* Release last references, if needed */
-      while (elt->ref_count > 0)
-        gtk_tree_model_filter_real_unref_node (GTK_TREE_MODEL (data), &iter,
-                                               FALSE, FALSE);
-
       lookup_elt_with_offset (level->seq, elt->offset, &siter);
       is_first = g_sequence_get_begin_iter (level->seq) == siter;
 
+      if (elt->children)
+        gtk_tree_model_filter_free_level (filter, elt->children,
+                                          FALSE, TRUE, FALSE);
+
       /* remove the row */
-      g_sequence_remove (elt->visible_siter);
+      if (elt->visible_siter)
+        g_sequence_remove (elt->visible_siter);
       tmp = g_sequence_iter_next (siter);
       g_sequence_remove (siter);
       g_sequence_foreach_range (tmp, g_sequence_get_end_iter (level->seq),

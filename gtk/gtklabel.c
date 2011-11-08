@@ -31,7 +31,6 @@
 #include "gtklabel.h"
 #include "gtkaccellabel.h"
 #include "gtkdnd.h"
-#include "gtkmainprivate.h"
 #include "gtkmarshalers.h"
 #include "gtkpango.h"
 #include "gtkwindow.h"
@@ -1285,7 +1284,7 @@ attribute_from_text (GtkBuilder   *builder,
   PangoLanguage  *language;
   PangoFontDescription *font_desc;
   GdkColor       *color;
-  GValue          val = { 0, };
+  GValue          val = G_VALUE_INIT;
 
   if (!gtk_builder_value_from_string_type (builder, PANGO_TYPE_ATTR_TYPE, name, &val, error))
     return NULL;
@@ -1441,7 +1440,7 @@ pango_start_element (GMarkupParseContext *context,
 		     GError             **error)
 {
   PangoParserData *data = (PangoParserData*)user_data;
-  GValue val = { 0, };
+  GValue val = G_VALUE_INIT;
   guint i;
   gint line_number, char_number;
 
@@ -4715,7 +4714,7 @@ gtk_label_button_press (GtkWidget      *widget,
 
   if (info->active_link)
     {
-      if (_gtk_button_event_triggers_context_menu (event))
+      if (gdk_event_triggers_context_menu ((GdkEvent *) event))
         {
           info->link_clicked = 1;
           gtk_label_do_popup (label, event);
@@ -4734,7 +4733,7 @@ gtk_label_button_press (GtkWidget      *widget,
   info->in_drag = FALSE;
   info->select_words = FALSE;
 
-  if (_gtk_button_event_triggers_context_menu (event))
+  if (gdk_event_triggers_context_menu ((GdkEvent *) event))
     {
       gtk_label_do_popup (label, event);
 
