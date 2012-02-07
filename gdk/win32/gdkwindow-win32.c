@@ -655,7 +655,7 @@ _gdk_window_impl_new (GdkWindow     *window,
       /* A temp window is not necessarily a top level window */
       dwStyle = (_gdk_root == real_parent ? WS_POPUP : WS_CHILDWINDOW);
       dwStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
-      dwExStyle |= WS_EX_TOOLWINDOW;
+      dwExStyle |= WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
       offset_x = _gdk_offset_x;
       offset_y = _gdk_offset_y;
       break;
@@ -1266,10 +1266,11 @@ show_window_internal (GdkWindow *window,
     }
 
   /* Sync STATE_ABOVE to TOPMOST */
-  if (((private->state & GDK_WINDOW_STATE_ABOVE) &&
+  if (GDK_WINDOW_TYPE (window) != GDK_WINDOW_TEMP &&
+      (((private->state & GDK_WINDOW_STATE_ABOVE) &&
        !(exstyle & WS_EX_TOPMOST)) ||
       (!(private->state & GDK_WINDOW_STATE_ABOVE) &&
-       (exstyle & WS_EX_TOPMOST)))
+       (exstyle & WS_EX_TOPMOST))))
     {
       API_CALL (SetWindowPos, (GDK_WINDOW_HWND (window),
 			       (private->state & GDK_WINDOW_STATE_ABOVE)?HWND_TOPMOST:HWND_NOTOPMOST,
@@ -1821,6 +1822,7 @@ gdk_window_win32_clear_region (GdkWindow *window,
 
   g_free (rectangles);
 }
+
 static void
 gdk_win32_window_raise (GdkWindow *window)
 {
@@ -1834,7 +1836,11 @@ gdk_win32_window_raise (GdkWindow *window)
 	                         0, 0, 0, 0,
 				 SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE));
       else if (((GdkWindowObject *)window)->accept_focus)
-        API_CALL (BringWindowToTop, (GDK_WINDOW_HWND (window)));
+        /* Do not wrap this in an API_CALL macro as SetForegroundWindow might
+         * fail when for example dragging a window belonging to a different
+         * application at the time of a gtk_window_present() call due to focus
+         * stealing prevention. */
+        SetForegroundWindow (GDK_WINDOW_HWND (window));
       else
         API_CALL (SetWindowPos, (GDK_WINDOW_HWND (window), HWND_TOP,
   			         0, 0, 0, 0,
@@ -3137,9 +3143,10 @@ update_style_bits (GdkWindow *window)
   new_style = old_style;
   new_exstyle = old_exstyle;
 
-  if (private->window_type == GDK_WINDOW_TEMP ||
-      impl->type_hint == GDK_WINDOW_TYPE_HINT_UTILITY)
-    new_exstyle |= WS_EX_TOOLWINDOW;
+  if (private->window_type == GDK_WINDOW_TEMP)
+    new_exstyle |= WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
+  else if (impl->type_hint == GDK_WINDOW_TYPE_HINT_UTILITY)
+    new_exstyle |= WS_EX_TOOLWINDOW ;
   else
     new_exstyle &= ~WS_EX_TOOLWINDOW;
 

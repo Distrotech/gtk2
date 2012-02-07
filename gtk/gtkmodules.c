@@ -281,6 +281,7 @@ load_module (GSList      *module_list,
 	      info->ref_count++;
 	      
 	      success = TRUE;
+              break;
 	    }
 	}
 
@@ -362,6 +363,8 @@ load_module (GSList      *module_list,
 	{
 	  module_list = g_slist_prepend (module_list, info);
 	}
+      else
+        info->ref_count--;
     }
   else
    {

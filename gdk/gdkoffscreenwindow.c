@@ -46,7 +46,6 @@
  * GDK_POINTER_MOTION_HINT_MASK isn't effective
  */
 
-typedef struct _GdkOffscreenWindow      GdkOffscreenWindow;
 typedef struct _GdkOffscreenWindowClass GdkOffscreenWindowClass;
 
 struct _GdkOffscreenWindow
@@ -67,9 +66,6 @@ struct _GdkOffscreenWindowClass
   GdkDrawableClass parent_class;
 };
 
-#define GDK_TYPE_OFFSCREEN_WINDOW            (gdk_offscreen_window_get_type())
-#define GDK_OFFSCREEN_WINDOW(object)         (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_OFFSCREEN_WINDOW, GdkOffscreenWindow))
-#define GDK_IS_OFFSCREEN_WINDOW(object)      (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_OFFSCREEN_WINDOW))
 #define GDK_OFFSCREEN_WINDOW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), GDK_TYPE_OFFSCREEN_WINDOW, GdkOffscreenWindowClass))
 #define GDK_IS_OFFSCREEN_WINDOW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GDK_TYPE_OFFSCREEN_WINDOW))
 #define GDK_OFFSCREEN_WINDOW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), GDK_TYPE_OFFSCREEN_WINDOW, GdkOffscreenWindowClass))
@@ -844,6 +840,12 @@ gdk_offscreen_window_get_pointer (GdkWindow       *window,
   if (mask)
     *mask = tmpmask;
   return TRUE;
+}
+
+GdkDrawable *
+_gdk_offscreen_window_get_real_drawable (GdkOffscreenWindow *offscreen)
+{
+  return get_real_drawable (offscreen);
 }
 
 /**
