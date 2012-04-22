@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors:
  *      Mark McLoughlin <mark@skynet.ie>
@@ -887,39 +885,37 @@ gtk_expander_paint (GtkExpander *expander,
 
   widget = GTK_WIDGET (expander);
   context = gtk_widget_get_style_context (widget);
+  state = gtk_widget_get_state_flags (widget);
 
   get_expander_bounds (expander, &clip);
   gtk_widget_get_allocation (widget, &allocation);
 
   gtk_style_context_save (context);
 
+  state &= ~(GTK_STATE_FLAG_PRELIGHT);
   if (expander->priv->prelight)
     {
-      state = GTK_STATE_FLAG_PRELIGHT;
+      state |= GTK_STATE_FLAG_PRELIGHT;
       gtk_style_context_set_state (context, state);
       gtk_expander_paint_prelight (expander, cr);
     }
 
   gtk_widget_style_get (widget, "expander-size", &size, NULL);
 
-  state = gtk_style_context_get_state (context);
-
   /* Set active flag as per the expanded state */
   if (priv->expanded)
     state |= GTK_STATE_FLAG_ACTIVE;
+  else
+    state &= ~(GTK_STATE_FLAG_ACTIVE);
 
   gtk_style_context_set_state (context, state);
   gtk_style_context_add_class (context, GTK_STYLE_CLASS_EXPANDER);
-
-  /* The expander is the only animatable region */
-  gtk_style_context_push_animatable_region (context, GUINT_TO_POINTER (1));
 
   gtk_render_expander (context, cr,
                        clip.x - allocation.x,
                        clip.y - allocation.y,
                        size, size);
 
-  gtk_style_context_pop_animatable_region (context);
   gtk_style_context_restore (context);
 }
 
@@ -1030,7 +1026,7 @@ gtk_expander_button_press (GtkWidget      *widget,
 {
   GtkExpander *expander = GTK_EXPANDER (widget);
 
-  if (event->button == 1 && event->window == expander->priv->event_window)
+  if (event->button == GDK_BUTTON_PRIMARY && event->window == expander->priv->event_window)
     {
       expander->priv->button_down = TRUE;
       return TRUE;
@@ -1045,7 +1041,7 @@ gtk_expander_button_release (GtkWidget      *widget,
 {
   GtkExpander *expander = GTK_EXPANDER (widget);
 
-  if (event->button == 1 && expander->priv->button_down)
+  if (event->button == GDK_BUTTON_PRIMARY && expander->priv->button_down)
     {
       gtk_widget_activate (widget);
       expander->priv->button_down = FALSE;
@@ -1709,27 +1705,8 @@ gtk_expander_set_expanded (GtkExpander *expander,
   if (priv->expanded != expanded)
     {
       GtkWidget *widget = GTK_WIDGET (expander);
-      GtkSettings *settings = gtk_widget_get_settings (widget);
-      GtkStyleContext *context;
-      gboolean enable_animations;
 
-      context = gtk_widget_get_style_context (widget);
       priv->expanded = expanded;
-
-      g_object_get (settings, "gtk-enable-animations", &enable_animations, NULL);
-
-      if (enable_animations && gtk_widget_get_realized (widget))
-        {
-          gtk_style_context_save (context);
-          gtk_style_context_add_class (context, GTK_STYLE_CLASS_EXPANDER);
-
-          gtk_style_context_notify_state_change (context,
-                                                 gtk_widget_get_window (widget),
-                                                 GUINT_TO_POINTER (1),
-                                                 GTK_STATE_ACTIVE,
-                                                 expanded);
-          gtk_style_context_restore (context);
-        }
 
       child = gtk_bin_get_child (GTK_BIN (expander));
 

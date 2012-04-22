@@ -15,9 +15,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -198,7 +196,7 @@ quit_when_idle (gpointer loop)
 {
   g_main_loop_quit (loop);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -568,6 +566,12 @@ add_tests_for_files_in_directory (GFile *dir)
 int
 main (int argc, char **argv)
 {
+  /* I don't want to fight fuzzy scaling algorithms in GPUs,
+   * so unles you explicitly set it to something else, we
+   * will use Cairo's image surface.
+   */
+  g_setenv ("GDK_RENDERING", "image", FALSE);
+
   if (!parse_command_line (&argc, &argv))
     return 1;
 

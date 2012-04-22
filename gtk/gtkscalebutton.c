@@ -21,9 +21,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -35,6 +33,8 @@
 
 #include "config.h"
 
+#include "gtkscalebutton.h"
+
 #ifndef _WIN32
 #define _GNU_SOURCE
 #endif
@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gtkadjustment.h"
 #include "gtkbindings.h"
 #include "gtkframe.h"
 #include "gtkmain.h"
@@ -49,7 +50,6 @@
 #include "gtkorientable.h"
 #include "gtkprivate.h"
 #include "gtkscale.h"
-#include "gtkscalebutton.h"
 #include "gtkstock.h"
 #include "gtkbox.h"
 #include "gtkwindow.h"
@@ -417,6 +417,8 @@ gtk_scale_button_init (GtkScaleButton *button)
   /* the scale */
   priv->scale = gtk_scale_button_scale_new (button);
   gtk_container_add (GTK_CONTAINER (priv->box), priv->scale);
+
+  gtk_widget_add_events (GTK_WIDGET (button), GDK_SCROLL_MASK);
 }
 
 static GObject *
@@ -985,7 +987,7 @@ gtk_scale_popup (GtkWidget *widget,
       monitor = gdk_screen_get_monitor_at_point (screen,
 						 button_event->x_root,
 						 button_event->y_root);
-      gdk_screen_get_monitor_geometry (screen, monitor, &rect);
+      gdk_screen_get_monitor_workarea (screen, monitor, &rect);
 
       if (priv->orientation == GTK_ORIENTATION_VERTICAL)
         y += button_event->y;

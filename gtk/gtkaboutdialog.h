@@ -15,9 +15,7 @@
    Library General Public License for more details.
 
    You should have received a copy of the GNU Library General Public
-   License along with the Gnome Library; see the file COPYING.LIB.  If not,
-   write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.
+   License along with this library. If not, see <http://www.gnu.org/licenses/>.
 
    Author: Anders Carlsson <andersca@codefactory.se>
 */
@@ -159,6 +157,10 @@ void                   gtk_about_dialog_set_logo               (GtkAboutDialog  
 const gchar *          gtk_about_dialog_get_logo_icon_name     (GtkAboutDialog  *about);
 void                   gtk_about_dialog_set_logo_icon_name     (GtkAboutDialog  *about,
                                                                 const gchar     *icon_name);
+GDK_AVAILABLE_IN_3_4
+void                  gtk_about_dialog_add_credit_section      (GtkAboutDialog  *about,
+                                                                const gchar     *section_name,
+                                                                const gchar    **people);
 
 G_END_DECLS
 

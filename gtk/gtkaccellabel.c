@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -445,7 +443,6 @@ gtk_accel_label_draw (GtkWidget *widget,
 
       gtk_style_context_save (context);
       gtk_style_context_add_class (context, GTK_STYLE_CLASS_ACCELERATOR);
-      gtk_style_context_set_state (context, gtk_widget_get_state_flags (widget));
 
       gtk_render_layout (context, cr, x, y, accel_layout);
       gtk_style_context_restore (context);

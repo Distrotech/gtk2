@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -650,6 +648,8 @@ gtk_im_context_xim_new (void)
   GtkIMContextXIM *result;
   const gchar *charset;
 
+  if (!GDK_IS_X11_DISPLAY(gdk_display_get_default()))
+    return NULL;
   result = g_object_new (GTK_TYPE_IM_CONTEXT_XIM, NULL);
 
   result->locale = g_strdup (setlocale (LC_CTYPE, NULL));

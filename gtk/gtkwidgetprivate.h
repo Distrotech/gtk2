@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -26,6 +24,9 @@
 
 #ifndef __GTK_WIDGET_PRIVATE_H__
 #define __GTK_WIDGET_PRIVATE_H__
+
+#include "gtkcsstypesprivate.h"
+#include "gtkwidget.h"
 
 G_BEGIN_DECLS
 
@@ -66,9 +67,6 @@ typedef struct {
 
 void         _gtk_widget_set_visible_flag   (GtkWidget *widget,
                                              gboolean   visible);
-gboolean     _gtk_widget_get_resize_pending (GtkWidget *widget);
-void         _gtk_widget_set_resize_pending (GtkWidget *widget,
-                                             gboolean   resize_pending);
 gboolean     _gtk_widget_get_in_reparent    (GtkWidget *widget);
 void         _gtk_widget_set_in_reparent    (GtkWidget *widget,
                                              gboolean   in_reparent);
@@ -100,6 +98,11 @@ void         _gtk_widget_remove_sizegroup      (GtkWidget    *widget,
 						gpointer      group);
 GSList      *_gtk_widget_get_sizegroups        (GtkWidget    *widget);
 
+void         _gtk_widget_add_attached_window    (GtkWidget    *widget,
+                                                 GtkWindow    *window);
+void         _gtk_widget_remove_attached_window (GtkWidget    *widget,
+                                                 GtkWindow    *window);
+
 void _gtk_widget_override_size_request (GtkWidget *widget,
                                         int        width,
                                         int        height,
@@ -117,6 +120,8 @@ void     _gtk_widget_free_cached_sizes (GtkWidget *widget);
 
 const gchar*      _gtk_widget_get_accel_path               (GtkWidget *widget,
                                                             gboolean  *locked);
+
+AtkObject *       _gtk_widget_peek_accessible              (GtkWidget *widget);
 
 GdkEventExpose *  _gtk_cairo_get_event                     (cairo_t *cr);
 
@@ -160,6 +165,18 @@ GtkStyle *        _gtk_widget_get_style                    (GtkWidget *widget);
 void              _gtk_widget_set_style                    (GtkWidget *widget,
                                                             GtkStyle  *style);
 
+typedef gboolean (*GtkCapturedEventHandler) (GtkWidget *widget, GdkEvent *event);
+
+void              _gtk_widget_set_captured_event_handler (GtkWidget               *widget,
+                                                          GtkCapturedEventHandler  handler);
+
+gboolean          _gtk_widget_captured_event               (GtkWidget *widget,
+                                                            GdkEvent  *event);
+
+GtkWidgetPath *   _gtk_widget_create_path                  (GtkWidget    *widget);
+void              _gtk_widget_invalidate_style_context     (GtkWidget    *widget,
+                                                            GtkCssChange  change);
+void              _gtk_widget_style_context_invalidated    (GtkWidget    *widget);
 
 G_END_DECLS
 

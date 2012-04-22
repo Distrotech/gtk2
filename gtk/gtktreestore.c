@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -1492,11 +1490,11 @@ gtk_tree_store_insert_after (GtkTreeStore *tree_store,
  * @tree_store: A #GtkTreeStore
  * @iter: (out) (allow-none): An unset #GtkTreeIter to set the new row, or %NULL.
  * @parent: (allow-none): A valid #GtkTreeIter, or %NULL
- * @position: position to insert the new row
+ * @position: position to insert the new row, or -1 to append after existing rows
  * @...: pairs of column number and value, terminated with -1
  *
  * Creates a new row at @position. @iter will be changed to point to this
- * new row. If @position is larger than the number of rows on the list, then
+ * new row. If @position is -1, or larger than the number of rows on the list, then
  * the new row will be appended to the list. The row will be filled with
  * the values given to this function.
  *

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -27,6 +25,7 @@
 #include "config.h"
 #include <stdio.h>
 #include "gtk/gtk.h"
+#include <math.h>
 
 /* Backing surface for drawing area */
 
@@ -47,6 +46,9 @@ update_cursor (GtkWidget *widget,  gdouble x, gdouble y)
 {
   static gint cursor_present = 0;
   gint state = !gdk_device_get_has_cursor (current_device) && cursor_proximity;
+
+  x = floor (x);
+  y = floor (y);
 
   if (surface != NULL)
     {
@@ -183,7 +185,8 @@ button_press_event (GtkWidget *widget, GdkEventButton *event)
   current_device = event->device;
   cursor_proximity = TRUE;
 
-  if (event->button == 1 && surface != NULL)
+  if (event->button == GDK_BUTTON_PRIMARY &&
+      surface != NULL)
     {
       gdouble pressure = 0.5;
 

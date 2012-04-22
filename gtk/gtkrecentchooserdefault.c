@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -629,12 +627,8 @@ gtk_recent_chooser_default_dispose (GObject *object)
       impl->load_id = 0;
     }
 
-  if (impl->recent_items)
-    {
-      g_list_foreach (impl->recent_items, (GFunc) gtk_recent_info_unref, NULL);
-      g_list_free (impl->recent_items);
-      impl->recent_items = NULL;
-    }
+  g_list_free_full (impl->recent_items, (GDestroyNotify) gtk_recent_info_unref);
+  impl->recent_items = NULL;
 
   if (impl->manager && impl->manager_changed_id)
     {
@@ -839,10 +833,7 @@ load_recent_items (gpointer user_data)
       /* we have finished loading, so we remove the items cache */
       impl->load_state = LOAD_LOADING;
       
-      g_list_foreach (impl->recent_items,
-      		      (GFunc) gtk_recent_info_unref,
-      		      NULL);
-      g_list_free (impl->recent_items);
+      g_list_free_full (impl->recent_items, (GDestroyNotify) gtk_recent_info_unref);
       
       impl->recent_items = NULL;
       impl->n_recent_items = 0;
@@ -960,7 +951,7 @@ set_default_size (GtkRecentChooserDefault *impl)
   monitor_num = gdk_screen_get_monitor_at_window (screen,
                                                   gtk_widget_get_window (widget));
 
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   width = MIN (width, monitor.width * 3 / 4);
   height = MIN (height, monitor.height * 3 / 4);
@@ -1858,7 +1849,7 @@ popup_position_func (GtkMenu   *menu,
 
   monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
   gtk_menu_set_monitor (menu, monitor_num);
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   *x = CLAMP (*x, monitor.x, monitor.x + MAX (0, monitor.width - req.width));
   *y = CLAMP (*y, monitor.y, monitor.y + MAX (0, monitor.height - req.height));

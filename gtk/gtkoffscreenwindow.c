@@ -10,9 +10,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Cody Russell <crussell@canonical.com>
  *          Alexander Larsson <alexl@redhat.com>
@@ -222,13 +220,10 @@ static void
 gtk_offscreen_window_show (GtkWidget *widget)
 {
   gboolean need_resize;
-  GtkContainer *container;
 
   _gtk_widget_set_visible_flag (widget, TRUE);
 
-  container = GTK_CONTAINER (widget);
-  need_resize = _gtk_container_get_need_resize (container) || !gtk_widget_get_realized (widget);
-  _gtk_container_set_need_resize (container, FALSE);
+  need_resize = _gtk_widget_get_alloc_needed (widget) || !gtk_widget_get_realized (widget);
 
   if (need_resize)
     gtk_offscreen_window_resize (widget);

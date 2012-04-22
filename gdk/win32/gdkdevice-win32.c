@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -45,15 +43,15 @@ static void gdk_device_win32_warp (GdkDevice *device,
                                    GdkScreen *screen,
                                    gint       x,
                                    gint       y);
-static gboolean gdk_device_win32_query_state (GdkDevice        *device,
-                                              GdkWindow        *window,
-                                              GdkWindow       **root_window,
-                                              GdkWindow       **child_window,
-                                              gint             *root_x,
-                                              gint             *root_y,
-                                              gint             *win_x,
-                                              gint             *win_y,
-                                              GdkModifierType  *mask);
+static void gdk_device_win32_query_state (GdkDevice        *device,
+                                          GdkWindow        *window,
+                                          GdkWindow       **root_window,
+                                          GdkWindow       **child_window,
+                                          gint             *root_x,
+                                          gint             *root_y,
+                                          gint             *win_x,
+                                          gint             *win_y,
+                                          GdkModifierType  *mask);
 static GdkGrabStatus gdk_device_win32_grab   (GdkDevice     *device,
                                               GdkWindow     *window,
                                               gboolean       owner_events,
@@ -135,74 +133,6 @@ gdk_device_win32_set_window_cursor (GdkDevice *device,
                                     GdkWindow *window,
                                     GdkCursor *cursor)
 {
-  GdkWin32Cursor *cursor_private;
-  GdkWindow *parent_window;
-  GdkWindowImplWin32 *impl;
-  HCURSOR hcursor;
-  HCURSOR hprevcursor;
-
-  impl = GDK_WINDOW_IMPL_WIN32 (window->impl);
-  cursor_private = (GdkWin32Cursor*) cursor;
-
-  hprevcursor = impl->hcursor;
-
-  if (!cursor)
-    hcursor = NULL;
-  else
-    hcursor = cursor_private->hcursor;
-
-  if (hcursor != NULL)
-    {
-      /* If the pointer is over our window, set new cursor */
-      GdkWindow *curr_window = gdk_window_get_pointer (window, NULL, NULL, NULL);
-
-      if (curr_window == window ||
-          (curr_window && window == gdk_window_get_toplevel (curr_window)))
-        SetCursor (hcursor);
-      else
-        {
-          /* Climb up the tree and find whether our window is the
-           * first ancestor that has cursor defined, and if so, set
-           * new cursor.
-           */
-          while (curr_window && curr_window->impl &&
-                 !GDK_WINDOW_IMPL_WIN32 (curr_window->impl)->hcursor)
-            {
-              curr_window = curr_window->parent;
-              if (curr_window == GDK_WINDOW (window))
-                {
-                  SetCursor (hcursor);
-                  break;
-                }
-            }
-        }
-    }
-
-  /* Unset the previous cursor: Need to make sure it's no longer in
-   * use before we destroy it, in case we're not over our window but
-   * the cursor is still set to our old one.
-   */
-  if (hprevcursor != NULL &&
-      GetCursor () == hprevcursor)
-    {
-      /* Look for a suitable cursor to use instead */
-      hcursor = NULL;
-      parent_window = GDK_WINDOW (window)->parent;
-
-      while (hcursor == NULL)
-        {
-          if (parent_window)
-            {
-              impl = GDK_WINDOW_IMPL_WIN32 (parent_window->impl);
-              hcursor = impl->hcursor;
-              parent_window = parent_window->parent;
-            }
-          else
-            hcursor = LoadCursor (NULL, IDC_ARROW);
-        }
-
-      SetCursor (hcursor);
-    }
 }
 
 static void
@@ -211,7 +141,6 @@ gdk_device_win32_warp (GdkDevice *device,
                        gint       x,
                        gint       y)
 {
-  SetCursorPos (x - _gdk_offset_x, y - _gdk_offset_y);
 }
 
 static GdkModifierType
@@ -240,7 +169,7 @@ get_current_mask (void)
   return mask;
 }
 
-static gboolean
+static void
 gdk_device_win32_query_state (GdkDevice        *device,
                               GdkWindow        *window,
                               GdkWindow       **root_window,
@@ -251,13 +180,8 @@ gdk_device_win32_query_state (GdkDevice        *device,
                               gint             *win_y,
                               GdkModifierType  *mask)
 {
-  gboolean return_val;
   POINT point;
   HWND hwnd, hwndc;
-
-  g_return_val_if_fail (window == NULL || GDK_IS_WINDOW (window), FALSE);
-  
-  return_val = TRUE;
 
   hwnd = GDK_WINDOW_HWND (window);
   GetCursorPos (&point);
@@ -305,8 +229,6 @@ gdk_device_win32_query_state (GdkDevice        *device,
 
   if (mask)
     *mask = get_current_mask ();
-
-  return TRUE;
 }
 
 static GdkGrabStatus
@@ -318,29 +240,21 @@ gdk_device_win32_grab (GdkDevice    *device,
                        GdkCursor    *cursor,
                        guint32       time_)
 {
-  if (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD)
-    SetCapture (GDK_WINDOW_HWND (window));
-
-  return GDK_GRAB_SUCCESS;
+  /* No support for grabbing the slave atm */
+  return GDK_GRAB_NOT_VIEWABLE;
 }
 
 static void
 gdk_device_win32_ungrab (GdkDevice *device,
                          guint32    time_)
 {
-  GdkDeviceGrabInfo *info;
-  GdkDisplay *display;
+}
 
-  display = gdk_device_get_display (device);
-  info = _gdk_display_get_last_device_grab (display, device);
-
-  if (info)
-    info->serial_end = 0;
-
-  if (gdk_device_get_source (device) != GDK_SOURCE_KEYBOARD)
-    ReleaseCapture ();
-
-  _gdk_display_device_grab_update (display, device, NULL, 0);
+static void
+screen_to_client (HWND hwnd, POINT screen_pt, POINT *client_pt)
+{
+  *client_pt = screen_pt;
+  ScreenToClient (hwnd, client_pt);
 }
 
 static GdkWindow *
@@ -350,45 +264,75 @@ gdk_device_win32_window_at_position (GdkDevice       *device,
                                      GdkModifierType *mask,
                                      gboolean         get_toplevel)
 {
-  GdkWindow *window;
-  POINT point, pointc;
+  GdkWindow *window = NULL;
+  POINT screen_pt, client_pt;
   HWND hwnd, hwndc;
   RECT rect;
 
-  GetCursorPos (&pointc);
-  point = pointc;
-  hwnd = WindowFromPoint (point);
+  GetCursorPos (&screen_pt);
 
-  if (hwnd == NULL)
+  if (get_toplevel)
     {
-      window = _gdk_root;
-      *win_x = pointc.x + _gdk_offset_x;
-      *win_y = pointc.y + _gdk_offset_y;
-      return window;
+      /* Only consider visible children of the desktop to avoid the various
+       * non-visible windows you often find on a running Windows box. These
+       * might overlap our windows and cause our walk to fail. As we assume
+       * WindowFromPoint() can find our windows, we follow similar logic
+       * here, and ignore invisible and disabled windows.
+       */
+      hwnd = GetDesktopWindow ();
+      do {
+        window = gdk_win32_handle_table_lookup (hwnd);
+
+        if (window != NULL &&
+            GDK_WINDOW_TYPE (window) != GDK_WINDOW_ROOT &&
+            GDK_WINDOW_TYPE (window) != GDK_WINDOW_FOREIGN)
+          break;
+
+        screen_to_client (hwnd, screen_pt, &client_pt);
+        hwndc = ChildWindowFromPointEx (hwnd, client_pt, CWP_SKIPDISABLED  |
+                                                         CWP_SKIPINVISIBLE);
+
+	/* Verify that we're really inside the client area of the window */
+	if (hwndc != hwnd)
+	  {
+	    GetClientRect (hwndc, &rect);
+	    screen_to_client (hwndc, screen_pt, &client_pt);
+	    if (!PtInRect (&rect, client_pt))
+	      hwndc = hwnd;
+	  }
+
+      } while (hwndc != hwnd && (hwnd = hwndc, 1));
+
     }
-
-  ScreenToClient (hwnd, &point);
-
-  do
+  else
     {
-      if (get_toplevel &&
-          (window = gdk_win32_handle_table_lookup (hwnd)) != NULL &&
-          GDK_WINDOW_TYPE (window) != GDK_WINDOW_FOREIGN)
-        break;
+      hwnd = WindowFromPoint (screen_pt);
 
-      hwndc = ChildWindowFromPoint (hwnd, point);
-      ClientToScreen (hwnd, &point);
-      ScreenToClient (hwndc, &point);
+      /* Verify that we're really inside the client area of the window */
+      GetClientRect (hwnd, &rect);
+      screen_to_client (hwnd, screen_pt, &client_pt);
+      if (!PtInRect (&rect, client_pt))
+	hwnd = NULL;
+
+      /* If we didn't hit any window at that point, return the desktop */
+      if (hwnd == NULL)
+        {
+          if (win_x)
+            *win_x = screen_pt.x + _gdk_offset_x;
+          if (win_y)
+            *win_y = screen_pt.y + _gdk_offset_y;
+          return _gdk_root;
+        }
+
+      window = gdk_win32_handle_table_lookup (hwnd);
     }
-  while (hwndc != hwnd && (hwnd = hwndc, 1));
-
-  window = gdk_win32_handle_table_lookup (hwnd);
 
   if (window && (win_x || win_y))
     {
-      GetClientRect (hwnd, &rect);
-      *win_x = point.x - rect.left;
-      *win_y = point.y - rect.top;
+      if (win_x)
+        *win_x = client_pt.x;
+      if (win_y)
+        *win_y = client_pt.y;
     }
 
   return window;

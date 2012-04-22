@@ -12,13 +12,13 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GDK_DEVICE_MANAGER_PRIVATE_CORE_H__
 #define __GDK_DEVICE_MANAGER_PRIVATE_CORE_H__
+
+#include <X11/Xlib.h>
 
 #include "gdkx11devicemanager-core.h"
 #include "gdkdevicemanagerprivate.h"
@@ -36,6 +36,14 @@ struct _GdkX11DeviceManagerCoreClass
 {
   GdkDeviceManagerClass parent_class;
 };
+
+void            _gdk_device_manager_core_handle_focus           (GdkWindow   *window,
+                                                                 Window       original,
+                                                                 GdkDevice   *device,
+                                                                 GdkDevice   *source_device,
+                                                                 gboolean     focus_in,
+                                                                 int          detail,
+                                                                 gboolean     in);
 
 G_END_DECLS
 

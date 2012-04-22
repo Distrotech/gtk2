@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -430,14 +428,14 @@ pattern_set_bg (GtkWidget   *widget,
 		GdkWindow   *child,
 		gint         level)
 {
-  static const GdkColor colors[] = {
-    { 0, 0x4444, 0x4444, 0xffff },
-    { 0, 0x8888, 0x8888, 0xffff },
-    { 0, 0xaaaa, 0xaaaa, 0xffff }
+  static GdkRGBA colors[] = {
+    { 0.27, 0.27, 1.0, 1.0 },
+    { 0.53, 0.53, 1.0, 1.0},
+    { 0.67, 0.67, 1.0, 1.0 }
   };
     
   gdk_window_set_user_data (child, widget);
-  gdk_window_set_background (child, &colors[level]);
+  gdk_window_set_background_rgba (child, &colors[level]);
 }
 
 static void
@@ -2121,11 +2119,11 @@ grippy_button_press (GtkWidget *area, GdkEventButton *event, GdkWindowEdge edge)
 {
   if (event->type == GDK_BUTTON_PRESS) 
     {
-      if (event->button == 1)
+      if (event->button == GDK_BUTTON_PRIMARY)
 	gtk_window_begin_resize_drag (GTK_WINDOW (gtk_widget_get_toplevel (area)), edge,
 				      event->button, event->x_root, event->y_root,
 				      event->time);
-      else if (event->button == 2)
+      else if (event->button == GDK_BUTTON_MIDDLE)
 	gtk_window_begin_move_drag (GTK_WINDOW (gtk_widget_get_toplevel (area)), 
 				    event->button, event->x_root, event->y_root,
 				    event->time);
@@ -3298,35 +3296,16 @@ static void
 cmw_color (GtkWidget *widget, GtkWidget *parent)
 {
     GtkWidget *csd;
-    GtkWidget *colorsel;
-    GtkWidget *ok_button, *cancel_button;
 
-    csd = gtk_color_selection_dialog_new ("This is a modal color selection dialog");
+    csd = gtk_color_chooser_dialog_new ("This is a modal color selection dialog", GTK_WINDOW (parent));
 
-    gtk_window_set_screen (GTK_WINDOW (csd), gtk_widget_get_screen (parent));
-
-    colorsel = gtk_color_selection_dialog_get_color_selection (GTK_COLOR_SELECTION_DIALOG (csd));
-    gtk_color_selection_set_has_palette (GTK_COLOR_SELECTION (colorsel),
-                                         TRUE);
-    
     /* Set as modal */
     gtk_window_set_modal (GTK_WINDOW(csd),TRUE);
 
-    /* And mark it as a transient dialog */
-    gtk_window_set_transient_for (GTK_WINDOW (csd), GTK_WINDOW (parent));
-    
     g_signal_connect (csd, "destroy",
 		      G_CALLBACK (cmw_destroy_cb), NULL);
-
-    g_object_get (csd,
-                  "ok-button", &ok_button,
-                  "cancel-button", &cancel_button,
-                  NULL);
-
-    g_signal_connect_swapped (ok_button,
-			     "clicked", G_CALLBACK (gtk_widget_destroy), csd);
-    g_signal_connect_swapped (cancel_button,
-			     "clicked", G_CALLBACK (gtk_widget_destroy), csd);
+    g_signal_connect (csd, "response",
+                      G_CALLBACK (gtk_widget_destroy), NULL);
     
     /* wait until destroy calls gtk_main_quit */
     gtk_widget_show (csd);    
@@ -3656,7 +3635,7 @@ entry_progress_timeout (gpointer data)
       gtk_entry_set_progress_fraction (GTK_ENTRY (data), fraction);
     }
 
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 static void
@@ -4631,10 +4610,10 @@ cursor_event (GtkWidget          *widget,
 	      GtkSpinButton	 *spinner)
 {
   if ((event->type == GDK_BUTTON_PRESS) &&
-      ((event->button.button == 1) ||
-       (event->button.button == 3)))
+      ((event->button.button == GDK_BUTTON_PRIMARY) ||
+       (event->button.button == GDK_BUTTON_SECONDARY)))
     {
-      gtk_spin_button_spin (spinner, event->button.button == 1 ?
+      gtk_spin_button_spin (spinner, event->button.button == GDK_BUTTON_PRIMARY ?
 			    GTK_SPIN_STEP_FORWARD : GTK_SPIN_STEP_BACKWARD, 0);
       return TRUE;
     }
@@ -4812,55 +4791,6 @@ create_cursors (GtkWidget *widget)
  */
 
 void
-color_selection_ok (GtkWidget               *w,
-                    GtkColorSelectionDialog *cs)
-{
-  GtkWidget *colorsel;
-  GdkColor color;
-
-  colorsel = gtk_color_selection_dialog_get_color_selection (cs);
-
-  gtk_color_selection_get_current_color (GTK_COLOR_SELECTION (colorsel), &color);
-  gtk_color_selection_set_current_color (GTK_COLOR_SELECTION (colorsel), &color);
-}
-
-void
-color_selection_changed (GtkWidget *w,
-                         GtkColorSelectionDialog *cs)
-{
-  GtkWidget *colorsel;
-  GdkColor color;
-
-  colorsel = gtk_color_selection_dialog_get_color_selection (cs);
-  gtk_color_selection_get_current_color (GTK_COLOR_SELECTION (colorsel), &color);
-  gtk_color_selection_set_current_color (GTK_COLOR_SELECTION (colorsel), &color);
-}
-
-#if 0 /* unused */
-static void
-opacity_toggled_cb (GtkWidget *w,
-		    GtkColorSelectionDialog *cs)
-{
-  GtkColorSelection *colorsel;
-
-  colorsel = GTK_COLOR_SELECTION (cs->colorsel);
-  gtk_color_selection_set_has_opacity_control (colorsel,
-					       gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (w)));
-}
-
-static void
-palette_toggled_cb (GtkWidget *w,
-		    GtkColorSelectionDialog *cs)
-{
-  GtkColorSelection *colorsel;
-
-  colorsel = GTK_COLOR_SELECTION (cs->colorsel);
-  gtk_color_selection_set_has_palette (colorsel,
-				       gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (w)));
-}
-#endif
-
-void
 create_color_selection (GtkWidget *widget)
 {
   static GtkWidget *window = NULL;
@@ -4891,7 +4821,7 @@ create_color_selection (GtkWidget *widget)
       gtk_container_add (GTK_CONTAINER (hbox), label);
 
       picker = gtk_color_button_new ();
-      gtk_color_button_set_use_alpha (GTK_COLOR_BUTTON (picker), TRUE);
+      gtk_color_chooser_set_use_alpha (GTK_COLOR_CHOOSER (picker), TRUE);
       gtk_container_add (GTK_CONTAINER (hbox), picker);
 
       button = gtk_button_new_with_mnemonic ("_Props");
@@ -6069,6 +5999,31 @@ create_notebook (GtkWidget *widget)
     gtk_widget_destroy (window);
 }
 
+void
+create_settings (GtkWidget *widget)
+{
+  static GtkWidget *window = NULL;
+
+  if (!window)
+    {
+      window = create_prop_editor (G_OBJECT (gtk_settings_get_default ()), 0);
+      gtk_window_set_screen (GTK_WINDOW (window),
+                             gtk_widget_get_screen (widget));
+
+      gtk_widget_hide (window);
+      gtk_window_set_title (GTK_WINDOW (window), "GTK+ Settings");
+
+      g_signal_connect (window, "destroy",
+                        G_CALLBACK (gtk_widget_destroyed),
+                        &window);
+    }
+
+  if (!gtk_widget_get_visible (window))
+    gtk_widget_show (window);
+  else
+    gtk_widget_destroy (window);
+}
+
 /*
  * GtkPanes
  */
@@ -6671,7 +6626,6 @@ shape_motion (GtkWidget      *widget,
 {
   gint xp, yp;
   CursorOffset * p;
-  GdkModifierType mask;
 
   p = g_object_get_data (G_OBJECT (widget), "cursor_offset");
 
@@ -6679,7 +6633,9 @@ shape_motion (GtkWidget      *widget,
    * Can't use event->x / event->y here 
    * because I need absolute coordinates.
    */
-  gdk_window_get_pointer (NULL, &xp, &yp, &mask);
+  gdk_window_get_device_position (gdk_screen_get_root_window (gtk_widget_get_screen (widget)),
+                                  gdk_event_get_device ((GdkEvent *) event),
+                                  &xp, &yp, NULL);
   gtk_window_move (GTK_WINDOW (widget), xp  - p->x, yp  - p->y);
 }
 
@@ -8321,8 +8277,9 @@ find_widget_at_pointer (GdkDevice *device)
 
  if (widget)
    {
-     gdk_window_get_pointer (gtk_widget_get_window (widget),
-			     &x, &y, NULL);
+     gdk_window_get_device_position (gtk_widget_get_window (widget),
+                                     device,
+			             &x, &y, NULL);
      
      data.x = x;
      data.y = y;
@@ -9094,7 +9051,7 @@ idle_test (GtkWidget *label)
   sprintf (buffer, "count: %d", ++count);
   gtk_label_set_text (GTK_LABEL (label), buffer);
 
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 static void
@@ -9712,6 +9669,7 @@ struct {
   { "rotated text", create_rotated_text },
   { "saved position", create_saved_position },
   { "scrolled windows", create_scrolled_windows },
+  { "settings", create_settings },
   { "shapes", create_shapes },
   { "size groups", create_size_groups },
   { "snapshot", create_snapshot },

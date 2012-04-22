@@ -18,8 +18,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -164,9 +163,9 @@ gtk_link_button_class_init (GtkLinkButtonClass *klass)
   klass->activate_link = gtk_link_button_activate_link;
 
   /**
-   * GtkLinkButton:uri
-   * 
-   * The URI bound to this button. 
+   * GtkLinkButton:uri:
+   *
+   * The URI bound to this button.
    *
    * Since: 2.10
    */
@@ -178,8 +177,8 @@ gtk_link_button_class_init (GtkLinkButtonClass *klass)
   				   			NULL,
   				   			G_PARAM_READWRITE));
   /**
-   * GtkLinkButton:visited
-   * 
+   * GtkLinkButton:visited:
+   *
    * The 'visited' state of this button. A visited link is drawn in a
    * different color.
    *
@@ -446,7 +445,7 @@ popup_position_func (GtkMenu  *menu,
 
   monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
   gtk_menu_set_monitor (menu, monitor_num);
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   *x = CLAMP (*x, monitor.x, monitor.x + MAX (0, monitor.width - req.width));
   *y = CLAMP (*y, monitor.y, monitor.y + MAX (0, monitor.height - req.height));

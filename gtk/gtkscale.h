@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -90,6 +88,11 @@ gint              gtk_scale_get_digits         (GtkScale        *scale);
 void              gtk_scale_set_draw_value     (GtkScale        *scale,
                                                 gboolean         draw_value);
 gboolean          gtk_scale_get_draw_value     (GtkScale        *scale);
+GDK_AVAILABLE_IN_3_4
+void              gtk_scale_set_has_origin     (GtkScale        *scale,
+                                                gboolean         has_origin);
+GDK_AVAILABLE_IN_3_4
+gboolean          gtk_scale_get_has_origin     (GtkScale        *scale);
 void              gtk_scale_set_value_pos      (GtkScale        *scale,
                                                 GtkPositionType  pos);
 GtkPositionType   gtk_scale_get_value_pos      (GtkScale        *scale);

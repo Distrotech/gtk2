@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,7 +29,7 @@
 #include "gtkaccelgroup.h"
 #include "gtkaccelgroupprivate.h"
 #include "gtkaccellabel.h"
-#include "gtkaccelmap.h"
+#include "gtkaccelmapprivate.h"
 #include "gtkintl.h"
 #include "gtkmarshalers.h"
 #include "gtkprivate.h"
@@ -1323,8 +1321,6 @@ gtk_accelerator_parse_with_keycode (const gchar     *accelerator,
                gchar *endptr;
                gint tmp_keycode;
 
-               keyval = GDK_KEY_VoidSymbol;
-
                memcpy (keystring, accelerator, 4);
                keystring [4] = '\000';
 
@@ -1367,7 +1363,7 @@ gtk_accelerator_parse_with_keycode (const gchar     *accelerator,
 		}
 	    }
 
-          if (keyval != GDK_KEY_VoidSymbol && accelerator_codes != NULL)
+          if (keyval && accelerator_codes != NULL)
             {
               GdkKeymapKey *keys;
               gint n_keys, i, j;
@@ -1382,9 +1378,27 @@ gtk_accelerator_parse_with_keycode (const gchar     *accelerator,
                 {
                   *accelerator_codes = g_new0 (guint, n_keys + 1);
 
+                  /* Prefer level-0 group-0 keys to modified keys */
                   for (i = 0, j = 0; i < n_keys; ++i)
                     {
-                      if (keys[i].level == 0)
+                      if (keys[i].level == 0 && keys[i].group == 0)
+                        (*accelerator_codes)[j++] = keys[i].keycode;
+                    }
+
+                  /* No level-0 group-0 keys? Find in the whole group-0 */
+                  if (j == 0)
+                    {
+                      for (i = 0, j = 0; i < n_keys; ++i)
+                        {
+                          if (keys[i].group == 0)
+                            (*accelerator_codes)[j++] = keys[i].keycode;
+                        }
+                    }
+
+                  /* Still nothing? Try in other groups */
+                  if (j == 0)
+                    {
+                      for (i = 0, j = 0; i < n_keys; ++i)
                         (*accelerator_codes)[j++] = keys[i].keycode;
                     }
 

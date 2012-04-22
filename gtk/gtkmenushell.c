@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -42,6 +40,7 @@
 #include "gtkbindings.h"
 #include "gtkkeyhash.h"
 #include "gtklabel.h"
+#include "gtkmain.h"
 #include "gtkmarshalers.h"
 #include "gtkmenubar.h"
 #include "gtkmenuitemprivate.h"
@@ -50,6 +49,7 @@
 #include "gtkmnemonichash.h"
 #include "gtkwindow.h"
 #include "gtkprivate.h"
+#include "gtkmain.h"
 #include "gtkintl.h"
 #include "gtktypebuiltins.h"
 
@@ -612,7 +612,8 @@ gtk_menu_shell_deactivate (GtkMenuShell *menu_shell)
 {
   g_return_if_fail (GTK_IS_MENU_SHELL (menu_shell));
 
-  g_signal_emit (menu_shell, menu_shell_signals[DEACTIVATE], 0);
+  if (menu_shell->priv->active)
+    g_signal_emit (menu_shell, menu_shell_signals[DEACTIVATE], 0);
 }
 
 static void
@@ -1082,13 +1083,11 @@ gtk_menu_shell_enter_notify (GtkWidget        *widget,
 
                   if (!gtk_widget_get_visible (GTK_MENU_ITEM (menu_item)->priv->submenu))
                     {
-                      gboolean touchscreen_mode;
+                      GdkDevice *source_device;
 
-                      g_object_get (gtk_widget_get_settings (widget),
-                                    "gtk-touchscreen-mode", &touchscreen_mode,
-                                    NULL);
+                      source_device = gdk_event_get_source_device ((GdkEvent *) event);
 
-                      if (touchscreen_mode)
+                      if (gdk_device_get_source (source_device) == GDK_SOURCE_TOUCHSCREEN)
                         _gtk_menu_item_popup_submenu (menu_item, TRUE);
                     }
                 }
@@ -1610,15 +1609,10 @@ gtk_real_menu_shell_move_current (GtkMenuShell         *menu_shell,
   GtkMenuShellPrivate *priv = menu_shell->priv;
   GtkMenuShell *parent_menu_shell = NULL;
   gboolean had_selection;
-  gboolean touchscreen_mode;
 
   priv->in_unselectable_item = FALSE;
 
   had_selection = priv->active_menu_item != NULL;
-
-  g_object_get (gtk_widget_get_settings (GTK_WIDGET (menu_shell)),
-                "gtk-touchscreen-mode", &touchscreen_mode,
-                NULL);
 
   if (priv->parent_menu_shell)
     parent_menu_shell = GTK_MENU_SHELL (priv->parent_menu_shell);
@@ -1626,29 +1620,8 @@ gtk_real_menu_shell_move_current (GtkMenuShell         *menu_shell,
   switch (direction)
     {
     case GTK_MENU_DIR_PARENT:
-      if (touchscreen_mode &&
-          priv->active_menu_item &&
-          GTK_MENU_ITEM (priv->active_menu_item)->priv->submenu &&
-          gtk_widget_get_visible (GTK_MENU_ITEM (priv->active_menu_item)->priv->submenu))
+      if (parent_menu_shell)
         {
-          /* if we are on a menu item that has an open submenu but the
-           * focus is not in that submenu (e.g. because it's empty or
-           * has only insensitive items), close that submenu instead of
-           * running into the code below which would close *this* menu.
-           */
-          _gtk_menu_item_popdown_submenu (priv->active_menu_item);
-          _gtk_menu_shell_update_mnemonics (menu_shell);
-        }
-      else if (parent_menu_shell)
-        {
-          if (touchscreen_mode)
-            {
-              /* close menu when returning from submenu. */
-              _gtk_menu_item_popdown_submenu (GTK_MENU (menu_shell)->priv->parent_menu_item);
-              _gtk_menu_shell_update_mnemonics (parent_menu_shell);
-              break;
-            }
-
           if (GTK_MENU_SHELL_GET_CLASS (parent_menu_shell)->submenu_placement ==
               GTK_MENU_SHELL_GET_CLASS (menu_shell)->submenu_placement)
             gtk_menu_shell_deselect (menu_shell);

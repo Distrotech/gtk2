@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -27,13 +25,16 @@ struct _GdkWin32Screen
 {
   GdkScreen parent_instance;
 };
+
 struct _GdkWin32ScreenClass
 {
   GdkScreenClass parent_class;
 };
+
 G_DEFINE_TYPE (GdkWin32Screen, gdk_win32_screen, GDK_TYPE_SCREEN)
+
 static void
-gdk_win32_screen_init(GdkWin32Screen *display)
+gdk_win32_screen_init (GdkWin32Screen *display)
 {
 }
 
@@ -91,45 +92,41 @@ gdk_win32_screen_get_primary_monitor (GdkScreen *screen)
 
 static gint
 gdk_win32_screen_get_monitor_width_mm (GdkScreen *screen,
-                                 gint       num_monitor)
+                                       gint       num_monitor)
 {
   g_return_val_if_fail (screen == _gdk_screen, 0);
   g_return_val_if_fail (num_monitor < _gdk_num_monitors, 0);
-  g_return_val_if_fail (num_monitor >= 0, 0);
 
   return _gdk_monitors[num_monitor].width_mm;
 }
 
 static gint
 gdk_win32_screen_get_monitor_height_mm (GdkScreen *screen,
-                                  gint       num_monitor)
+                                        gint       num_monitor)
 {
   g_return_val_if_fail (screen == _gdk_screen, 0);
   g_return_val_if_fail (num_monitor < _gdk_num_monitors, 0);
-  g_return_val_if_fail (num_monitor >= 0, 0);
 
   return _gdk_monitors[num_monitor].height_mm;
 }
 
 static gchar *
 gdk_win32_screen_get_monitor_plug_name (GdkScreen *screen,
-                                  gint       num_monitor)
+                                        gint       num_monitor)
 {
   g_return_val_if_fail (screen == _gdk_screen, 0);
   g_return_val_if_fail (num_monitor < _gdk_num_monitors, 0);
-  g_return_val_if_fail (num_monitor >= 0, 0);
 
   return g_strdup (_gdk_monitors[num_monitor].name);
 }
 
 static void
-gdk_win32_screen_get_monitor_geometry (GdkScreen    *screen, 
-				 gint          num_monitor,
-				 GdkRectangle *dest)
+gdk_win32_screen_get_monitor_geometry (GdkScreen    *screen,
+                                       gint          num_monitor,
+                                       GdkRectangle *dest)
 {
   g_return_if_fail (screen == _gdk_screen);
   g_return_if_fail (num_monitor < _gdk_num_monitors);
-  g_return_if_fail (num_monitor >= 0);
 
   *dest = _gdk_monitors[num_monitor].rect;
 }
@@ -141,16 +138,16 @@ gdk_win32_screen_get_rgba_visual (GdkScreen *screen)
 
   return NULL;
 }
-  
+
 static gint
 gdk_win32_screen_get_number (GdkScreen *screen)
 {
-  g_return_val_if_fail (screen == _gdk_screen, 0);  
-  
+  g_return_val_if_fail (screen == _gdk_screen, 0);
+
   return 0;
 }
 
-gchar * 
+gchar *
 _gdk_windowing_substitute_screen_number (const gchar *display_name,
 					 int          screen_number)
 {
@@ -222,6 +219,7 @@ gdk_win32_screen_class_init (GdkWin32ScreenClass *klass)
   screen_class->get_monitor_height_mm = gdk_win32_screen_get_monitor_height_mm;
   screen_class->get_monitor_plug_name = gdk_win32_screen_get_monitor_plug_name;
   screen_class->get_monitor_geometry = gdk_win32_screen_get_monitor_geometry;
+  screen_class->get_monitor_workarea = gdk_win32_screen_get_monitor_geometry;
   screen_class->get_system_visual = _gdk_win32_screen_get_system_visual;
   screen_class->get_rgba_visual = gdk_win32_screen_get_rgba_visual;
   screen_class->is_composited = gdk_win32_screen_is_composited;

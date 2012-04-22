@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -379,6 +377,27 @@ gdk_keymap_get_num_lock_state (GdkKeymap *keymap)
 }
 
 /**
+ * gdk_keymap_get_modifier_state:
+ * @keymap: a #GdkKeymap
+ *
+ * Returns the current modifier state.
+ *
+ * Returns: the current modifier state.
+ *
+ * Since: 3.4
+ */
+guint
+gdk_keymap_get_modifier_state (GdkKeymap *keymap)
+{
+  g_return_val_if_fail (GDK_IS_KEYMAP (keymap), FALSE);
+
+  if (GDK_KEYMAP_GET_CLASS (keymap)->get_modifier_state)
+    return GDK_KEYMAP_GET_CLASS (keymap)->get_modifier_state (keymap);
+
+  return 0;
+}
+
+/**
  * gdk_keymap_get_entries_for_keyval:
  * @keymap: a #GdkKeymap
  * @keyval: a keyval, such as %GDK_a, %GDK_Up, %GDK_Return, etc.
@@ -407,6 +426,9 @@ gdk_keymap_get_entries_for_keyval (GdkKeymap     *keymap,
                                    gint          *n_keys)
 {
   g_return_val_if_fail (GDK_IS_KEYMAP (keymap), FALSE);
+  g_return_val_if_fail (keys != NULL, FALSE);
+  g_return_val_if_fail (n_keys != NULL, FALSE);
+  g_return_val_if_fail (keyval != 0, FALSE);
 
   return GDK_KEYMAP_GET_CLASS (keymap)->get_entries_for_keyval (keymap, keyval,
                                                                 keys, n_keys);
@@ -439,6 +461,7 @@ gdk_keymap_get_entries_for_keycode (GdkKeymap     *keymap,
                                     gint          *n_entries)
 {
   g_return_val_if_fail (GDK_IS_KEYMAP (keymap), FALSE);
+  g_return_val_if_fail (n_entries != NULL, FALSE);
 
   return GDK_KEYMAP_GET_CLASS (keymap)->get_entries_for_keycode (keymap, hardware_keycode,
                                                                  keys, keyvals, n_entries);
@@ -462,6 +485,7 @@ gdk_keymap_lookup_key (GdkKeymap          *keymap,
                        const GdkKeymapKey *key)
 {
   g_return_val_if_fail (GDK_IS_KEYMAP (keymap), 0);
+  g_return_val_if_fail (key != NULL, 0);
 
   return GDK_KEYMAP_GET_CLASS (keymap)->lookup_key (keymap, key);
 }
@@ -633,6 +657,9 @@ gdk_keymap_real_get_modifier_mask (GdkKeymap         *keymap,
 
     case GDK_MODIFIER_INTENT_NO_TEXT_INPUT:
       return GDK_MOD1_MASK | GDK_CONTROL_MASK;
+
+    case GDK_MODIFIER_INTENT_SHIFT_GROUP:
+      return 0;
 
     default:
       g_return_val_if_reached (0);

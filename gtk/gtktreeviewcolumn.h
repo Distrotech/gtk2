@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -142,6 +140,7 @@ gboolean                gtk_tree_view_column_get_resizable       (GtkTreeViewCol
 void                    gtk_tree_view_column_set_sizing          (GtkTreeViewColumn       *tree_column,
 								  GtkTreeViewColumnSizing  type);
 GtkTreeViewColumnSizing gtk_tree_view_column_get_sizing          (GtkTreeViewColumn       *tree_column);
+GDK_AVAILABLE_IN_3_2
 gint                    gtk_tree_view_column_get_x_offset        (GtkTreeViewColumn       *tree_column);
 gint                    gtk_tree_view_column_get_width           (GtkTreeViewColumn       *tree_column);
 gint                    gtk_tree_view_column_get_fixed_width     (GtkTreeViewColumn       *tree_column);

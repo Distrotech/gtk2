@@ -30,14 +30,15 @@ EXTRA_DIST += 			\
 	gdk.symbols		\
 	gdkenumtypes.c.template	\
 	gdkenumtypes.h.template	\
+	gdkversionmacros.h.in	\
 	abicheck.sh
 
 AM_CPPFLAGS = 				\
 	-DG_LOG_DOMAIN=\"Gdk\"		\
 	-DGDK_COMPILATION		\
-	-I$(top_srcdir)			\
 	-I$(top_builddir)		\
 	-I$(top_builddir)/gdk		\
+	-I$(top_srcdir)			\
 	$(GTK_DEBUG_FLAGS)		\
 	$(GDK_DEP_CFLAGS)
 
@@ -138,6 +139,7 @@ gdk_built_sources = 				\
 	gdkenumtypes.c				\
 	gdkmarshalers.h 			\
 	gdkmarshalers.c				\
+	gdkversionmacros.h			\
 	gdkenumtypes.h
 
 #
@@ -145,7 +147,7 @@ gdk_built_sources = 				\
 #
 
 gdkincludedir = $(includedir)/gtk-3.0/gdk
-gdkinclude_HEADERS = $(gdk_public_h_sources) gdkenumtypes.h
+gdkinclude_HEADERS = $(gdk_public_h_sources) gdkenumtypes.h gdkversionmacros.h
 nodist_gdkinclude_HEADERS = gdkconfig.h
 
 common_sources = 		\
@@ -209,10 +211,8 @@ x11_introspection_files = 		\
 	x11/gdkdevice-core-x11.c	\
 	x11/gdkdevicemanager-core-x11.c	\
 	x11/gdkdevicemanager-x11.c	\
-	x11/gdkdevicemanager-xi.c	\
 	x11/gdkdevicemanager-xi2.c	\
 	x11/gdkdevice-xi2.c		\
-	x11/gdkdevice-xi.c		\
 	x11/gdkdisplay-x11.c		\
 	x11/gdkdnd-x11.c		\
 	x11/gdkeventsource.c		\

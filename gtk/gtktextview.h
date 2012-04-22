@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -188,10 +186,10 @@ void gtk_text_view_window_to_buffer_coords (GtkTextView       *text_view,
                                             gint              *buffer_x,
                                             gint              *buffer_y);
 
-#ifndef GTK_DISABLE_DEPRECATED
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_hadjustment)
 GtkAdjustment*   gtk_text_view_get_hadjustment (GtkTextView   *text_view);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_vadjustment)
 GtkAdjustment*   gtk_text_view_get_vadjustment (GtkTextView   *text_view);
-#endif
 
 GdkWindow*        gtk_text_view_get_window      (GtkTextView       *text_view,
                                                  GtkTextWindowType  win);

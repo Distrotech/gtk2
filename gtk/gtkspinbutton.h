@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -36,7 +34,6 @@
 
 
 #include <gtk/gtkentry.h>
-#include <gtk/gtkadjustment.h>
 
 
 G_BEGIN_DECLS
@@ -207,7 +204,9 @@ gboolean        gtk_spin_button_get_snap_to_ticks  (GtkSpinButton  *spin_button)
 void            gtk_spin_button_update             (GtkSpinButton  *spin_button);
 
 /* private */
-GdkWindow*      _gtk_spin_button_get_panel         (GtkSpinButton  *spin_button);
+void            _gtk_spin_button_get_panels        (GtkSpinButton  *spin_button,
+                                                    GdkWindow     **down_panel,
+                                                    GdkWindow     **up_panel);
 
 G_END_DECLS
 

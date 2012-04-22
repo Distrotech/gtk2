@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_CELL_ACCESSIBLE_PARENT_H__
@@ -58,6 +56,18 @@ struct _GtkCellAccessibleParentIface
                                  GdkRectangle            *cell_rect);
   gboolean ( *grab_focus)       (GtkCellAccessibleParent *parent,
                                  GtkCellAccessible       *cell);
+  int      ( *get_child_index)  (GtkCellAccessibleParent *parent,
+                                 GtkCellAccessible       *cell);
+  GtkCellRendererState
+           ( *get_renderer_state) (GtkCellAccessibleParent *parent,
+                                 GtkCellAccessible       *cell);
+  /* actions */
+  void     ( *expand_collapse)  (GtkCellAccessibleParent *parent,
+                                 GtkCellAccessible       *cell);
+  void     ( *activate)         (GtkCellAccessibleParent *parent,
+                                 GtkCellAccessible       *cell);
+  void     ( *edit)             (GtkCellAccessibleParent *parent,
+                                 GtkCellAccessible       *cell);
 };
 
 GType    _gtk_cell_accessible_parent_get_type         (void);
@@ -73,6 +83,17 @@ void     _gtk_cell_accessible_parent_get_cell_area    (GtkCellAccessibleParent *
                                                        GtkCellAccessible       *cell,
                                                        GdkRectangle            *cell_rect);
 gboolean _gtk_cell_accessible_parent_grab_focus       (GtkCellAccessibleParent *parent,
+                                                       GtkCellAccessible       *cell);
+int      _gtk_cell_accessible_parent_get_child_index  (GtkCellAccessibleParent *parent,
+                                                       GtkCellAccessible       *cell);
+GtkCellRendererState
+         _gtk_cell_accessible_parent_get_renderer_state(GtkCellAccessibleParent *parent,
+                                                       GtkCellAccessible       *cell);
+void     _gtk_cell_accessible_parent_expand_collapse  (GtkCellAccessibleParent *parent,
+                                                       GtkCellAccessible       *cell);
+void     _gtk_cell_accessible_parent_activate         (GtkCellAccessibleParent *parent,
+                                                       GtkCellAccessible       *cell);
+void     _gtk_cell_accessible_parent_edit             (GtkCellAccessibleParent *parent,
                                                        GtkCellAccessible       *cell);
 
 G_END_DECLS

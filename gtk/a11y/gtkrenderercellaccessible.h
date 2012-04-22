@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_RENDERER_CELL_ACCESSIBLE_H__
@@ -44,16 +42,11 @@ struct _GtkRendererCellAccessible
 struct _GtkRendererCellAccessibleClass
 {
   GtkCellAccessibleClass parent_class;
-  gchar **property_list;
-  gboolean (*update_cache) (GtkRendererCellAccessible *cell,
-                            gboolean                   emit_change_signal);
 };
 
 GType      _gtk_renderer_cell_accessible_get_type     (void);
 
-AtkObject *_gtk_renderer_cell_accessible_new          (void);
-gboolean   _gtk_renderer_cell_accessible_update_cache (GtkRendererCellAccessible *cell,
-                                                       gboolean          emit_change_signal);
+AtkObject *_gtk_renderer_cell_accessible_new          (GtkCellRenderer * renderer);
 
 G_END_DECLS
 

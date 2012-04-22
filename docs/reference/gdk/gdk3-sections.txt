@@ -52,6 +52,14 @@ GDK_WINDOWING_X11
 GDK_WINDOWING_WIN32
 GDK_WINDOWING_QUARTZ
 
+<SUBSECTION>
+GDK_VERSION_3_0
+GDK_VERSION_3_2
+GDK_VERSION_3_4
+GDK_VERSION_MIN_REQUIRED
+GDK_VERSION_MAX_ALLOWED
+GDK_DISABLE_DEPRECATION_WARNINGS
+
 <SUBSECTION Standard>
 GDK_TYPE_GRAB_STATUS
 
@@ -199,6 +207,7 @@ gdk_screen_make_display_name
 gdk_screen_get_n_monitors
 gdk_screen_get_primary_monitor
 gdk_screen_get_monitor_geometry
+gdk_screen_get_monitor_workarea
 gdk_screen_get_monitor_at_point
 gdk_screen_get_monitor_at_window
 gdk_screen_get_monitor_height_mm
@@ -366,7 +375,9 @@ gdk_window_restack
 gdk_window_focus
 gdk_window_register_dnd
 gdk_window_begin_resize_drag
+gdk_window_begin_resize_drag_for_device
 gdk_window_begin_move_drag
+gdk_window_begin_move_drag_for_device
 gdk_window_constrain_size
 gdk_window_beep
 
@@ -628,6 +639,7 @@ gdk_keymap_get_direction
 gdk_keymap_have_bidi_layouts
 gdk_keymap_get_caps_lock_state
 gdk_keymap_get_num_lock_state
+gdk_keymap_get_modifier_state
 gdk_keymap_add_virtual_modifiers
 gdk_keymap_map_virtual_modifiers
 gdk_keymap_get_modifier_mask
@@ -754,6 +766,11 @@ GdkEventMask
 GDK_CURRENT_TIME
 GDK_PRIORITY_EVENTS
 GDK_PRIORITY_REDRAW
+GDK_EVENT_PROPAGATE
+GDK_EVENT_STOP
+GDK_BUTTON_PRIMARY
+GDK_BUTTON_MIDDLE
+GDK_BUTTON_SECONDARY
 
 <SUBSECTION>
 gdk_events_pending
@@ -771,8 +788,11 @@ gdk_event_get_keycode
 gdk_event_get_keyval
 gdk_event_get_root_coords
 gdk_event_get_scroll_direction
+gdk_event_get_scroll_deltas
 gdk_event_get_state
 gdk_event_get_time
+GdkEventSequence
+gdk_event_get_event_sequence
 gdk_event_request_motions
 gdk_events_get_angle
 gdk_events_get_center
@@ -810,6 +830,7 @@ GdkEvent
 GdkEventAny
 GdkEventKey
 GdkEventButton
+GdkEventTouch
 GdkEventScroll
 GdkEventMotion
 GdkEventExpose
@@ -959,6 +980,7 @@ gdk_x11_screen_supports_net_wm_hint
 gdk_x11_window_foreign_new_for_display
 gdk_x11_window_lookup_for_display
 gdk_x11_window_get_xid
+gdk_x11_window_set_hide_titlebar_when_maximized
 gdk_x11_window_set_theme_variant
 gdk_x11_window_set_user_time
 gdk_x11_window_move_to_current_desktop
@@ -984,6 +1006,98 @@ gdk_x11_free_text_list
 gdk_x11_display_string_to_compound_text
 gdk_x11_display_utf8_to_compound_text
 gdk_x11_free_compound_text
+
+<SUBSECTION Standard>
+GDK_TYPE_X11_APP_LAUNCH_CONTEXT
+GDK_X11_APP_LAUNCH_CONTEXT
+GDK_X11_APP_LAUNCH_CONTEXT_CLASS
+GDK_IS_X11_APP_LAUNCH_CONTEXT
+GDK_IS_X11_APP_LAUNCH_CONTEXT_CLASS
+GDK_X11_APP_LAUNCH_CONTEXT_GET_CLASS
+GDK_TYPE_X11_CURSOR
+GDK_X11_CURSOR
+GDK_X11_CURSOR_CLASS
+GDK_IS_X11_CURSOR
+GDK_IS_X11_CURSOR_CLASS
+GDK_X11_CURSOR_GET_CLASS
+GDK_TYPE_X11_DEVICE_CORE
+GDK_X11_DEVICE_CORE
+GDK_X11_DEVICE_CORE_CLASS
+GDK_IS_X11_DEVICE_CORE
+GDK_IS_X11_DEVICE_CORE_CLASS
+GDK_X11_DEVICE_CORE_GET_CLASS
+GDK_TYPE_X11_DEVICE_MANAGER_CORE
+GDK_X11_DEVICE_MANAGER_CORE
+GDK_X11_DEVICE_MANAGER_CORE_CLASS
+GDK_IS_X11_DEVICE_MANAGER_CORE
+GDK_IS_X11_DEVICE_MANAGER_CORE_CLASS
+GDK_X11_DEVICE_MANAGER_CORE_GET_CLASS
+GDK_TYPE_X11_DEVICE_MANAGER_XI2
+GDK_X11_DEVICE_MANAGER_XI2
+GDK_X11_DEVICE_MANAGER_XI2_CLASS
+GDK_IS_X11_DEVICE_MANAGER_XI2
+GDK_IS_X11_DEVICE_MANAGER_XI2_CLASS
+GDK_X11_DEVICE_MANAGER_XI2_GET_CLASS
+GDK_TYPE_X11_DEVICE_MANAGER_XI
+GDK_X11_DEVICE_MANAGER_XI
+GDK_X11_DEVICE_MANAGER_XI_CLASS
+GDK_IS_X11_DEVICE_MANAGER_XI
+GDK_IS_X11_DEVICE_MANAGER_XI_CLASS
+GDK_X11_DEVICE_MANAGER_XI_GET_CLASS
+GDK_TYPE_X11_DEVICE_XI2
+GDK_X11_DEVICE_XI2
+GDK_X11_DEVICE_XI2_CLASS
+GDK_IS_X11_DEVICE_XI2
+GDK_IS_X11_DEVICE_XI2_CLASS
+GDK_X11_DEVICE_XI2_GET_CLASS
+GDK_TYPE_X11_DEVICE_XI
+GDK_X11_DEVICE_XI
+GDK_X11_DEVICE_XI_CLASS
+GDK_IS_X11_DEVICE_XI
+GDK_IS_X11_DEVICE_XI_CLASS
+GDK_X11_DEVICE_XI_GET_CLASS
+GDK_TYPE_X11_DISPLAY
+GDK_X11_DISPLAY
+GDK_X11_DISPLAY_CLASS
+GDK_IS_X11_DISPLAY
+GDK_IS_X11_DISPLAY_CLASS
+GDK_X11_DISPLAY_GET_CLASS
+GDK_TYPE_X11_DISPLAY_MANAGER
+GDK_X11_DISPLAY_MANAGER
+GDK_X11_DISPLAY_MANAGER_CLASS
+GDK_IS_X11_DISPLAY_MANAGER
+GDK_IS_X11_DISPLAY_MANAGER_CLASS
+GDK_X11_DISPLAY_MANAGER_GET_CLASS
+GDK_TYPE_X11_DRAG_CONTEXT
+GDK_X11_DRAG_CONTEXT
+GDK_X11_DRAG_CONTEXT_CLASS
+GDK_IS_X11_DRAG_CONTEXT
+GDK_IS_X11_DRAG_CONTEXT_CLASS
+GDK_X11_DRAG_CONTEXT_GET_CLASS
+GDK_TYPE_X11_KEYMAP
+GDK_X11_KEYMAP
+GDK_X11_KEYMAP_CLASS
+GDK_IS_X11_KEYMAP
+GDK_IS_X11_KEYMAP_CLASS
+GDK_X11_KEYMAP_GET_CLASS
+GDK_TYPE_X11_SCREEN
+GDK_X11_SCREEN
+GDK_X11_SCREEN_CLASS
+GDK_IS_X11_SCREEN
+GDK_IS_X11_SCREEN_CLASS
+GDK_X11_SCREEN_GET_CLASS
+GDK_TYPE_X11_VISUAL
+GDK_X11_VISUAL
+GDK_X11_VISUAL_CLASS
+GDK_IS_X11_VISUAL
+GDK_IS_X11_VISUAL_CLASS
+GDK_X11_VISUAL_GET_CLASS
+GDK_TYPE_X11_WINDOW
+GDK_X11_WINDOW
+GDK_X11_WINDOW_CLASS
+GDK_IS_X11_WINDOW
+GDK_IS_X11_WINDOW_CLASS
+GDK_X11_WINDOW_GET_CLASS
 
 <SUBSECTION Private>
 gdk_x11_app_launch_context_get_type
@@ -1033,4 +1147,4 @@ gdk_app_launch_context_get_type
 gdk_test_render_sync
 gdk_test_simulate_button
 gdk_test_simulate_key
-</SECTION>
+

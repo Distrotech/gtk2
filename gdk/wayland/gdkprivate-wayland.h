@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -45,10 +43,8 @@
 #define GDK_WINDOW_IS_WAYLAND(win)    (GDK_IS_WINDOW_IMPL_WAYLAND (((GdkWindow *)win)->impl))
 
 GType _gdk_wayland_window_get_type    (void);
-void  _gdk_wayland_window_update_size (GdkWindow *window,
-				       int32_t width,
-				       int32_t height,
-				       uint32_t edges);
+void _gdk_wayland_window_add_focus    (GdkWindow *window);
+void _gdk_wayland_window_remove_focus (GdkWindow *window);
 
 GdkKeymap *_gdk_wayland_keymap_new (GdkDisplay *display);
 struct xkb_desc *_gdk_wayland_keymap_get_xkb_desc (GdkKeymap *keymap);
@@ -149,5 +145,9 @@ void _gdk_wayland_display_manager_add_display (GdkDisplayManager *manager,
 					       GdkDisplay        *display);
 void _gdk_wayland_display_manager_remove_display (GdkDisplayManager *manager,
 						  GdkDisplay        *display);
+
+void _gdk_wayland_window_set_device_grabbed (GdkWindow *window,
+                                             struct wl_input_device *input_device,
+                                             guint32 time_);
 
 #endif /* __GDK_PRIVATE_WAYLAND_H__ */

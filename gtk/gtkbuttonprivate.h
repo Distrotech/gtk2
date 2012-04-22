@@ -19,6 +19,7 @@
 #ifndef __GTK_BUTTON_PRIVATE_H__
 #define __GTK_BUTTON_PRIVATE_H__
 
+#include "gsimpleactionobserver.h"
 #include "gtkaction.h"
 
 G_BEGIN_DECLS
@@ -28,6 +29,10 @@ struct _GtkButtonPrivate
 {
   GtkAction             *action;
   GtkWidget             *image;
+
+  gchar                 *action_name;
+  GVariant              *action_target;
+  GSimpleActionObserver *action_observer;
 
   GdkDevice             *grab_keyboard;
   GdkWindow             *event_window;
@@ -58,11 +63,6 @@ struct _GtkButtonPrivate
 
 void _gtk_button_set_depressed             (GtkButton          *button,
                                             gboolean            depressed);
-void _gtk_button_paint                     (GtkButton          *button,
-                                            cairo_t            *cr,
-                                            int                 width,
-                                            int                 height,
-                                            GtkStateFlags       state);
 
 
 G_END_DECLS

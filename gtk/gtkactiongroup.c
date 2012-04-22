@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -1406,7 +1404,8 @@ dgettext_swapped (const gchar *msgid,
 /**
  * gtk_action_group_set_translation_domain:
  * @action_group: a #GtkActionGroup
- * @domain: the translation domain to use for g_dgettext() calls
+ * @domain: (allow-none): the translation domain to use for g_dgettext()
+ * calls, or %NULL to use the domain set with textdomain()
  * 
  * Sets the translation domain and uses g_dgettext() for translating the 
  * @label and @tooltip of #GtkActionEntry<!-- -->s added by 

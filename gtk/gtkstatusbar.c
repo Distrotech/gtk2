@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -666,12 +664,7 @@ gtk_statusbar_size_allocate (GtkWidget     *widget,
       gtk_window_resize_grip_is_visible (GTK_WINDOW (window)))
     {
       gtk_window_get_resize_grip_area (GTK_WINDOW (window), &rect);
-      if (gtk_widget_translate_coordinates (gtk_widget_get_parent (widget),
-                                            window,
-                                            allocation->x,
-                                            allocation->y,
-                                            &x,
-                                            &y))
+      if (gtk_widget_translate_coordinates (widget, window, 0, 0, &x, &y))
         {
           translated_rect.x = x;
           translated_rect.y = y;

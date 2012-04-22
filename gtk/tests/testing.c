@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -44,10 +42,8 @@ test_button_clicks (void)
   g_assert (button != NULL);
   simsuccess = gtk_test_widget_click (button, 1, 0);
   g_assert (simsuccess == TRUE);
-  while (gtk_events_pending ()) {
-    g_print ("iterate main loop\n");
+  while (gtk_events_pending ())
     gtk_main_iteration ();
-  }
   g_assert (a == 0);
   g_assert (b > 0);
   g_assert (c == 0);

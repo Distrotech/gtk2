@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -716,6 +714,7 @@ static void
 remove_proxy (GtkAction *action,
 	      GtkWidget *proxy)
 {
+  g_object_unref (proxy);
   action->private_data->proxies = g_slist_remove (action->private_data->proxies, proxy);
 }
 
@@ -724,6 +723,8 @@ connect_proxy (GtkAction *action,
 	       GtkWidget *proxy)
 {
   action->private_data->proxies = g_slist_prepend (action->private_data->proxies, proxy);
+
+  g_object_ref_sink (proxy);
 
   if (action->private_data->action_group)
     _gtk_action_group_emit_connect_proxy (action->private_data->action_group, action, proxy);

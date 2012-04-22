@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -49,7 +47,7 @@
  * GtkVBox has been deprecated. You can use #GtkBox instead, which is a
  * very quick and easy change. If you have derived your own classes from
  * GtkVBox, you can simply change the inheritance to derive directly
- * from #GtkBox, and set the #GtkOrientable::orientation property to
+ * from #GtkBox, and set the #GtkOrientable:orientation property to
  * %GTK_ORIENTATION_VERTICAL in your instance init function, with a
  * call like:
  * |[
@@ -88,7 +86,7 @@ gtk_vbox_init (GtkVBox *vbox)
  * Returns: a new #GtkVBox.
  *
  * Deprecated: 3.2: You can use gtk_box_new() with %GTK_ORIENTATION_VERTICAL instead,
- *   wich is a very quick and easy change. But the recommendation is to switch to
+ *   which is a quick and easy change. But the recommendation is to switch to
  *   #GtkGrid, since #GtkBox is going to go away eventually.
  *   See <xref linkend="gtk-migrating-GtkGrid"/>.
  */

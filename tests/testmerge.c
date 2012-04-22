@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -212,11 +210,11 @@ enum {
 static GtkRadioActionEntry radio_entries[] = {
   { "justify-left", GTK_STOCK_JUSTIFY_LEFT, NULL, "<control>L", 
     "Left justify the text", JUSTIFY_LEFT },
-  { "justify-center", GTK_STOCK_JUSTIFY_CENTER, NULL, "<control>E",
+  { "justify-center", GTK_STOCK_JUSTIFY_CENTER, NULL, "<super>E",
     "Center justify the text", JUSTIFY_CENTER },
-  { "justify-right", GTK_STOCK_JUSTIFY_RIGHT, NULL, "<control>R",
+  { "justify-right", GTK_STOCK_JUSTIFY_RIGHT, NULL, "<hyper>R",
     "Right justify the text", JUSTIFY_RIGHT },
-  { "justify-fill", GTK_STOCK_JUSTIFY_FILL, NULL, "<control>J",
+  { "justify-fill", GTK_STOCK_JUSTIFY_FILL, NULL, "<super><hyper>J",
     "Fill justify the text", JUSTIFY_FILL },
 };
 static guint n_radio_entries = G_N_ELEMENTS (radio_entries);
@@ -461,7 +459,7 @@ area_press (GtkWidget      *drawing_area,
 {
   gtk_widget_grab_focus (drawing_area);
 
-  if (event->button == 3 &&
+  if (gdk_event_triggers_context_menu ((GdkEvent *) event) &&
       event->type == GDK_BUTTON_PRESS)
     {
       GtkWidget *menu = gtk_ui_manager_get_widget (merge, "/FileMenu");

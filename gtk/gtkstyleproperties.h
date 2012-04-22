@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -39,6 +37,7 @@ G_BEGIN_DECLS
 
 typedef struct _GtkStyleProperties GtkStyleProperties;
 typedef struct _GtkStylePropertiesClass GtkStylePropertiesClass;
+typedef struct _GtkStylePropertiesPrivate GtkStylePropertiesPrivate;
 
 typedef struct _GtkSymbolicColor GtkSymbolicColor;
 typedef struct _GtkGradient GtkGradient;
@@ -46,7 +45,7 @@ typedef struct _GtkGradient GtkGradient;
 struct _GtkStyleProperties
 {
   GObject parent_object;
-  gpointer priv;
+  GtkStylePropertiesPrivate *priv;
 };
 
 struct _GtkStylePropertiesClass
@@ -66,7 +65,7 @@ typedef gboolean (* GtkStylePropertyParser) (const gchar  *string,
 
 GType gtk_style_properties_get_type (void) G_GNUC_CONST;
 
-/* Functions to register style properties */
+/* Next 2 are implemented in gtkcsscustomproperty.c */
 void     gtk_style_properties_register_property (GtkStylePropertyParser  parse_func,
                                                  GParamSpec             *pspec);
 gboolean gtk_style_properties_lookup_property   (const gchar             *property_name,

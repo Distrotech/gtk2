@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -117,6 +115,17 @@ void           gtk_scrolled_window_set_min_content_width  (GtkScrolledWindow *sc
 gint           gtk_scrolled_window_get_min_content_height (GtkScrolledWindow *scrolled_window);
 void           gtk_scrolled_window_set_min_content_height (GtkScrolledWindow *scrolled_window,
                                                            gint               height);
+GDK_AVAILABLE_IN_3_4
+void           gtk_scrolled_window_set_kinetic_scrolling  (GtkScrolledWindow        *scrolled_window,
+                                                           gboolean                  kinetic_scrolling);
+GDK_AVAILABLE_IN_3_4
+gboolean       gtk_scrolled_window_get_kinetic_scrolling  (GtkScrolledWindow        *scrolled_window);
+
+GDK_AVAILABLE_IN_3_4
+void           gtk_scrolled_window_set_capture_button_press (GtkScrolledWindow      *scrolled_window,
+                                                             gboolean                capture_button_press);
+GDK_AVAILABLE_IN_3_4
+gboolean       gtk_scrolled_window_get_capture_button_press (GtkScrolledWindow      *scrolled_window);
 
 gint _gtk_scrolled_window_get_scrollbar_spacing (GtkScrolledWindow *scrolled_window);
 

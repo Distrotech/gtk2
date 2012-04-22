@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -29,16 +27,13 @@
 #include "gdkprivate-x11.h"
 #include "gdkintl.h"
 #include "gdkkeysyms.h"
-
-#ifdef XINPUT_2
+#include "gdkinternals.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/XInput2.h>
 
 #include <string.h>
-
-#endif /* XINPUT_2 */
 
 struct _GdkX11DeviceManagerXI2
 {
@@ -49,6 +44,8 @@ struct _GdkX11DeviceManagerXI2
   GList *devices;
 
   gint opcode;
+  gint major;
+  gint minor;
 };
 
 struct _GdkX11DeviceManagerXI2Class
@@ -62,8 +59,6 @@ G_DEFINE_TYPE_WITH_CODE (GdkX11DeviceManagerXI2, gdk_x11_device_manager_xi2, GDK
                          G_IMPLEMENT_INTERFACE (GDK_TYPE_EVENT_TRANSLATOR,
                                                 gdk_x11_device_manager_xi2_event_translator_init))
 
-
-#ifdef XINPUT_2
 
 #define HAS_FOCUS(toplevel) ((toplevel)->has_focus || (toplevel)->has_pointer_focus)
 
@@ -96,7 +91,9 @@ static GdkWindow *  gdk_x11_device_manager_xi2_get_window           (GdkEventTra
 
 enum {
   PROP_0,
-  PROP_OPCODE
+  PROP_OPCODE,
+  PROP_MAJOR,
+  PROP_MINOR
 };
 
 static void
@@ -118,6 +115,20 @@ gdk_x11_device_manager_xi2_class_init (GdkX11DeviceManagerXI2Class *klass)
                                    g_param_spec_int ("opcode",
                                                      P_("Opcode"),
                                                      P_("Opcode for XInput2 requests"),
+                                                     0, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property (object_class,
+                                   PROP_MAJOR,
+                                   g_param_spec_int ("major",
+                                                     P_("Major"),
+                                                     P_("Major version number"),
+                                                     0, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property (object_class,
+                                   PROP_MINOR,
+                                   g_param_spec_int ("minor",
+                                                     P_("Minor"),
+                                                     P_("Minor version number"),
                                                      0, G_MAXINT, 0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 }
@@ -148,8 +159,10 @@ _gdk_x11_device_manager_xi2_select_events (GdkDeviceManager *device_manager,
 static void
 translate_valuator_class (GdkDisplay          *display,
                           GdkDevice           *device,
-                          XIValuatorClassInfo *info,
-                          gint                 n_valuator)
+                          Atom                 valuator_label,
+                          gdouble              min,
+                          gdouble              max,
+                          gdouble              resolution)
 {
   static gboolean initialized = FALSE;
   static Atom label_atoms [GDK_AXIS_LAST] = { 0 };
@@ -170,24 +183,19 @@ translate_valuator_class (GdkDisplay          *display,
 
   for (i = GDK_AXIS_IGNORE; i < GDK_AXIS_LAST; i++)
     {
-      if (label_atoms[i] == info->label)
+      if (label_atoms[i] == valuator_label)
         {
           use = i;
           break;
         }
     }
 
-  if (info->label != None)
-    label = gdk_x11_xatom_to_atom_for_display (display, info->label);
+  if (valuator_label != None)
+    label = gdk_x11_xatom_to_atom_for_display (display, valuator_label);
   else
     label = GDK_NONE;
 
-  _gdk_device_add_axis (device,
-                        label,
-                        use,
-                        info->min,
-                        info->max,
-                        info->resolution);
+  _gdk_device_add_axis (device, label, use, min, max, resolution);
 }
 
 static void
@@ -196,7 +204,7 @@ translate_device_classes (GdkDisplay      *display,
                           XIAnyClassInfo **classes,
                           guint            n_classes)
 {
-  gint i, n_valuator = 0;
+  gint i;
 
   g_object_freeze_notify (G_OBJECT (device));
 
@@ -218,11 +226,40 @@ translate_device_classes (GdkDisplay      *display,
           }
           break;
         case XIValuatorClass:
-          translate_valuator_class (display, device,
-                                    (XIValuatorClassInfo *) class_info,
-                                    n_valuator);
-          n_valuator++;
+          {
+            XIValuatorClassInfo *valuator_info = (XIValuatorClassInfo *) class_info;
+            translate_valuator_class (display, device,
+                                      valuator_info->label,
+                                      valuator_info->min,
+                                      valuator_info->max,
+                                      valuator_info->resolution);
+          }
           break;
+#ifdef XINPUT_2_2
+        case XIScrollClass:
+          {
+            XIScrollClassInfo *scroll_info = (XIScrollClassInfo *) class_info;
+            GdkScrollDirection direction;
+
+            if (scroll_info->scroll_type == XIScrollTypeVertical)
+              direction = GDK_SCROLL_DOWN;
+            else
+              direction = GDK_SCROLL_RIGHT;
+
+            GDK_NOTE (INPUT,
+                      g_message ("\n\tscroll valuator %d: %s, increment %f",
+                                 scroll_info->number,
+                                 scroll_info->scroll_type == XIScrollTypeVertical
+                                                ? "vertical"
+                                                : "horizontal",
+                                 scroll_info->increment));
+
+            _gdk_x11_device_xi2_add_scroll_valuator (GDK_X11_DEVICE_XI2 (device),
+                                                     scroll_info->number,
+                                                     direction,
+                                                     scroll_info->increment);
+          }
+#endif /* XINPUT_2_2 */
         default:
           /* Ignore */
           break;
@@ -232,18 +269,58 @@ translate_device_classes (GdkDisplay      *display,
   g_object_thaw_notify (G_OBJECT (device));
 }
 
+static gboolean
+is_touch_device (XIAnyClassInfo **classes,
+                 guint            n_classes,
+                 GdkInputSource  *device_type,
+                 gint            *num_touches)
+{
+#ifdef XINPUT_2_2
+  guint i;
+
+  for (i = 0; i < n_classes; i++)
+    {
+      XITouchClassInfo *class = (XITouchClassInfo *) classes[i];
+
+      if (class->type != XITouchClass)
+        continue;
+
+      if (class->num_touches > 0)
+        {
+          if (class->mode == XIDirectTouch)
+            *device_type = GDK_SOURCE_TOUCHSCREEN;
+          else if (class->mode == XIDependentTouch)
+            *device_type = GDK_SOURCE_TOUCHPAD;
+          else
+            continue;
+
+          *num_touches = class->num_touches;
+
+          return TRUE;
+        }
+    }
+#endif
+
+  return FALSE;
+}
+
 static GdkDevice *
 create_device (GdkDeviceManager *device_manager,
                GdkDisplay       *display,
                XIDeviceInfo     *dev)
 {
   GdkInputSource input_source;
+  GdkInputSource touch_source;
   GdkDeviceType type;
   GdkDevice *device;
   GdkInputMode mode;
+  gint num_touches = 0;
 
   if (dev->use == XIMasterKeyboard || dev->use == XISlaveKeyboard)
     input_source = GDK_SOURCE_KEYBOARD;
+  else if (dev->use == XISlavePointer &&
+           is_touch_device (dev->classes, dev->num_classes, &touch_source, &num_touches))
+    input_source = touch_source;
   else
     {
       gchar *tmp_name;
@@ -281,6 +358,20 @@ create_device (GdkDeviceManager *device_manager,
       mode = GDK_MODE_DISABLED;
       break;
     }
+
+  GDK_NOTE (INPUT,
+            ({
+              const gchar *type_names[] = { "master", "slave", "floating" };
+              const gchar *source_names[] = { "mouse", "pen", "eraser", "cursor", "keyboard", "direct touch", "indirect touch" };
+              const gchar *mode_names[] = { "disabled", "screen", "window" };
+              g_message ("input device:\n\tname: %s\n\ttype: %s\n\tsource: %s\n\tmode: %s\n\thas cursor: %d\n\ttouches: %d",
+                         dev->name,
+                         type_names[type],
+                         source_names[input_source],
+                         mode_names[mode],
+                         dev->use == XIMasterPointer,
+                         num_touches);
+            }));
 
   device = g_object_new (GDK_TYPE_X11_DEVICE_XI2,
                          "name", dev->name,
@@ -408,6 +499,8 @@ gdk_x11_device_manager_xi2_constructed (GObject *object)
   display = gdk_device_manager_get_display (GDK_DEVICE_MANAGER (object));
   xdisplay = GDK_DISPLAY_XDISPLAY (display);
 
+  g_assert (device_manager->major == 2);
+
   masters = g_hash_table_new (NULL, NULL);
   slaves = g_hash_table_new (NULL, NULL);
 
@@ -533,6 +626,12 @@ gdk_x11_device_manager_xi2_set_property (GObject      *object,
     case PROP_OPCODE:
       device_manager->opcode = g_value_get_int (value);
       break;
+    case PROP_MAJOR:
+      device_manager->major = g_value_get_int (value);
+      break;
+    case PROP_MINOR:
+      device_manager->minor = g_value_get_int (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -553,6 +652,12 @@ gdk_x11_device_manager_xi2_get_property (GObject    *object,
     {
     case PROP_OPCODE:
       g_value_set_int (value, device_manager->opcode);
+      break;
+    case PROP_MAJOR:
+      g_value_set_int (value, device_manager->major);
+      break;
+    case PROP_MINOR:
+      g_value_set_int (value, device_manager->minor);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -586,9 +691,14 @@ handle_hierarchy_changed (GdkX11DeviceManagerXI2 *device_manager,
     {
       if (ev->info[i].flags & XIDeviceEnabled)
         {
+          gdk_x11_display_error_trap_push (display);
           info = XIQueryDevice (xdisplay, ev->info[i].deviceid, &ndevices);
-          add_device (device_manager, &info[0], TRUE);
-          XIFreeDeviceInfo (info);
+          gdk_x11_display_error_trap_pop_ignored (display);
+          if (info)
+            {
+              add_device (device_manager, &info[0], TRUE);
+              XIFreeDeviceInfo (info);
+            }
         }
       else if (ev->info[i].flags & XIDeviceDisabled)
         remove_device (device_manager, ev->info[i].deviceid);
@@ -599,6 +709,9 @@ handle_hierarchy_changed (GdkX11DeviceManagerXI2 *device_manager,
 
           slave = g_hash_table_lookup (device_manager->id_table,
                                        GINT_TO_POINTER (ev->info[i].deviceid));
+
+          if (!slave)
+            continue;
 
           /* Remove old master info */
           master = gdk_device_get_associated_device (slave);
@@ -614,15 +727,23 @@ handle_hierarchy_changed (GdkX11DeviceManagerXI2 *device_manager,
           /* Add new master if it's an attachment event */
           if (ev->info[i].flags & XISlaveAttached)
             {
+              gdk_x11_display_error_trap_push (display);
               info = XIQueryDevice (xdisplay, ev->info[i].deviceid, &ndevices);
+              gdk_x11_display_error_trap_pop_ignored (display);
+              if (info)
+                {
+                  master = g_hash_table_lookup (device_manager->id_table,
+                                                GINT_TO_POINTER (info->attachment));
+                  XIFreeDeviceInfo (info);
+                }
 
-              master = g_hash_table_lookup (device_manager->id_table,
-                                            GINT_TO_POINTER (info->attachment));
+              if (master)
+                {
+                  _gdk_device_set_associated_device (slave, master);
+                  _gdk_device_add_slave (master, slave);
 
-              _gdk_device_set_associated_device (slave, master);
-              _gdk_device_add_slave (master, slave);
-
-              g_signal_emit_by_name (device_manager, "device-changed", master);
+                  g_signal_emit_by_name (device_manager, "device-changed", master);
+                }
             }
 
           g_signal_emit_by_name (device_manager, "device-changed", slave);
@@ -635,16 +756,24 @@ handle_device_changed (GdkX11DeviceManagerXI2 *device_manager,
                        XIDeviceChangedEvent   *ev)
 {
   GdkDisplay *display;
-  GdkDevice *device;
+  GdkDevice *device, *source_device;
 
   display = gdk_device_manager_get_display (GDK_DEVICE_MANAGER (device_manager));
   device = g_hash_table_lookup (device_manager->id_table,
                                 GUINT_TO_POINTER (ev->deviceid));
+  source_device = g_hash_table_lookup (device_manager->id_table,
+                                       GUINT_TO_POINTER (ev->sourceid));
 
-  _gdk_device_reset_axes (device);
-  translate_device_classes (display, device, ev->classes, ev->num_classes);
+  if (device)
+    {
+      _gdk_device_reset_axes (device);
+      translate_device_classes (display, device, ev->classes, ev->num_classes);
 
-  g_signal_emit_by_name (G_OBJECT (device), "changed");
+      g_signal_emit_by_name (G_OBJECT (device), "changed");
+    }
+
+  if (source_device)
+    _gdk_device_xi2_reset_scroll_valuators (GDK_X11_DEVICE_XI2 (source_device));
 }
 
 static GdkCrossingMode
@@ -718,91 +847,6 @@ set_user_time (GdkEvent *event)
    */
   if (time != GDK_CURRENT_TIME)
     gdk_x11_window_set_user_time (window, time);
-}
-
-static void
-generate_focus_event (GdkWindow *window,
-                      GdkDevice *device,
-                      GdkDevice *source_device,
-                      gboolean   in)
-{
-  GdkEvent *event;
-
-  event = gdk_event_new (GDK_FOCUS_CHANGE);
-  event->focus_change.window = g_object_ref (window);
-  event->focus_change.send_event = FALSE;
-  event->focus_change.in = in;
-  gdk_event_set_device (event, device);
-  gdk_event_set_source_device (event, source_device);
-
-  gdk_event_put (event);
-  gdk_event_free (event);
-}
-
-static void
-handle_focus_change (GdkWindow *window,
-                     GdkDevice *device,
-                     GdkDevice *source_device,
-                     gint       detail,
-                     gint       mode,
-                     gboolean   in)
-{
-  GdkToplevelX11 *toplevel;
-  gboolean had_focus;
-
-  toplevel = _gdk_x11_window_get_toplevel (window);
-
-  if (!toplevel)
-    return;
-
-  had_focus = HAS_FOCUS (toplevel);
-
-  switch (detail)
-    {
-    case NotifyAncestor:
-    case NotifyVirtual:
-      /* When the focus moves from an ancestor of the window to
-       * the window or a descendent of the window, *and* the
-       * pointer is inside the window, then we were previously
-       * receiving keystroke events in the has_pointer_focus
-       * case and are now receiving them in the
-       * has_focus_window case.
-       */
-      if (toplevel->has_pointer &&
-          mode != NotifyGrab &&
-          mode != NotifyUngrab)
-        toplevel->has_pointer_focus = (in) ? FALSE : TRUE;
-
-      /* fall through */
-    case NotifyNonlinear:
-    case NotifyNonlinearVirtual:
-      if (mode != NotifyGrab &&
-          mode != NotifyUngrab)
-        toplevel->has_focus_window = (in) ? TRUE : FALSE;
-      /* We pretend that the focus moves to the grab
-       * window, so we pay attention to NotifyGrab
-       * NotifyUngrab, and ignore NotifyWhileGrabbed
-       */
-      if (mode != NotifyWhileGrabbed)
-        toplevel->has_focus = (in) ? TRUE : FALSE;
-      break;
-    case NotifyPointer:
-      /* The X server sends NotifyPointer/NotifyGrab,
-       * but the pointer focus is ignored while a
-       * grab is in effect
-       */
-      if (mode != NotifyGrab &&
-          mode != NotifyUngrab)
-        toplevel->has_pointer_focus = (in) ? TRUE :FALSE;
-      break;
-    case NotifyInferior:
-    case NotifyPointerRoot:
-    case NotifyDetailNone:
-      break;
-    }
-
-  if (HAS_FOCUS (toplevel) != had_focus)
-    generate_focus_event (window, device, source_device, (in) ? TRUE : FALSE);
 }
 
 static gdouble *
@@ -889,6 +933,11 @@ get_event_window (GdkEventTranslator *translator,
     case XI_ButtonPress:
     case XI_ButtonRelease:
     case XI_Motion:
+#ifdef XINPUT_2_2
+    case XI_TouchUpdate:
+    case XI_TouchBegin:
+    case XI_TouchEnd:
+#endif /* XINPUT_2_2 */
       {
         XIDeviceEvent *xev = (XIDeviceEvent *) ev;
 
@@ -1008,6 +1057,47 @@ gdk_x11_device_manager_xi2_translate_core_event (GdkEventTranslator *translator,
 }
 
 static gboolean
+scroll_valuators_changed (GdkX11DeviceXI2 *device,
+                          XIValuatorState *valuators,
+                          gdouble         *dx,
+                          gdouble         *dy)
+{
+  gdouble has_scroll_valuators = FALSE;
+  GdkScrollDirection direction;
+  guint n_axes, i, n_val;
+  gdouble *vals;
+
+  n_axes = gdk_device_get_n_axes (GDK_DEVICE (device));
+  vals = valuators->values;
+  *dx = *dy = 0;
+  n_val = 0;
+
+  for (i = 0; i < MIN (valuators->mask_len * 8, n_axes); i++)
+    {
+      gdouble delta;
+
+      if (!XIMaskIsSet (valuators->mask, i))
+        continue;
+
+      if (_gdk_x11_device_xi2_get_scroll_delta (device, i, vals[n_val],
+                                                &direction, &delta))
+        {
+          has_scroll_valuators = TRUE;
+
+          if (direction == GDK_SCROLL_UP ||
+              direction == GDK_SCROLL_DOWN)
+            *dy = delta;
+          else
+            *dx = delta;
+        }
+
+      n_val++;
+    }
+
+  return has_scroll_valuators;
+}
+
+static gboolean
 gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
                                             GdkDisplay         *display,
                                             GdkEvent           *event,
@@ -1113,51 +1203,49 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
         XIDeviceEvent *xev = (XIDeviceEvent *) ev;
         GdkDevice *source_device;
 
-        switch (xev->detail)
+        if (ev->evtype == XI_ButtonRelease &&
+            (xev->detail >= 4 && xev->detail <= 7))
+          return FALSE;
+        else if (ev->evtype == XI_ButtonPress &&
+                 (xev->detail >= 4 && xev->detail <= 7))
           {
-          case 4:
-          case 5:
-          case 6:
-          case 7:
-             /* Button presses of button 4-7 are scroll events */
-            if (ev->evtype == XI_ButtonPress)
-              {
-                event->scroll.type = GDK_SCROLL;
+            /* Button presses of button 4-7 are scroll events */
+            event->scroll.type = GDK_SCROLL;
 
-                if (xev->detail == 4)
-                  event->scroll.direction = GDK_SCROLL_UP;
-                else if (xev->detail == 5)
-                  event->scroll.direction = GDK_SCROLL_DOWN;
-                else if (xev->detail == 6)
-                  event->scroll.direction = GDK_SCROLL_LEFT;
-                else
-                  event->scroll.direction = GDK_SCROLL_RIGHT;
+            if (xev->detail == 4)
+              event->scroll.direction = GDK_SCROLL_UP;
+            else if (xev->detail == 5)
+              event->scroll.direction = GDK_SCROLL_DOWN;
+            else if (xev->detail == 6)
+              event->scroll.direction = GDK_SCROLL_LEFT;
+            else
+              event->scroll.direction = GDK_SCROLL_RIGHT;
 
-                event->scroll.window = window;
-                event->scroll.time = xev->time;
-                event->scroll.x = (gdouble) xev->event_x;
-                event->scroll.y = (gdouble) xev->event_y;
-                event->scroll.x_root = (gdouble) xev->root_x;
-                event->scroll.y_root = (gdouble) xev->root_y;
+            event->scroll.window = window;
+            event->scroll.time = xev->time;
+            event->scroll.x = (gdouble) xev->event_x;
+            event->scroll.y = (gdouble) xev->event_y;
+            event->scroll.x_root = (gdouble) xev->root_x;
+            event->scroll.y_root = (gdouble) xev->root_y;
+            event->scroll.delta_x = 0;
+            event->scroll.delta_y = 0;
 
-                event->scroll.device = g_hash_table_lookup (device_manager->id_table,
-                                                            GUINT_TO_POINTER (xev->deviceid));
+            event->scroll.device = g_hash_table_lookup (device_manager->id_table,
+                                                        GUINT_TO_POINTER (xev->deviceid));
 
-                source_device = g_hash_table_lookup (device_manager->id_table,
-                                                     GUINT_TO_POINTER (xev->sourceid));
-                gdk_event_set_source_device (event, source_device);
+            source_device = g_hash_table_lookup (device_manager->id_table,
+                                                 GUINT_TO_POINTER (xev->sourceid));
+            gdk_event_set_source_device (event, source_device);
 
-                event->scroll.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
-                break;
-              }
-            /* Button presses of button 4-7 are scroll events, so ignore the release */
-            else if (ev->evtype == XI_ButtonRelease)
-              {
-                return_val = FALSE;
-                break;
-              }
-            /* else (XI_ButtonRelease) fall thru */
-          default:
+            event->scroll.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+
+#ifdef XINPUT_2_2
+            if (xev->flags & XIPointerEmulated)
+              _gdk_event_set_pointer_emulated (event, TRUE);
+#endif
+          }
+        else
+          {
             event->button.type = (ev->evtype == XI_ButtonPress) ? GDK_BUTTON_PRESS : GDK_BUTTON_RELEASE;
 
             event->button.window = window;
@@ -1190,8 +1278,14 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
               }
 
             event->button.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+
             event->button.button = xev->detail;
           }
+
+#ifdef XINPUT_2_2
+        if (xev->flags & XIPointerEmulated)
+          _gdk_event_set_pointer_emulated (event, TRUE);
+#endif
 
         if (return_val == FALSE)
           break;
@@ -1207,15 +1301,47 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
 
         break;
       }
+
     case XI_Motion:
       {
         XIDeviceEvent *xev = (XIDeviceEvent *) ev;
         GdkDevice *source_device;
+        gdouble delta_x, delta_y;
+
+        source_device = g_hash_table_lookup (device_manager->id_table,
+                                             GUINT_TO_POINTER (xev->sourceid));
+
+        if (scroll_valuators_changed (GDK_X11_DEVICE_XI2 (source_device),
+                                      &xev->valuators, &delta_x, &delta_y))
+          {
+            event->scroll.type = GDK_SCROLL;
+            event->scroll.direction = GDK_SCROLL_SMOOTH;
+
+            GDK_NOTE(EVENTS,
+                     g_message ("smooth scroll:\twindow %ld\n\tdeltas: %f %f",
+                                xev->event, delta_x, delta_y));
+
+
+            event->scroll.window = window;
+            event->scroll.time = xev->time;
+            event->scroll.x = (gdouble) xev->event_x;
+            event->scroll.y = (gdouble) xev->event_y;
+            event->scroll.x_root = (gdouble) xev->root_x;
+            event->scroll.y_root = (gdouble) xev->root_y;
+            event->scroll.delta_x = delta_x;
+            event->scroll.delta_y = delta_y;
+
+            event->scroll.device = g_hash_table_lookup (device_manager->id_table,
+                                                        GUINT_TO_POINTER (xev->deviceid));
+
+            gdk_event_set_source_device (event, source_device);
+
+            event->scroll.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+            break;
+          }
 
         event->motion.type = GDK_MOTION_NOTIFY;
-
         event->motion.window = window;
-
         event->motion.time = xev->time;
         event->motion.x = (gdouble) xev->event_x;
         event->motion.y = (gdouble) xev->event_y;
@@ -1225,11 +1351,14 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
         event->motion.device = g_hash_table_lookup (device_manager->id_table,
                                                     GINT_TO_POINTER (xev->deviceid));
 
-        source_device = g_hash_table_lookup (device_manager->id_table,
-                                             GUINT_TO_POINTER (xev->sourceid));
         gdk_event_set_source_device (event, source_device);
 
         event->motion.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+
+#ifdef XINPUT_2_2
+        if (xev->flags & XIPointerEmulated)
+          _gdk_event_set_pointer_emulated (event, TRUE);
+#endif
 
         /* There doesn't seem to be motion hints in XI */
         event->motion.is_hint = FALSE;
@@ -1250,6 +1379,137 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
           }
       }
       break;
+
+#ifdef XINPUT_2_2
+    case XI_TouchBegin:
+    case XI_TouchEnd:
+      {
+        XIDeviceEvent *xev = (XIDeviceEvent *) ev;
+        GdkDevice *source_device;
+
+        GDK_NOTE(EVENTS,
+                 g_message ("touch %s:\twindow %ld\n\ttouch id: %u\n\tpointer emulating: %d",
+                            ev->evtype == XI_TouchBegin ? "begin" : "end",
+                            xev->event,
+                            xev->detail,
+                            xev->flags & XITouchEmulatingPointer));
+
+        if (ev->evtype == XI_TouchBegin)
+          event->touch.type = GDK_TOUCH_BEGIN;
+        else if (ev->evtype == XI_TouchEnd)
+          event->touch.type = GDK_TOUCH_END;
+
+        event->touch.window = window;
+        event->touch.time = xev->time;
+        event->touch.x = (gdouble) xev->event_x;
+        event->touch.y = (gdouble) xev->event_y;
+        event->touch.x_root = (gdouble) xev->root_x;
+        event->touch.y_root = (gdouble) xev->root_y;
+
+        event->touch.device = g_hash_table_lookup (device_manager->id_table,
+                                                   GUINT_TO_POINTER (xev->deviceid));
+
+        source_device = g_hash_table_lookup (device_manager->id_table,
+                                             GUINT_TO_POINTER (xev->sourceid));
+        gdk_event_set_source_device (event, source_device);
+
+        event->touch.axes = translate_axes (event->touch.device,
+                                            event->touch.x,
+                                            event->touch.y,
+                                            event->touch.window,
+                                            &xev->valuators);
+
+        if (gdk_device_get_mode (event->touch.device) == GDK_MODE_WINDOW)
+          {
+            GdkDevice *device = event->touch.device;
+
+            /* Update event coordinates from axes */
+            gdk_device_get_axis (device, event->touch.axes, GDK_AXIS_X, &event->touch.x);
+            gdk_device_get_axis (device, event->touch.axes, GDK_AXIS_Y, &event->touch.y);
+          }
+
+        event->touch.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+
+        if (ev->evtype == XI_TouchBegin)
+          event->touch.state |= GDK_BUTTON1_MASK;
+
+        event->touch.sequence = GUINT_TO_POINTER (xev->detail);
+
+        if (xev->flags & XITouchEmulatingPointer)
+          {
+            event->touch.emulating_pointer = TRUE;
+            _gdk_event_set_pointer_emulated (event, TRUE);
+          }
+
+        if (return_val == FALSE)
+          break;
+
+        if (!set_screen_from_root (display, event, xev->root))
+          {
+            return_val = FALSE;
+            break;
+          }
+
+        if (ev->evtype == XI_TouchBegin)
+          set_user_time (event);
+      }
+      break;
+
+    case XI_TouchUpdate:
+      {
+        XIDeviceEvent *xev = (XIDeviceEvent *) ev;
+        GdkDevice *source_device;
+
+        GDK_NOTE(EVENTS,
+                 g_message ("touch update:\twindow %ld\n\ttouch id: %u\n\tpointer emulating: %d",
+                            xev->event,
+                            xev->detail,
+                            xev->flags & XITouchEmulatingPointer));
+
+        event->touch.window = window;
+        event->touch.sequence = GUINT_TO_POINTER (xev->detail);
+        event->touch.type = GDK_TOUCH_UPDATE;
+        event->touch.time = xev->time;
+        event->touch.x = (gdouble) xev->event_x;
+        event->touch.y = (gdouble) xev->event_y;
+        event->touch.x_root = (gdouble) xev->root_x;
+        event->touch.y_root = (gdouble) xev->root_y;
+
+        event->touch.device = g_hash_table_lookup (device_manager->id_table,
+                                                   GINT_TO_POINTER (xev->deviceid));
+
+        source_device = g_hash_table_lookup (device_manager->id_table,
+                                             GUINT_TO_POINTER (xev->sourceid));
+        gdk_event_set_source_device (event, source_device);
+
+        event->touch.state = _gdk_x11_device_xi2_translate_state (&xev->mods, &xev->buttons, &xev->group);
+
+        event->touch.state |= GDK_BUTTON1_MASK;
+
+        if (xev->flags & XITouchEmulatingPointer)
+          {
+            event->touch.emulating_pointer = TRUE;
+            _gdk_event_set_pointer_emulated (event, TRUE);
+          }
+
+        event->touch.axes = translate_axes (event->touch.device,
+                                            event->touch.x,
+                                            event->touch.y,
+                                            event->touch.window,
+                                            &xev->valuators);
+
+        if (gdk_device_get_mode (event->touch.device) == GDK_MODE_WINDOW)
+          {
+            GdkDevice *device = event->touch.device;
+
+            /* Update event coordinates from axes */
+            gdk_device_get_axis (device, event->touch.axes, GDK_AXIS_X, &event->touch.x);
+            gdk_device_get_axis (device, event->touch.axes, GDK_AXIS_Y, &event->touch.y);
+          }
+      }
+      break;
+#endif  /* XINPUT_2_2 */
+
     case XI_Enter:
     case XI_Leave:
       {
@@ -1275,6 +1535,7 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
         source_device = g_hash_table_lookup (device_manager->id_table,
                                              GUINT_TO_POINTER (xev->sourceid));
         gdk_event_set_source_device (event, source_device);
+        _gdk_device_xi2_reset_scroll_valuators (GDK_X11_DEVICE_XI2 (source_device));
 
         event->crossing.mode = translate_crossing_mode (xev->mode);
         event->crossing.detail = translate_notify_type (xev->detail);
@@ -1293,9 +1554,13 @@ gdk_x11_device_manager_xi2_translate_event (GdkEventTranslator *translator,
         source_device = g_hash_table_lookup (device_manager->id_table,
                                              GUINT_TO_POINTER (xev->sourceid));
 
-        handle_focus_change (window, device, source_device,
-                             xev->detail, xev->mode,
-                             (ev->evtype == XI_FocusIn) ? TRUE : FALSE);
+        _gdk_device_manager_core_handle_focus (window,
+                                               xev->event,
+                                               device,
+                                               source_device,
+                                               (ev->evtype == XI_FocusIn) ? TRUE : FALSE,
+                                               xev->detail,
+                                               xev->mode);
 
         return_val = FALSE;
       }
@@ -1343,7 +1608,8 @@ gdk_x11_device_manager_xi2_get_handled_events (GdkEventTranslator *translator)
           GDK_BUTTON2_MOTION_MASK |
           GDK_BUTTON3_MOTION_MASK |
           GDK_BUTTON_MOTION_MASK |
-          GDK_FOCUS_CHANGE_MASK);
+          GDK_FOCUS_CHANGE_MASK |
+          GDK_TOUCH_MASK);
 }
 
 static void
@@ -1357,7 +1623,9 @@ gdk_x11_device_manager_xi2_select_window_events (GdkEventTranslator *translator,
   device_manager = GDK_DEVICE_MANAGER (translator);
 
   event_mask.deviceid = XIAllMasterDevices;
-  event_mask.mask = _gdk_x11_device_xi2_translate_event_mask (evmask, &event_mask.mask_len);
+  event_mask.mask = _gdk_x11_device_xi2_translate_event_mask (GDK_X11_DEVICE_MANAGER_XI2 (device_manager),
+                                                              evmask,
+                                                              &event_mask.mask_len);
 
   _gdk_x11_device_manager_xi2_select_events (device_manager, window, &event_mask);
   g_free (event_mask.mask);
@@ -1380,25 +1648,6 @@ gdk_x11_device_manager_xi2_get_window (GdkEventTranslator *translator,
 
   return get_event_window (translator, ev);
 }
-
-#else /* XINPUT_2 */
-
-static void
-gdk_x11_device_manager_xi2_class_init (GdkX11DeviceManagerXI2Class *klass)
-{
-}
-
-static void
-gdk_x11_device_manager_xi2_init (GdkX11DeviceManagerXI2 *device_manager)
-{
-}
-
-static void
-gdk_x11_device_manager_xi2_event_translator_init (GdkEventTranslatorIface *iface)
-{
-}
-
-#endif /* XINPUT_2 */
 
 GdkDevice *
 _gdk_x11_device_manager_xi2_lookup (GdkX11DeviceManagerXI2 *device_manager_xi2,

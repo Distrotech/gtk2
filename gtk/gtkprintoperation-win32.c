@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _MSC_VER
@@ -71,7 +69,7 @@ static void win32_poll_status (GtkPrintOperation *op);
 
 static const GUID myIID_IPrintDialogCallback  = {0x5852a2c3,0x6530,0x11d1,{0xb6,0xa3,0x0,0x0,0xf8,0x75,0x7b,0xf9}};
 
-#if !defined (_MSC_VER) && !defined (__MINGW64_VERSION_MAJOR)
+#if !defined (_MSC_VER) && !defined (HAVE_IPRINTDIALOGCALLBACK)
 #undef INTERFACE
 #define INTERFACE IPrintDialogCallback
 DECLARE_INTERFACE_ (IPrintDialogCallback, IUnknown)

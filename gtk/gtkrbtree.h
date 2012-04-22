@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* A Red-Black Tree implementation used specifically by GtkTreeView.
@@ -57,7 +55,6 @@ typedef void (*GtkRBTreeTraverseFunc) (GtkRBTree  *tree,
 struct _GtkRBTree
 {
   GtkRBNode *root;
-  GtkRBNode *nil;
   GtkRBTree *parent_tree;
   GtkRBNode *parent_node;
 };
@@ -66,18 +63,6 @@ struct _GtkRBNode
 {
   guint flags : 14;
 
-  /* We keep track of whether the aggregate count of children plus 1
-   * for the node itself comes to an even number.  The parity flag is
-   * the total count of children mod 2, where the total count of
-   * children gets computed in the same way that the total offset gets
-   * computed. i.e. not the same as the "count" field below which
-   * doesn't include children. We could replace parity with a
-   * full-size int field here, and then take % 2 to get the parity flag,
-   * but that would use extra memory.
-   */
-
-  guint parity : 1;
-  
   GtkRBNode *left;
   GtkRBNode *right;
   GtkRBNode *parent;
@@ -86,6 +71,11 @@ struct _GtkRBNode
    * i.e. node->left->count + node->right->count + 1
    */
   gint count;
+  /* count the number of total nodes beneath us, including nodes
+   * of children trees.
+   * i.e. node->left->count + node->right->count + node->children->root->count + 1
+   */
+  guint total_count;
   
   /* this is the total of sizes of
    * node->left, node->right, our own height, and the height
@@ -121,9 +111,12 @@ GtkRBNode *_gtk_rbtree_insert_after     (GtkRBTree              *tree,
 					 gboolean                valid);
 void       _gtk_rbtree_remove_node      (GtkRBTree              *tree,
 					 GtkRBNode              *node);
+gboolean   _gtk_rbtree_is_nil           (GtkRBNode              *node);
 void       _gtk_rbtree_reorder          (GtkRBTree              *tree,
 					 gint                   *new_order,
 					 gint                    length);
+gboolean   _gtk_rbtree_contains         (GtkRBTree              *tree,
+                                         GtkRBTree              *potential_child);
 GtkRBNode *_gtk_rbtree_find_count       (GtkRBTree              *tree,
 					 gint                    count);
 void       _gtk_rbtree_node_set_height  (GtkRBTree              *tree,
@@ -140,8 +133,12 @@ void       _gtk_rbtree_set_fixed_height (GtkRBTree              *tree,
 					 gboolean                mark_valid);
 gint       _gtk_rbtree_node_find_offset (GtkRBTree              *tree,
 					 GtkRBNode              *node);
-gint       _gtk_rbtree_node_find_parity (GtkRBTree              *tree,
+guint      _gtk_rbtree_node_get_index   (GtkRBTree              *tree,
 					 GtkRBNode              *node);
+gboolean   _gtk_rbtree_find_index       (GtkRBTree              *tree,
+					 guint                   index,
+					 GtkRBTree             **new_tree,
+					 GtkRBNode             **new_node);
 gint       _gtk_rbtree_find_offset      (GtkRBTree              *tree,
 					 gint                    offset,
 					 GtkRBTree             **new_tree,
@@ -151,6 +148,7 @@ void       _gtk_rbtree_traverse         (GtkRBTree              *tree,
 					 GTraverseType           order,
 					 GtkRBTreeTraverseFunc   func,
 					 gpointer                data);
+GtkRBNode *_gtk_rbtree_first            (GtkRBTree              *tree);
 GtkRBNode *_gtk_rbtree_next             (GtkRBTree              *tree,
 					 GtkRBNode              *node);
 GtkRBNode *_gtk_rbtree_prev             (GtkRBTree              *tree,
@@ -165,13 +163,6 @@ void       _gtk_rbtree_prev_full        (GtkRBTree              *tree,
 					 GtkRBNode             **new_node);
 
 gint       _gtk_rbtree_get_depth        (GtkRBTree              *tree);
-
-/* This func checks the integrity of the tree */
-#ifdef G_ENABLE_DEBUG  
-void       _gtk_rbtree_test             (const gchar            *where,
-                                         GtkRBTree              *tree);
-void       _gtk_rbtree_debug_spew       (GtkRBTree              *tree);
-#endif
 
 
 G_END_DECLS

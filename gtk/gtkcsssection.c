@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -194,11 +192,11 @@ gtk_css_section_get_parent (const GtkCssSection *section)
  * @section: the section
  *
  * Gets the file that @section was parsed from. If no such file exists,
- * for example because the CSS was loaded via 
+ * for example because the CSS was loaded via
  * @gtk_css_provider_load_from_data(), then %NULL is returned.
  *
- * Returns: the #GFile that @section was parsed from or %NULL if
- *   @section was parsed from other data.
+ * Returns: (transfer none): the #GFile that @section was parsed from
+ *     or %NULL if @section was parsed from other data
  *
  * Since: 3.2
  **/
@@ -279,13 +277,13 @@ gtk_css_section_get_end_line (const GtkCssSection *section)
 }
 
 /**
- * gtk_css_section_get_start_position:
+ * gtk_css_section_get_end_position:
  * @section: the section
  *
  * Returns the offset in bytes from the start of the current line
  * returned via gtk_css_section_get_end_line().
  * This value may change in future invocations of this function if
- * @section is not yet parsed completely. This will for example 
+ * @section is not yet parsed completely. This will for example
  * happen in the GtkCssProvider::parsing-error signal.
  * The end position and line may be identical to the start
  * position and line for sections which failed to parse anything

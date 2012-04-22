@@ -16,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -149,8 +147,10 @@ void       gtk_entry_set_has_frame              (GtkEntry      *entry,
                                                  gboolean       setting);
 gboolean   gtk_entry_get_has_frame              (GtkEntry      *entry);
 
+GDK_DEPRECATED_IN_3_4
 void             gtk_entry_set_inner_border     (GtkEntry        *entry,
                                                  const GtkBorder *border);
+GDK_DEPRECATED_IN_3_4
 const GtkBorder* gtk_entry_get_inner_border     (GtkEntry        *entry);
 
 void       gtk_entry_set_overwrite_mode         (GtkEntry      *entry,
@@ -212,9 +212,9 @@ void           gtk_entry_set_progress_pulse_step (GtkEntry     *entry,
 gdouble        gtk_entry_get_progress_pulse_step (GtkEntry     *entry);
 
 void           gtk_entry_progress_pulse          (GtkEntry     *entry);
-
+GDK_AVAILABLE_IN_3_2
 const gchar*   gtk_entry_get_placeholder_text    (GtkEntry             *entry);
-
+GDK_AVAILABLE_IN_3_2
 void           gtk_entry_set_placeholder_text    (GtkEntry             *entry,
                                                   const gchar          *text);
 /* Setting and managing icons

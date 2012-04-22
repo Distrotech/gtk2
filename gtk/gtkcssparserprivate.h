@@ -12,15 +12,14 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_CSS_PARSER_PRIVATE_H__
 #define __GTK_CSS_PARSER_PRIVATE_H__
 
-#include <gtk/gtksymboliccolor.h>
+#include "gtk/gtkcsstypesprivate.h"
+#include <gtk/gtkcssprovider.h>
 
 G_BEGIN_DECLS
 
@@ -40,6 +39,10 @@ void            _gtk_css_parser_take_error        (GtkCssParser          *parser
 void            _gtk_css_parser_error             (GtkCssParser          *parser,
                                                    const char            *format,
                                                     ...) G_GNUC_PRINTF (2, 3);
+void            _gtk_css_parser_error_full        (GtkCssParser          *parser,
+                                                   GtkCssProviderError    code,
+                                                   const char            *format,
+                                                    ...) G_GNUC_PRINTF (3, 4);
 
 guint           _gtk_css_parser_get_line          (GtkCssParser          *parser);
 guint           _gtk_css_parser_get_position      (GtkCssParser          *parser);
@@ -47,6 +50,8 @@ guint           _gtk_css_parser_get_position      (GtkCssParser          *parser
 gboolean        _gtk_css_parser_is_eof            (GtkCssParser          *parser);
 gboolean        _gtk_css_parser_begins_with       (GtkCssParser          *parser,
                                                    char                   c);
+gboolean        _gtk_css_parser_has_prefix        (GtkCssParser          *parser,
+                                                   const char            *prefix);
 gboolean        _gtk_css_parser_is_string         (GtkCssParser          *parser);
 
 /* IMPORTANT:
@@ -70,14 +75,21 @@ gboolean        _gtk_css_parser_try_uint          (GtkCssParser          *parser
                                                    guint                 *value);
 gboolean        _gtk_css_parser_try_double        (GtkCssParser          *parser,
                                                    gdouble               *value);
+gboolean        _gtk_css_parser_try_length        (GtkCssParser          *parser,
+                                                   int                   *value);
+gboolean        _gtk_css_parser_try_enum          (GtkCssParser          *parser,
+                                                   GType                  enum_type,
+                                                   int                   *value);
+gboolean        _gtk_css_parser_try_hash_color    (GtkCssParser          *parser,
+                                                   GdkRGBA               *rgba);
+
+gboolean        _gtk_css_parser_has_number        (GtkCssParser          *parser);
+char *          _gtk_css_parser_read_string       (GtkCssParser          *parser);
+char *          _gtk_css_parser_read_value        (GtkCssParser          *parser);
+GFile *         _gtk_css_parser_read_url          (GtkCssParser          *parser,
+                                                   GFile                 *base);
 
 void            _gtk_css_parser_skip_whitespace   (GtkCssParser          *parser);
-char *          _gtk_css_parser_read_string       (GtkCssParser          *parser);
-char *          _gtk_css_parser_read_uri          (GtkCssParser          *parser);
-char *          _gtk_css_parser_read_value        (GtkCssParser          *parser);
-GtkSymbolicColor *_gtk_css_parser_read_symbolic_color
-                                                  (GtkCssParser          *parser);
-
 void            _gtk_css_parser_resync            (GtkCssParser          *parser,
                                                    gboolean               sync_at_semicolon,
                                                    char                   terminator);

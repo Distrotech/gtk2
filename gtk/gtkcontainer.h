@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -33,7 +31,6 @@
 
 
 #include <gtk/gtkwidget.h>
-#include <gtk/gtkadjustment.h>
 
 
 G_BEGIN_DECLS
@@ -197,6 +194,7 @@ void	     gtk_container_child_get_property		(GtkContainer	   *container,
 							 const gchar	   *property_name,
 	                                                 GValue		   *value);
 
+GDK_AVAILABLE_IN_3_2
 void gtk_container_child_notify (GtkContainer *container,
                                  GtkWidget    *child,
                                  const gchar  *child_property);

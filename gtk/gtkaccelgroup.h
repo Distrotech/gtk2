@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -163,18 +161,21 @@ gboolean gtk_accelerator_valid		      (guint	        keyval,
 void	 gtk_accelerator_parse		      (const gchar     *accelerator,
 					       guint	       *accelerator_key,
 					       GdkModifierType *accelerator_mods);
+GDK_AVAILABLE_IN_3_4
 void gtk_accelerator_parse_with_keycode       (const gchar     *accelerator,
                                                guint           *accelerator_key,
                                                guint          **accelerator_codes,
                                                GdkModifierType *accelerator_mods);
 gchar*	 gtk_accelerator_name		      (guint	        accelerator_key,
 					       GdkModifierType  accelerator_mods);
+GDK_AVAILABLE_IN_3_4
 gchar*	 gtk_accelerator_name_with_keycode    (GdkDisplay      *display,
                                                guint            accelerator_key,
                                                guint            keycode,
                                                GdkModifierType  accelerator_mods);
 gchar*   gtk_accelerator_get_label            (guint           accelerator_key,
                                                GdkModifierType accelerator_mods);
+GDK_AVAILABLE_IN_3_4
 gchar*   gtk_accelerator_get_label_with_keycode (GdkDisplay      *display,
                                                  guint            accelerator_key,
                                                  guint            keycode,

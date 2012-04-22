@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -25,6 +23,7 @@
 #define __GTK_GRADIENT_H__
 
 #include <gdk/gdk.h>
+#include <gtk/gtkstylecontext.h>
 #include <gtk/gtkstyleproperties.h>
 #include <gtk/gtksymboliccolor.h>
 
@@ -55,6 +54,10 @@ void          gtk_gradient_unref          (GtkGradient         *gradient);
 gboolean      gtk_gradient_resolve        (GtkGradient         *gradient,
                                            GtkStyleProperties  *props,
                                            cairo_pattern_t    **resolved_gradient);
+cairo_pattern_t *
+              gtk_gradient_resolve_for_context
+                                          (GtkGradient         *gradient,
+                                           GtkStyleContext     *context);
 
 char *        gtk_gradient_to_string      (GtkGradient         *gradient);
 

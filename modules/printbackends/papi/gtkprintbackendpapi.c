@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <unistd.h>
@@ -802,7 +800,7 @@ papi_display_printer_status (gpointer user_data)
   papi_printer = GTK_PRINTER_PAPI (printer);
   if (papiServiceCreate (&service, NULL, NULL, NULL, NULL, PAPI_ENCRYPT_NEVER,
                           NULL) != PAPI_OK)
-    return FALSE;
+    return G_SOURCE_REMOVE;
 
   if (papiPrinterQuery (service, papi_printer->printer_name, NULL, NULL,
                         &current_printer) != PAPI_OK) 
@@ -845,7 +843,7 @@ papi_display_printer_status (gpointer user_data)
   papiServiceDestroy (service);
   gtk_printer_set_has_details (printer, TRUE);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void  

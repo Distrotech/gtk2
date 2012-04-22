@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -59,7 +57,8 @@ _gtk_get_libdir (void)
     {
       gchar *root = g_win32_get_package_installation_directory_of_module (gtk_dll);
       gchar *slash = strrchr (root, '\\');
-      if (g_ascii_strcasecmp (slash + 1, ".libs") == 0)
+      if (slash != NULL &&
+          g_ascii_strcasecmp (slash + 1, ".libs") == 0)
         gtk_libdir = GTK_LIBDIR;
       else
         gtk_libdir = g_build_filename (root, "lib", NULL);

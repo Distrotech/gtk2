@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -24,6 +23,7 @@
 #define __GTK_SETTINGS_H__
 
 #include <gdk/gdk.h>
+#include <gtk/gtktypes.h>
 
 G_BEGIN_DECLS
 
@@ -38,15 +38,9 @@ G_BEGIN_DECLS
 
 
 /* --- typedefs --- */
-typedef struct _GtkSettings GtkSettings;
 typedef struct _GtkSettingsPrivate GtkSettingsPrivate;
 typedef struct _GtkSettingsClass GtkSettingsClass;
 typedef struct _GtkSettingsValue GtkSettingsValue;
-
-
-typedef gboolean (*GtkRcPropertyParser) (const GParamSpec *pspec,
-                                         const GString    *rc_string,
-                                         GValue           *property_value);
 
 
 /* --- structures --- */

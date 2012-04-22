@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Cosimo Cecchi <ccecchi@redhat.com>
  */
@@ -80,8 +78,10 @@ void     gtk_app_chooser_button_set_heading           (GtkAppChooserButton *self
                                                        const gchar         *heading);
 const gchar *
          gtk_app_chooser_button_get_heading           (GtkAppChooserButton *self);
+GDK_AVAILABLE_IN_3_2
 void     gtk_app_chooser_button_set_show_default_item (GtkAppChooserButton *self,
                                                        gboolean             setting);
+GDK_AVAILABLE_IN_3_2
 gboolean gtk_app_chooser_button_get_show_default_item (GtkAppChooserButton *self);
 
 G_END_DECLS

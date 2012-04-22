@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -214,16 +212,17 @@ void                   gtk_tree_view_set_model                     (GtkTreeView 
 								    GtkTreeModel              *model);
 GtkTreeSelection      *gtk_tree_view_get_selection                 (GtkTreeView               *tree_view);
 
-#ifndef GTK_DISABLE_DEPRECATED
-
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_hadjustment)
 GtkAdjustment         *gtk_tree_view_get_hadjustment               (GtkTreeView               *tree_view);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_set_hadjustment)
 void                   gtk_tree_view_set_hadjustment               (GtkTreeView               *tree_view,
 								    GtkAdjustment             *adjustment);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_vadjustment)
 GtkAdjustment         *gtk_tree_view_get_vadjustment               (GtkTreeView               *tree_view);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_set_vadjustment)
 void                   gtk_tree_view_set_vadjustment               (GtkTreeView               *tree_view,
 								    GtkAdjustment             *adjustment);
 
-#endif
 
 gboolean               gtk_tree_view_get_headers_visible           (GtkTreeView               *tree_view);
 void                   gtk_tree_view_set_headers_visible           (GtkTreeView               *tree_view,
@@ -256,6 +255,9 @@ gint                   gtk_tree_view_insert_column_with_data_func  (GtkTreeView 
                                                                     GtkTreeCellDataFunc        func,
                                                                     gpointer                   data,
                                                                     GDestroyNotify             dnotify);
+
+GDK_AVAILABLE_IN_3_4
+guint                  gtk_tree_view_get_n_columns                 (GtkTreeView               *tree_view);
 GtkTreeViewColumn     *gtk_tree_view_get_column                    (GtkTreeView               *tree_view,
 								    gint                       n);
 GList                 *gtk_tree_view_get_columns                   (GtkTreeView               *tree_view);
@@ -433,6 +435,7 @@ typedef void (* GtkTreeDestroyCountFunc)  (GtkTreeView             *tree_view,
 					   GtkTreePath             *path,
 					   gint                     children,
 					   gpointer                 user_data);
+GDK_DEPRECATED_IN_3_4
 void gtk_tree_view_set_destroy_count_func (GtkTreeView             *tree_view,
 					   GtkTreeDestroyCountFunc  func,
 					   gpointer                 data,

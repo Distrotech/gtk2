@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -46,12 +44,12 @@ struct _GtkFontChooserDialogPrivate
 };
 
 /**
- * SECTION:gtkfontchooserdlg
- * @Short_description: A dialog box for selecting fonts
+ * SECTION:gtkfontchooserdialog
+ * @Short_description: A dialog for selecting fonts
  * @Title: GtkFontChooserDialog
  * @See_also: #GtkFontChooser, #GtkDialog
  *
- * The #GtkFontChooserDialog widget is a dialog box for selecting a font.
+ * The #GtkFontChooserDialog widget is a dialog for selecting a font.
  * It implements the #GtkFontChooser interface.
  *
  * <refsect2 id="GtkFontChooserDialog-BUILDER-UI">
@@ -190,7 +188,8 @@ gtk_font_chooser_dialog_init (GtkFontChooserDialog *fontchooserdiag)
                                   GTK_FONT_CHOOSER (priv->fontchooser));
 }
 
-/** gtk_font_chooser_dialog_new:
+/**
+ * gtk_font_chooser_dialog_new:
  * @title: (allow-none): Title of the dialog, or %NULL
  * @parent: (allow-none): Transient parent of the dialog, or %NULL
  *

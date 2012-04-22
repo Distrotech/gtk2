@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -273,7 +271,7 @@ gtk_combo_box_accessible_get_keybinding (AtkAction *action,
     {
       target = atk_relation_get_target (relation);
       target_object = g_ptr_array_index (target, 0);
-      widget = gtk_accessible_get_widget (GTK_ACCESSIBLE (target_object));
+      label = gtk_accessible_get_widget (GTK_ACCESSIBLE (target_object));
     }
   g_object_unref (set);
   if (GTK_IS_LABEL (label))

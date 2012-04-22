@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -33,11 +31,8 @@
 
 #include <gdk/gdk.h>
 #include <gtk/gtkaccelgroup.h>
-#include <gtk/gtkadjustment.h>
 #include <gtk/gtkborder.h>
-#include <gtk/gtksettings.h>
-#include <gtk/gtkstylecontext.h>
-#include <gtk/gtkwidgetpath.h>
+#include <gtk/gtktypes.h>
 #include <atk/atk.h>
 
 G_BEGIN_DECLS
@@ -61,17 +56,10 @@ typedef enum
 
 #define GTK_TYPE_REQUISITION              (gtk_requisition_get_type ())
 
-/* forward declaration to avoid excessive includes (and concurrent includes)
- */
-typedef struct _GtkRequisition	       GtkRequisition;
-typedef struct _GtkSelectionData       GtkSelectionData;
 typedef struct _GtkWidgetPrivate       GtkWidgetPrivate;
 typedef struct _GtkWidgetClass	       GtkWidgetClass;
 typedef struct _GtkWidgetClassPrivate  GtkWidgetClassPrivate;
 typedef struct _GtkWidgetAuxInfo       GtkWidgetAuxInfo;
-typedef struct _GtkClipboard	       GtkClipboard;
-typedef struct _GtkTooltip             GtkTooltip;
-typedef struct _GtkWindow              GtkWindow;
 
 /**
  * GtkAllocation:
@@ -425,6 +413,9 @@ struct _GtkWidgetClass
 
   void         (* style_updated)          (GtkWidget *widget);
 
+  gboolean     (* touch_event)            (GtkWidget     *widget,
+                                           GdkEventTouch *event);
+
   /*< private >*/
 
   GtkWidgetClassPrivate *priv;
@@ -436,7 +427,6 @@ struct _GtkWidgetClass
   void (*_gtk_reserved5) (void);
   void (*_gtk_reserved6) (void);
   void (*_gtk_reserved7) (void);
-  void (*_gtk_reserved8) (void);
 };
 
 struct _GtkWidgetAuxInfo
@@ -483,10 +473,9 @@ void	   gtk_widget_queue_draw_region   (GtkWidget	       *widget,
                                            const cairo_region_t*region);
 void	   gtk_widget_queue_resize	  (GtkWidget	       *widget);
 void	   gtk_widget_queue_resize_no_redraw (GtkWidget *widget);
-#ifndef GTK_DISABLE_DEPRECATED
-void	   gtk_widget_size_request	  (GtkWidget	       *widget,
-					   GtkRequisition      *requisition);
-#endif
+GDK_DEPRECATED_IN_3_0_FOR(gtk_widget_get_preferred_size)
+void       gtk_widget_size_request        (GtkWidget           *widget,
+                                           GtkRequisition      *requisition);
 void	   gtk_widget_size_allocate	  (GtkWidget	       *widget,
 					   GtkAllocation       *allocation);
 
@@ -509,10 +498,9 @@ void                gtk_widget_get_preferred_size             (GtkWidget      *w
                                                                GtkRequisition *minimum_size,
                                                                GtkRequisition *natural_size);
 
-#ifndef GTK_DISABLE_DEPRECATED
-void       gtk_widget_get_child_requisition (GtkWidget	       *widget,
-					     GtkRequisition    *requisition);
-#endif
+GDK_DEPRECATED_IN_3_0_FOR(gtk_widget_get_preferred_size)
+void       gtk_widget_get_child_requisition (GtkWidget         *widget,
+                                             GtkRequisition    *requisition);
 void	   gtk_widget_add_accelerator	  (GtkWidget           *widget,
 					   const gchar         *accel_signal,
 					   GtkAccelGroup       *accel_group,
@@ -558,6 +546,7 @@ void       gtk_widget_set_can_focus       (GtkWidget           *widget,
 gboolean   gtk_widget_get_can_focus       (GtkWidget           *widget);
 gboolean   gtk_widget_has_focus           (GtkWidget           *widget);
 gboolean   gtk_widget_is_focus            (GtkWidget           *widget);
+GDK_AVAILABLE_IN_3_2
 gboolean   gtk_widget_has_visible_focus   (GtkWidget           *widget);
 void       gtk_widget_grab_focus          (GtkWidget           *widget);
 
@@ -721,8 +710,10 @@ void             gtk_widget_set_support_multidevice (GtkWidget      *widget,
                                                      gboolean        support_multidevice);
 
 /* Accessibility support */
+GDK_AVAILABLE_IN_3_2
 void             gtk_widget_class_set_accessible_type    (GtkWidgetClass     *widget_class,
                                                           GType               type);
+GDK_AVAILABLE_IN_3_2
 void             gtk_widget_class_set_accessible_role    (GtkWidgetClass     *widget_class,
                                                           AtkRole             role);
 AtkObject*       gtk_widget_get_accessible               (GtkWidget          *widget);
@@ -752,6 +743,7 @@ void     gtk_widget_set_margin_bottom (GtkWidget *widget,
 gint	     gtk_widget_get_events	(GtkWidget	*widget);
 GdkEventMask gtk_widget_get_device_events (GtkWidget	*widget,
                                            GdkDevice    *device);
+GDK_DEPRECATED_IN_3_0_FOR(gdk_window_get_device_position)
 void	     gtk_widget_get_pointer	(GtkWidget	*widget,
 					 gint		*x,
 					 gint		*y);
@@ -890,6 +882,7 @@ GtkStyleContext * gtk_widget_get_style_context (GtkWidget *widget);
 
 GtkWidgetPath *   gtk_widget_get_path (GtkWidget *widget);
 
+GDK_AVAILABLE_IN_3_4
 GdkModifierType   gtk_widget_get_modifier_mask (GtkWidget         *widget,
                                                 GdkModifierIntent  intent);
 

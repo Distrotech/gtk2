@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -150,7 +148,13 @@ typedef enum
   /* Following flag is set for events on the event queue during
    * translation and cleared afterwards.
    */
-  GDK_EVENT_PENDING = 1 << 0
+  GDK_EVENT_PENDING = 1 << 0,
+
+  /* The following flag is set for:
+   * 1) touch events emulating pointer events
+   * 2) pointer events being emulated by a touch sequence.
+   */
+  GDK_EVENT_POINTER_EMULATED = 1 << 1
 } GdkEventFlags;
 
 struct _GdkEventPrivate
@@ -180,7 +184,6 @@ struct _GdkWindow
   gint y;
 
   GdkEventMask event_mask;
-  gint extension_events;
 
   GList *filters;
   GList *children;
@@ -204,6 +207,7 @@ struct _GdkWindow
   guint input_only : 1;
   guint modal_hint : 1;
   guint composited : 1;
+  guint has_alpha_background : 1;
 
   guint destroyed : 2;
 
@@ -227,10 +231,18 @@ struct _GdkWindow
 
   gint abs_x, abs_y; /* Absolute offset in impl */
   gint width, height;
-  guint32 clip_tag;
 
-  cairo_region_t *clip_region; /* Clip region (wrt toplevel) in window coords */
-  cairo_region_t *clip_region_with_children; /* Clip region in window coords */
+  /* The clip region is the part of the window, in window coordinates
+     that is fully or partially (i.e. semi transparently) visible in
+     the window hierarchy from the toplevel and down */
+  cairo_region_t *clip_region;
+  /* This is the clip region, with additionally all the opaque
+     child windows removed */
+  cairo_region_t *clip_region_with_children;
+  /* The layered region is the subset of clip_region that
+     is covered by non-opaque sibling or ancestor sibling window. */
+  cairo_region_t *layered_region;
+
   GdkCursor *cursor;
   GHashTable *device_cursor;
 
@@ -265,6 +277,10 @@ GdkEvent* _gdk_event_unqueue (GdkDisplay *display);
 
 void _gdk_event_filter_unref        (GdkWindow      *window,
 				     GdkEventFilter *filter);
+
+void     _gdk_event_set_pointer_emulated (GdkEvent *event,
+                                          gboolean  emulated);
+gboolean _gdk_event_get_pointer_emulated (GdkEvent *event);
 
 void   _gdk_event_emit               (GdkEvent   *event);
 GList* _gdk_event_queue_find_first   (GdkDisplay *display);
@@ -391,11 +407,6 @@ void _gdk_display_set_window_under_pointer (GdkDisplay *display,
 
 void _gdk_synthesize_crossing_events_for_geometry_change (GdkWindow *changed_window);
 
-cairo_region_t *_gdk_window_calculate_full_clip_region    (GdkWindow     *window,
-                                                      GdkWindow     *base_window,
-                                                      gboolean       do_children,
-                                                      gint          *base_x_offset,
-                                                      gint          *base_y_offset);
 gboolean    _gdk_window_has_impl (GdkWindow *window);
 GdkWindow * _gdk_window_get_impl_window (GdkWindow *window);
 

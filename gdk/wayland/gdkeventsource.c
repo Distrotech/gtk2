@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -35,7 +33,7 @@ static gboolean
 gdk_event_source_prepare(GSource *base, gint *timeout)
 {
   GdkWaylandEventSource *source = (GdkWaylandEventSource *) base;
-  GdkDisplayWayland *display = (GdkDisplayWayland *) source->display;
+  GdkWaylandDisplay *display = (GdkWaylandDisplay *) source->display;
 
   *timeout = -1;
 
@@ -113,10 +111,10 @@ void
 _gdk_wayland_display_deliver_event (GdkDisplay *display, GdkEvent *event)
 {
   GList *node;
-  static int serial;
 
   node = _gdk_event_queue_append (display, event);
-  _gdk_windowing_got_event (display, node, event, serial++);
+  _gdk_windowing_got_event (display, node, event,
+                            _gdk_display_get_next_serial (display));
 }
 
 GSource *
@@ -124,7 +122,7 @@ _gdk_wayland_display_event_source_new (GdkDisplay *display)
 {
   GSource *source;
   GdkWaylandEventSource *wl_source;
-  GdkDisplayWayland *display_wayland;
+  GdkWaylandDisplay *display_wayland;
   char *name;
 
   source = g_source_new (&wl_glib_source_funcs,
@@ -134,7 +132,7 @@ _gdk_wayland_display_event_source_new (GdkDisplay *display)
   g_free (name);
   wl_source = (GdkWaylandEventSource *) source;
 
-  display_wayland = GDK_DISPLAY_WAYLAND (display);
+  display_wayland = GDK_WAYLAND_DISPLAY (display);
   wl_source->display = display;
   wl_source->pfd.fd = wl_display_get_fd(display_wayland->wl_display,
 					gdk_event_source_update, source);
@@ -156,17 +154,17 @@ _gdk_wayland_display_flush (GdkDisplay *display, GSource *source)
   GdkWaylandEventSource *wayland_source = (GdkWaylandEventSource *) source;
 
   while (wayland_source->mask & WL_DISPLAY_WRITABLE)
-    wl_display_iterate(GDK_DISPLAY_WAYLAND (display)->wl_display,
+    wl_display_iterate(GDK_WAYLAND_DISPLAY (display)->wl_display,
 		       WL_DISPLAY_WRITABLE);
 }
 
 void
 _gdk_wayland_display_queue_events (GdkDisplay *display)
 {
-  GdkDisplayWayland *display_wayland;
+  GdkWaylandDisplay *display_wayland;
   GdkWaylandEventSource *source;
 
-  display_wayland = GDK_DISPLAY_WAYLAND (display);
+  display_wayland = GDK_WAYLAND_DISPLAY (display);
   source = (GdkWaylandEventSource *) display_wayland->event_source;
 
   if (source->pfd.revents)

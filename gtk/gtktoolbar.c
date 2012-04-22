@@ -17,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -56,6 +54,8 @@
 #include "gtkprivate.h"
 #include "gtkintl.h"
 #include "gtktypebuiltins.h"
+#include "gtkwidgetpath.h"
+#include "gtkwidgetprivate.h"
 
 
 /**
@@ -858,16 +858,11 @@ gtk_toolbar_draw (GtkWidget *widget,
   GtkToolbar *toolbar = GTK_TOOLBAR (widget);
   GtkToolbarPrivate *priv = toolbar->priv;
   GtkStyleContext *context;
-  GtkStateFlags state;
   GList *list;
   guint border_width;
 
   border_width = gtk_container_get_border_width (GTK_CONTAINER (widget));
   context = gtk_widget_get_style_context (widget);
-  state = gtk_widget_get_state_flags (widget);
-
-  gtk_style_context_save (context);
-  gtk_style_context_set_state (context, state);
 
   gtk_render_background (context, cr, border_width, border_width,
                          gtk_widget_get_allocated_width (widget) - 2 * border_width,
@@ -886,8 +881,6 @@ gtk_toolbar_draw (GtkWidget *widget,
   gtk_container_propagate_draw (GTK_CONTAINER (widget),
 				priv->arrow_button,
 				cr);
-
-  gtk_style_context_restore (context);
 
   return FALSE;
 }
@@ -2659,7 +2652,7 @@ menu_position_func (GtkMenu  *menu,
                                                   gtk_widget_get_window (priv->arrow_button));
   if (monitor_num < 0)
     monitor_num = 0;
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   gtk_widget_get_allocation (priv->arrow_button, &allocation);
 
@@ -3953,7 +3946,7 @@ gtk_toolbar_get_path_for_child (GtkContainer *container,
   g_list_foreach (children, add_widget_to_path, sibling_path);
   g_list_free (children);
 
-  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (container)));
+  path = _gtk_widget_create_path (GTK_WIDGET (container));
   if (gtk_widget_get_visible (child))
     {
       vis_index = gtk_toolbar_get_visible_position (toolbar, child);
@@ -3973,10 +3966,16 @@ gtk_toolbar_get_path_for_child (GtkContainer *container,
 }
 
 static void
+gtk_toolbar_invalidate_order_foreach (GtkWidget *widget)
+{
+  _gtk_widget_invalidate_style_context (widget, GTK_CSS_CHANGE_POSITION | GTK_CSS_CHANGE_SIBLING_POSITION);
+}
+
+static void
 gtk_toolbar_invalidate_order (GtkToolbar *toolbar)
 {
   gtk_container_forall (GTK_CONTAINER (toolbar),
-                        (GtkCallback) gtk_widget_reset_style,
+                        (GtkCallback) gtk_toolbar_invalidate_order_foreach,
                         NULL);
 }
 

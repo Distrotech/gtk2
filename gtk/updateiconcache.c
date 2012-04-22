@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -1525,8 +1523,7 @@ opentmp:
     }
   cache = NULL;
 
-  g_list_foreach (directories, (GFunc)g_free, NULL);
-  g_list_free (directories);
+  g_list_free_full (directories, g_free);
 
   if (!validate_file (tmp_cache_path))
     {

@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -1220,22 +1218,13 @@ test_icon_view (void)
     "    </child>"
     "  </object>"
     "</interface>";
-  GObject *window, *iconview, *renderer;
-  gchar *text;
+  GObject *window, *iconview;
   
   builder = builder_new_from_string (buffer, -1, NULL);
   iconview = gtk_builder_get_object (builder, "iconview1");
   g_assert (iconview);
   g_assert (GTK_IS_ICON_VIEW (iconview));
 
-  gtk_widget_realize (GTK_WIDGET (iconview));
-
-  renderer = gtk_builder_get_object (builder, "renderer1");
-  g_object_get (renderer, "text", &text, NULL);
-  g_assert (text);
-  g_assert (strcmp (text, "test") == 0);
-  g_free (text);
-    
   window = gtk_builder_get_object (builder, "window1");
   gtk_widget_destroy (GTK_WIDGET (window));
   g_object_unref (builder);
@@ -2572,6 +2561,79 @@ test_message_area (void)
   g_object_unref (builder);
 }
 
+static void
+test_gmenu (void)
+{
+  GtkBuilder *builder;
+  GObject *obj, *obj1;
+  const gchar buffer[] =
+    "<interface>"
+    "  <object class=\"GtkWindow\" id=\"window\">"
+    "  </object>"
+    "  <menu id='edit-menu'>"
+    "    <section>"
+    "      <item>"
+    "        <attribute name='label'>Undo</attribute>"
+    "        <attribute name='action'>undo</attribute>"
+    "      </item>"
+    "      <item>"
+    "        <attribute name='label'>Redo</attribute>"
+    "        <attribute name='action'>redo</attribute>"
+    "      </item>"
+    "    </section>"
+    "    <section></section>"
+    "    <section>"
+    "      <attribute name='label'>Copy &amp; Paste</attribute>"
+    "      <item>"
+    "        <attribute name='label'>Cut</attribute>"
+    "        <attribute name='action'>cut</attribute>"
+    "      </item>"
+    "      <item>"
+    "        <attribute name='label'>Copy</attribute>"
+    "        <attribute name='action'>copy</attribute>"
+    "      </item>"
+    "      <item>"
+    "        <attribute name='label'>Paste</attribute>"
+    "        <attribute name='action'>paste</attribute>"
+    "      </item>"
+    "    </section>"
+    "    <item><link name='section' id='blargh'>"
+    "      <item>"
+    "        <attribute name='label'>Bold</attribute>"
+    "        <attribute name='action'>bold</attribute>"
+    "      </item>"
+    "      <submenu>"
+    "        <attribute name='label'>Language</attribute>"
+    "        <item>"
+    "          <attribute name='label'>Latin</attribute>"
+    "          <attribute name='action'>lang</attribute>"
+    "          <attribute name='target'>'latin'</attribute>"
+    "        </item>"
+    "        <item>"
+    "          <attribute name='label'>Greek</attribute>"
+    "          <attribute name='action'>lang</attribute>"
+    "          <attribute name='target'>'greek'</attribute>"
+    "        </item>"
+    "        <item>"
+    "          <attribute name='label'>Urdu</attribute>"
+    "          <attribute name='action'>lang</attribute>"
+    "          <attribute name='target'>'urdu'</attribute>"
+    "        </item>"
+    "      </submenu>"
+    "    </link></item>"
+    "  </menu>"
+    "</interface>";
+
+  builder = builder_new_from_string (buffer, -1, NULL);
+  obj = gtk_builder_get_object (builder, "window");
+  g_assert (GTK_IS_WINDOW (obj));
+  obj1 = gtk_builder_get_object (builder, "edit-menu");
+  g_assert (G_IS_MENU_MODEL (obj1));
+  obj1 = gtk_builder_get_object (builder, "blargh");
+  g_assert (G_IS_MENU_MODEL (obj1));
+  g_object_unref (builder);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -2618,6 +2680,7 @@ main (int argc, char **argv)
   g_test_add_func ("/Builder/Menus", test_menus);
   g_test_add_func ("/Builder/MessageArea", test_message_area);
   g_test_add_func ("/Builder/MessageDialog", test_message_dialog);
+  g_test_add_func ("/Builder/GMenu", test_gmenu);
 
   return g_test_run();
 }

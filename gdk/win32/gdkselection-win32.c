@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -587,14 +585,14 @@ _gdk_win32_display_convert_selection (GdkDisplay *display,
 	       * it.
 	       *
 	       * If the data is from Mozilla Firefox or IE7, and
-	       * starts with an "oldfashioned" BITMAPINFOHEADER,
+	       * starts with an "old fashioned" BITMAPINFOHEADER,
 	       * i.e. with biSize==40, and biCompression == BI_RGB and
 	       * biBitCount==32, we assume that the "extra" byte in
 	       * each pixel in fact is alpha.
 	       *
 	       * The gdk-pixbuf bmp loader doesn't trust 32-bit BI_RGB
-	       * nitmaps to in fact have alpha, so we have to convince
-	       * it by changint the bitmap header to a version 5
+	       * bitmaps to in fact have alpha, so we have to convince
+	       * it by changing the bitmap header to a version 5
 	       * BI_BITFIELDS one with explicit alpha mask indicated.
 	       *
 	       * The RGB bytes that are in bitmaps on the clipboard
@@ -720,6 +718,17 @@ _gdk_win32_display_convert_selection (GdkDisplay *display,
 		      bf->bfOffBits = (sizeof (BITMAPFILEHEADER) +
 				       bi->biSize +
 				       bi->biClrUsed * sizeof (RGBQUAD));
+
+		      if (bi->biCompression == BI_BITFIELDS && bi->biBitCount >= 16)
+		        {
+                          /* Screenshots taken with PrintScreen or
+                           * Alt + PrintScreen are found on the clipboard in
+                           * this format. In this case the BITMAPINFOHEADER is
+                           * followed by three DWORD specifying the masks of the
+                           * red green and blue components, so adjust the offset
+                           * accordingly. */
+		          bf->bfOffBits += (3 * sizeof (DWORD));
+		        }
 
 		      memcpy ((char *) data + sizeof (BITMAPFILEHEADER),
 			      bi,
@@ -874,7 +883,7 @@ _gdk_selection_property_delete (GdkWindow *window)
 
 void
 _gdk_win32_display_send_selection_notify (GdkDisplay   *display,
-					  HWND          requestor,
+					  GdkWindow    *requestor,
 					  GdkAtom     	selection,
 					  GdkAtom     	target,
 					  GdkAtom     	property,

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -34,6 +32,7 @@
 #include "gtkorientable.h"
 #include "gtkwindow.h"
 #include "gtktypebuiltins.h"
+#include "gtkorientableprivate.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
 #include "a11y/gtkpanedaccessible.h"
@@ -690,7 +689,6 @@ gtk_paned_init (GtkPaned *paned)
   priv->child1 = NULL;
   priv->child2 = NULL;
   priv->handle = NULL;
-  priv->cursor_type = GDK_CROSS;
 
   priv->handle_pos.width = 5;
   priv->handle_pos.height = 5;
@@ -723,6 +721,7 @@ gtk_paned_set_property (GObject        *object,
     {
     case PROP_ORIENTATION:
       priv->orientation = g_value_get_enum (value);
+      _gtk_orientable_set_style_classes (GTK_ORIENTABLE (paned));
 
       if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
         priv->cursor_type = GDK_SB_H_DOUBLE_ARROW;
@@ -905,7 +904,10 @@ gtk_paned_get_preferred_size (GtkWidget      *widget,
   if (priv->child1 && gtk_widget_get_visible (priv->child1))
     {
       get_preferred_size_for_size (priv->child1, orientation, size, &child_min, &child_nat);
-      *minimum = child_min;
+      if (priv->child1_shrink && priv->orientation == orientation)
+        *minimum = 0;
+      else
+        *minimum = child_min;
       *natural = child_nat;
     }
 
@@ -915,7 +917,8 @@ gtk_paned_get_preferred_size (GtkWidget      *widget,
 
       if (priv->orientation == orientation)
         {
-          *minimum += child_min;
+          if (!priv->child2_shrink)
+            *minimum += child_min;
           *natural += child_nat;
         }
       else
@@ -1352,8 +1355,7 @@ gtk_paned_realize (GtkWidget *widget)
 			    GDK_BUTTON_RELEASE_MASK |
 			    GDK_ENTER_NOTIFY_MASK |
 			    GDK_LEAVE_NOTIFY_MASK |
-			    GDK_POINTER_MOTION_MASK |
-			    GDK_POINTER_MOTION_HINT_MASK);
+			    GDK_POINTER_MOTION_MASK);
   attributes_mask = GDK_WA_X | GDK_WA_Y;
   if (gtk_widget_is_sensitive (widget))
     {
@@ -1520,7 +1522,10 @@ is_rtl (GtkPaned *paned)
 }
 
 static void
-update_drag (GtkPaned *paned)
+update_drag (GtkPaned         *paned,
+             /* relative to priv->handle */
+             int               xpos,
+             int               ypos)
 {
   GtkPanedPrivate *priv = paned->priv;
   GtkAllocation allocation;
@@ -1528,11 +1533,18 @@ update_drag (GtkPaned *paned)
   gint pos;
   gint handle_size;
   gint size;
+  gint x, y;
 
+  gdk_window_get_position (priv->handle, &x, &y);
+  gtk_widget_get_allocation (widget, &allocation);
   if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
-    gtk_widget_get_pointer (widget, &pos, NULL);
+    {
+      pos = xpos + x - allocation.x;
+    }
   else
-    gtk_widget_get_pointer (widget, NULL, &pos);
+    {
+      pos = ypos + y - allocation.y;
+    }
 
   pos -= priv->drag_pos;
 
@@ -1542,7 +1554,6 @@ update_drag (GtkPaned *paned)
 			    "handle-size", &handle_size,
 			    NULL);
 
-      gtk_widget_get_allocation (widget, &allocation);
       size = allocation.width - pos - handle_size;
     }
   else
@@ -1564,7 +1575,7 @@ gtk_paned_enter (GtkWidget        *widget,
   GtkPanedPrivate *priv = paned->priv;
 
   if (priv->in_drag)
-    update_drag (paned);
+    update_drag (paned, event->x, event->y);
   else
     {
       priv->handle_prelit = TRUE;
@@ -1586,7 +1597,7 @@ gtk_paned_leave (GtkWidget        *widget,
   GtkPanedPrivate *priv = paned->priv;
 
   if (priv->in_drag)
-    update_drag (paned);
+    update_drag (paned, event->x, event->y);
   else
     {
       priv->handle_prelit = FALSE;
@@ -1626,15 +1637,14 @@ gtk_paned_button_press (GtkWidget      *widget,
   GtkPanedPrivate *priv = paned->priv;
 
   if (!priv->in_drag &&
-      (event->window == priv->handle) && (event->button == 1))
+      (event->window == priv->handle) && (event->button == GDK_BUTTON_PRIMARY))
     {
       /* We need a server grab here, not gtk_grab_add(), since
        * we don't want to pass events on to the widget's children */
       if (gdk_device_grab (event->device,
                            priv->handle,
                            GDK_OWNERSHIP_WINDOW, FALSE,
-                           GDK_POINTER_MOTION_HINT_MASK
-                           | GDK_BUTTON1_MOTION_MASK
+                           GDK_BUTTON1_MOTION_MASK
                            | GDK_BUTTON_RELEASE_MASK
                            | GDK_ENTER_NOTIFY_MASK
                            | GDK_LEAVE_NOTIFY_MASK,
@@ -1729,7 +1739,7 @@ gtk_paned_button_release (GtkWidget      *widget,
   GtkPaned *paned = GTK_PANED (widget);
   GtkPanedPrivate *priv = paned->priv;
 
-  if (priv->in_drag && (event->button == 1))
+  if (priv->in_drag && (event->button == GDK_BUTTON_PRIMARY))
     {
       stop_drag (paned);
 
@@ -1748,7 +1758,7 @@ gtk_paned_motion (GtkWidget      *widget,
 
   if (priv->in_drag)
     {
-      update_drag (paned);
+      update_drag (paned, event->x, event->y);
       return TRUE;
     }
   

@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -65,16 +63,21 @@ struct _GdkWindowImplWin32
   gint hint_flags;
   GdkGeometry hints;
 
-  GdkWindowTypeHint type_hint;
+  GdkEventMask native_event_mask;
 
-  gboolean extension_events_selected;
+  GdkWindowTypeHint type_hint;
 
   GdkWindow *transient_owner;
   GSList    *transient_children;
   gint       num_transients;
   gboolean   changing_state;
 
+  gint initial_x;
+  gint initial_y;
+
   guint no_bg : 1;
+  guint inhibit_configure : 1;
+  guint override_redirect : 1;
 
   cairo_surface_t *cairo_surface;
   HDC              hdc;

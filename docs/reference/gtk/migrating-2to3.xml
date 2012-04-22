@@ -42,6 +42,10 @@
         <listitem>for GTK</listitem>
       </varlistentry>
       <varlistentry>
+        <term><filename>gtk/gtkx.h</filename></term>
+        <listitem>for the X-specfic widgets #GtkSocket and #GtkPlug</listitem>
+      </varlistentry>
+      <varlistentry>
         <term><filename>gtk/gtkunixprint.h</filename></term>
         <listitem>for low-level, UNIX-specific printing functions</listitem>
       </varlistentry>
@@ -1202,8 +1206,6 @@ gtk_arrow_draw (GtkWidget *widget,
     unhappiness and must be avoided.
   </para>
   </section>
-
-  <xi:include href="migrating-GtkStyleContext.xml" />
 
   </section>
 

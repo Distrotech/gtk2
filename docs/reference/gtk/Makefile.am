@@ -123,11 +123,14 @@ content_files =					\
 	glossary.xml				\
 	migrating-2to3.xml			\
 	migrating-checklist.sgml		\
-	migrating-GtkApplication.xml		\
+	migrating-unique-GtkApplication.xml	\
+	migrating-smclient-GtkApplication.xml	\
 	migrating-GtkGrid.xml			\
 	migrating-GtkStyleContext.xml		\
 	objects_grouped.sgml			\
 	osx.sgml				\
+	broadway.xml				\
+	wayland.xml				\
 	question_index.sgml			\
 	resources.sgml				\
 	text_widget.sgml			\
@@ -141,12 +144,14 @@ content_files =					\
 	overview.xml
 
 expand_content_files = 				\
+	compiling.sgml				\
 	drawing-model.xml			\
 	getting_started.xml			\
 	glossary.xml				\
 	migrating-2to3.xml			\
 	migrating-checklist.sgml		\
-	migrating-GtkApplication.xml		\
+	migrating-unique-GtkApplication.xml	\
+	migrating-smclient-GtkApplication.xml	\
 	migrating-GtkGrid.xml			\
 	migrating-GtkStyleContext.xml		\
 	question_index.sgml			\
@@ -285,6 +290,7 @@ HTML_IMAGES = \
 	$(srcdir)/images/check-button.png				\
 	$(srcdir)/images/color-button.png				\
 	$(srcdir)/images/colorsel.png					\
+	$(srcdir)/images/colorchooser.png				\
 	$(srcdir)/images/combo-box.png					\
 	$(srcdir)/images/combo-box-entry.png				\
 	$(srcdir)/images/entry.png					\
@@ -294,12 +300,14 @@ HTML_IMAGES = \
 	$(srcdir)/images/filechooser.png				\
 	$(srcdir)/images/font-button.png				\
 	$(srcdir)/images/fontsel.png					\
+	$(srcdir)/images/fontchooser.png				\
 	$(srcdir)/images/frame.png					\
 	$(srcdir)/images/icon-view.png					\
 	$(srcdir)/images/image.png					\
 	$(srcdir)/images/label.png					\
 	$(srcdir)/images/link-button.png				\
 	$(srcdir)/images/list-and-tree.png				\
+	$(srcdir)/images/lock-button.png				\
 	$(srcdir)/images/lockbutton.png				\
 	$(srcdir)/images/lockbutton-locked.png				\
 	$(srcdir)/images/lockbutton-unlocked.png			\
@@ -365,7 +373,10 @@ HTML_IMAGES = \
 	$(srcdir)/images/handles.png					\
 	$(srcdir)/images/extensions.png					\
 	$(srcdir)/images/numerableicon.png				\
-	$(srcdir)/images/numerableicon2.png
+	$(srcdir)/images/numerableicon2.png				\
+	$(srcdir)/images/bloatpad-osx.png				\
+	$(srcdir)/images/bloatpad-gnome.png				\
+	$(srcdir)/images/bloatpad-xfce.png
 
 # Extra options to supply to gtkdoc-fixref
 FIXXREF_OPTIONS=--extra-dir=../gdk/html \

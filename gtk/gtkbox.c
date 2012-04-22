@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -81,11 +79,13 @@
 
 #include "gtkbox.h"
 #include "gtkboxprivate.h"
-#include "gtkorientable.h"
-#include "gtksizerequest.h"
-#include "gtktypebuiltins.h"
-#include "gtkprivate.h"
 #include "gtkintl.h"
+#include "gtkorientable.h"
+#include "gtkprivate.h"
+#include "gtktypebuiltins.h"
+#include "gtksizerequest.h"
+#include "gtkwidgetpath.h"
+#include "gtkwidgetprivate.h"
 #include "a11y/gtkboxaccessible.h"
 
 
@@ -899,7 +899,7 @@ gtk_box_get_path_for_child (GtkContainer *container,
   box = GTK_BOX (container);
   private = box->priv;
 
-  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (container)));
+  path = _gtk_widget_create_path (GTK_WIDGET (container));
 
   if (gtk_widget_get_visible (child))
     {
@@ -939,10 +939,16 @@ gtk_box_get_path_for_child (GtkContainer *container,
 }
 
 static void
+gtk_box_invalidate_order_foreach (GtkWidget *widget)
+{
+  _gtk_widget_invalidate_style_context (widget, GTK_CSS_CHANGE_POSITION | GTK_CSS_CHANGE_SIBLING_POSITION);
+}
+
+static void
 gtk_box_invalidate_order (GtkBox *box)
 {
   gtk_container_foreach (GTK_CONTAINER (box),
-                         (GtkCallback) gtk_widget_reset_style,
+                         (GtkCallback) gtk_box_invalidate_order_foreach,
                          NULL);
 }
 
@@ -1809,12 +1815,12 @@ gtk_box_remove (GtkContainer *container,
 	{
 	  gboolean was_visible;
 
-	  was_visible = gtk_widget_get_visible (widget);
-	  gtk_widget_unparent (widget);
-
           g_signal_handlers_disconnect_by_func (widget,
                                                 box_child_visibility_notify_cb,
                                                 box);
+
+	  was_visible = gtk_widget_get_visible (widget);
+	  gtk_widget_unparent (widget);
 
 	  priv->children = g_list_remove_link (priv->children, children);
 	  g_list_free (children);

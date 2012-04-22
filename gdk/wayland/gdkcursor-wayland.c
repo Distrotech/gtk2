@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -165,10 +163,9 @@ set_pixbuf (GdkWaylandCursor *cursor, GdkPixbuf *pixbuf)
 }
 
 static GdkCursor *
-create_cursor(GdkDisplayWayland *display, GdkPixbuf *pixbuf, int x, int y)
+create_cursor(GdkWaylandDisplay *display, GdkPixbuf *pixbuf, int x, int y)
 {
   GdkWaylandCursor *cursor;
-  struct wl_visual *visual;
   int stride, fd;
   char *filename;
   GError *error = NULL;
@@ -224,19 +221,16 @@ create_cursor(GdkDisplayWayland *display, GdkPixbuf *pixbuf, int x, int y)
   else
     memset (cursor->map, 0, 4);
 
-  visual = display->premultiplied_argb_visual;
   cursor->buffer = wl_shm_create_buffer(display->shm,
 					fd,
 					cursor->width,
 					cursor->height,
-					stride, visual);
+					stride, WL_SHM_FORMAT_ARGB8888);
 
   close(fd);
 
   return GDK_CURSOR (cursor);
 }
-
-#define DATADIR "/usr/share/wayland"
 
 static const struct {
   GdkCursorType type;
@@ -244,21 +238,21 @@ static const struct {
   int hotspot_x, hotspot_y;
 } cursor_definitions[] = {
   { GDK_BLANK_CURSOR, NULL, 0, 0 },
-  { GDK_HAND1, DATADIR "/hand1.png", 18, 11 },
-  { GDK_HAND2, DATADIR "/hand2.png", 14,  8 },
-  { GDK_LEFT_PTR, DATADIR "/left_ptr.png", 10, 5 },
-  { GDK_SB_H_DOUBLE_ARROW, DATADIR "/sb_h_double_arrow.png", 15, 15 },
-  { GDK_SB_V_DOUBLE_ARROW, DATADIR "/sb_v_double_arrow.png", 15, 15 },
-  { GDK_XTERM, DATADIR "/xterm.png", 15, 15 },
-  { GDK_BOTTOM_RIGHT_CORNER, DATADIR "/bottom_right_corner.png", 28, 28 }
+  { GDK_HAND1, "hand1.png", 18, 11 },
+  { GDK_HAND2, "hand2.png", 14,  8 },
+  { GDK_LEFT_PTR, "left_ptr.png", 10, 5 },
+  { GDK_SB_H_DOUBLE_ARROW, "sb_h_double_arrow.png", 15, 15 },
+  { GDK_SB_V_DOUBLE_ARROW, "sb_v_double_arrow.png", 15, 15 },
+  { GDK_XTERM, "xterm.png", 15, 15 },
+  { GDK_BOTTOM_RIGHT_CORNER, "bottom_right_corner.png", 28, 28 }
 };
 
 GdkCursor *
 _gdk_wayland_display_get_cursor_for_type (GdkDisplay    *display,
 					  GdkCursorType  cursor_type)
 {
-  GdkDisplayWayland *wayland_display;
-  GdkPixbuf *pixbuf;
+  GdkWaylandDisplay *wayland_display;
+  GdkPixbuf *pixbuf = NULL;
   GError *error = NULL;
   int i;
 
@@ -270,12 +264,12 @@ _gdk_wayland_display_get_cursor_for_type (GdkDisplay    *display,
 
   if (i == G_N_ELEMENTS (cursor_definitions))
     {
-      g_warning("unhandled cursor type %d, falling back to blank\n",
-		cursor_type);
+      g_warning ("Unhandled cursor type %d, falling back to blank\n",
+                 cursor_type);
       i = 0;
     }
 
-  wayland_display = GDK_DISPLAY_WAYLAND (display);
+  wayland_display = GDK_WAYLAND_DISPLAY (display);
   if (!wayland_display->cursors)
     wayland_display->cursors =
       g_new0 (GdkCursor *, G_N_ELEMENTS(cursor_definitions));
@@ -283,20 +277,44 @@ _gdk_wayland_display_get_cursor_for_type (GdkDisplay    *display,
     return g_object_ref (wayland_display->cursors[i]);
 
   GDK_NOTE (CURSOR,
-	    g_message ("creating new cursor for type %d, filename %s",
+	    g_message ("Creating new cursor for type %d, filename %s",
 		       cursor_type, cursor_definitions[i].filename));
 
   if (cursor_type != GDK_BLANK_CURSOR)
-    pixbuf = gdk_pixbuf_new_from_file(cursor_definitions[i].filename, &error);
-  else
-    pixbuf = NULL;
-  if (error != NULL)
     {
-      GDK_NOTE (CURSOR,
-		g_message ("failed to load %s: %s",
-			   cursor_definitions[i].filename, error->message));
-      g_error_free(error);
-      return NULL;
+      const gchar * const *directories;
+      gint j;
+
+      directories = g_get_system_data_dirs();
+
+      for (j = 0; directories[j] != NULL; j++)
+        {
+          gchar *filename;
+          filename = g_build_filename (directories[j],
+                                       "weston",
+                                       cursor_definitions[i].filename,
+                                       NULL);
+          if (g_file_test (filename, G_FILE_TEST_EXISTS))
+            {
+              pixbuf = gdk_pixbuf_new_from_file (filename, &error);
+
+              if (error != NULL)
+                {
+                  g_warning ("Failed to load cursor: %s: %s",
+                             filename, error->message);
+                  g_error_free(error);
+                  return NULL;
+                }
+              break;
+            }
+        }
+
+      if (!pixbuf)
+        {
+          g_warning ("Unable to find cursor for: %s",
+                     cursor_definitions[i].filename);
+          return NULL;
+        }
     }
 
   wayland_display->cursors[i] =

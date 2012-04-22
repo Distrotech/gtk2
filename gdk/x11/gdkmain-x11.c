@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -99,13 +97,6 @@ static int _gdk_error_handler_push_count = 0;
 /*
  * Private function declarations
  */
-
-#ifndef HAVE_XCONVERTCASE
-static void	 gdkx_XConvertCase	(KeySym	       symbol,
-					 KeySym	      *lower,
-					 KeySym	      *upper);
-#define XConvertCase gdkx_XConvertCase
-#endif
 
 static int	    gdk_x_error			 (Display     *display, 
 						  XErrorEvent *error);

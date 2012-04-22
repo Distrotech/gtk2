@@ -12,9 +12,9 @@
     <releaseinfo>
       This document is for the GTK+ 3 library, version &version;.
       The latest versions can be found online at
-      <ulink role="online-location" url="http://library.gnome.org/devel/gtk3/">http://library.gnome.org/devel/gtk3/</ulink>.
+      <ulink role="online-location" url="http://developer.gnome.org/devel/gtk3/">http://developer.gnome.org/devel/gtk3/</ulink>.
       If you are looking for the older GTK+ 2 series of libraries,
-      see <ulink role="online-location" url="http://library.gnome.org/devel/gtk/">http://library.gnome.org/devel/gtk/</ulink>.
+      see <ulink role="online-location" url="http://developer.gnome.org/devel/gtk/">http://developer.gnome.org/devel/gtk/</ulink>.
     </releaseinfo>
   </bookinfo>
 
@@ -23,11 +23,13 @@
     <xi:include href="overview.xml"/>
     <xi:include href="xml/getting_started.xml"/>
     <xi:include href="building.sgml" />
-    <xi:include href="compiling.sgml" />
+    <xi:include href="xml/compiling.sgml" />
     <xi:include href="running.sgml" />
     <xi:include href="x11.sgml" />
     <xi:include href="windows.sgml" />
     <xi:include href="osx.sgml" />
+    <xi:include href="broadway.xml" />
+    <xi:include href="wayland.xml" />
     <xi:include href="resources.sgml" />
     <xi:include href="xml/question_index.sgml" />
     <xi:include href="drawing-model.xml" />
@@ -209,18 +211,22 @@
 
     <chapter id="SelectorWidgets">
       <title>Selectors (Color/File/Font)</title>
+      <xi:include href="xml/gtkcolorchooser.xml" />
       <xi:include href="xml/gtkcolorbutton.xml" />
-      <xi:include href="xml/gtkcolorseldlg.xml" />
+      <xi:include href="xml/gtkcolorchooserwidget.xml" />
+      <xi:include href="xml/gtkcolorchooserdialog.xml" />
       <xi:include href="xml/gtkcolorsel.xml" />
+      <xi:include href="xml/gtkcolorseldlg.xml" />
       <xi:include href="xml/gtkhsv.xml" />
       <xi:include href="xml/gtkfilechooser.xml" />
       <xi:include href="xml/gtkfilechooserbutton.xml" />
       <xi:include href="xml/gtkfilechooserdialog.xml" />
       <xi:include href="xml/gtkfilechooserwidget.xml" />
       <xi:include href="xml/gtkfilefilter.xml" />
-      <xi:include href="xml/gtkfontbutton.xml" />
       <xi:include href="xml/gtkfontchooser.xml" />
-      <xi:include href="xml/gtkfontchooserdlg.xml" />
+      <xi:include href="xml/gtkfontbutton.xml" />
+      <xi:include href="xml/gtkfontchooserwidget.xml" />
+      <xi:include href="xml/gtkfontchooserdialog.xml" />
       <xi:include href="xml/gtkfontsel.xml" />
       <xi:include href="xml/gtkfontseldlg.xml" />
     </chapter>
@@ -338,6 +344,8 @@
     <chapter id="Application">
       <title>Application support</title>
       <xi:include href="xml/gtkapplication.xml" />
+      <xi:include href="xml/gtkapplicationwindow.xml" />
+      <xi:include href="xml/gtkactionable.xml" />
     </chapter>
   </part>
 
@@ -354,11 +362,12 @@
       </para>
     </partintro>
 
-    <xi:include href="xml/migrating-checklist.sgml" />
     <xi:include href="xml/migrating-2to3.xml" />
     <xi:include href="xml/migrating-GtkStyleContext.xml" />
-    <xi:include href="xml/migrating-GtkApplication.xml" />
+    <xi:include href="xml/migrating-unique-GtkApplication.xml" />
+    <xi:include href="xml/migrating-smclient-GtkApplication.xml" />
     <xi:include href="xml/migrating-GtkGrid.xml" />
+    <xi:include href="xml/migrating-checklist.sgml" />
   </part>
 
   <part>

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -81,7 +79,9 @@ static const char gdk_settings_names[] =
   "Net/EnableEventSounds\0"   "gtk-enable-event-sounds\0"
   "Gtk/CursorBlinkTimeout\0"  "gtk-cursor-blink-timeout\0"
   "Gtk/AutoMnemonics\0"       "gtk-auto-mnemonics\0"
-  "Gtk/VisibleFocus\0"        "gtk-visible-focus\0";
+  "Gtk/VisibleFocus\0"        "gtk-visible-focus\0"
+  "Gtk/ShellShowsAppMenu\0"   "gtk-shell-shows-app-menu\0"
+  "Gtk/ShellShowsMenubar\0"   "gtk-shell-shows-menubar\0";
 
 
 static const struct
@@ -135,5 +135,7 @@ static const struct
   { 1636, 1658 },
   { 1682, 1705 },
   { 1730, 1748 },
-  { 1767, 1784 }
+  { 1767, 1784 },
+  { 1802, 1824 },
+  { 1849, 1871 }
 };

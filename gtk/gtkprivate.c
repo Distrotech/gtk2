@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -27,6 +25,7 @@
 #include "config.h"
 
 #include <locale.h>
+#include <stdlib.h>
 
 #include "gdk/gdk.h"
 
@@ -203,4 +202,52 @@ _gtk_get_primary_accel_mod (void)
     }
 
   return primary;
+}
+
+gboolean
+_gtk_translate_keyboard_accel_state (GdkKeymap       *keymap,
+                                     guint            hardware_keycode,
+                                     GdkModifierType  state,
+                                     GdkModifierType  accel_mask,
+                                     gint             group,
+                                     guint           *keyval,
+                                     gint            *effective_group,
+                                     gint            *level,
+                                     GdkModifierType *consumed_modifiers)
+{
+  GdkModifierType shift_group_mask;
+  gboolean group_mask_disabled = FALSE;
+  gboolean retval;
+
+  /* if the group-toggling modifier is part of the accel mod mask, and
+   * it is active, disable it for matching
+   */
+  shift_group_mask = gdk_keymap_get_modifier_mask (keymap,
+                                                   GDK_MODIFIER_INTENT_SHIFT_GROUP);
+  if (accel_mask & state & shift_group_mask)
+    {
+      state &= ~shift_group_mask;
+      group = 0;
+      group_mask_disabled = TRUE;
+    }
+
+  retval = gdk_keymap_translate_keyboard_state (keymap,
+                                                hardware_keycode, state, group,
+                                                keyval,
+                                                effective_group, level,
+                                                consumed_modifiers);
+
+  /* add back the group mask, we want to match against the modifier,
+   * but not against the keyval from its group
+   */
+  if (group_mask_disabled)
+    {
+      if (effective_group)
+        *effective_group = 1;
+
+      if (consumed_modifiers)
+        *consumed_modifiers &= ~shift_group_mask;
+    }
+
+  return retval;
 }

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -32,6 +30,7 @@
 #define __GTK_ADJUSTMENT_H__
 
 #include <gdk/gdk.h>
+#include <gtk/gtktypes.h>
 
 G_BEGIN_DECLS
 
@@ -43,7 +42,6 @@ G_BEGIN_DECLS
 #define GTK_ADJUSTMENT_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_ADJUSTMENT, GtkAdjustmentClass))
 
 
-typedef struct _GtkAdjustment         GtkAdjustment;
 typedef struct _GtkAdjustmentPrivate  GtkAdjustmentPrivate;
 typedef struct _GtkAdjustmentClass    GtkAdjustmentClass;
 
@@ -115,7 +113,7 @@ void       gtk_adjustment_configure             (GtkAdjustment   *adjustment,
                                                  gdouble          step_increment,
                                                  gdouble          page_increment,
                                                  gdouble          page_size);
-
+GDK_AVAILABLE_IN_3_2
 gdouble    gtk_adjustment_get_minimum_increment (GtkAdjustment   *adjustment);
 
 G_END_DECLS

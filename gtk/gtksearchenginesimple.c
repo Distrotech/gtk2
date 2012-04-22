@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  *
@@ -168,8 +167,7 @@ search_thread_add_hits_idle (gpointer user_data)
 				    hits->uris);
     }
 
-  g_list_foreach (hits->uris, (GFunc)g_free, NULL);
-  g_list_free (hits->uris);
+  g_list_free_full (hits->uris, g_free);
   g_free (hits);
 	
   return FALSE;

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -41,9 +39,6 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#ifdef XINPUT_XFREE
-#include <X11/extensions/XInput.h>
-#endif
 #ifdef XINPUT_2
 #include <X11/extensions/XInput2.h>
 #endif
@@ -231,24 +226,10 @@ void _gdk_x11_device_check_extension_events   (GdkDevice  *device);
 
 GdkDeviceManager *_gdk_x11_device_manager_new (GdkDisplay *display);
 
-#ifdef XINPUT_XFREE
-void _gdk_x11_device_xi_update_window_info (GdkWindow *window);
-
-void _gdk_x11_device_xi_update_axes        (GdkDevice *device,
-                                            gint       axes_count,
-                                            gint       first_axis,
-                                            gint      *axis_data);
-void _gdk_x11_device_xi_translate_axes     (GdkDevice *device,
-                                            GdkWindow *window,
-                                            gint      *axis_data,
-                                            gdouble   *axes,
-                                            gdouble   *x,
-                                            gdouble   *y);
-#endif
-
 #ifdef XINPUT_2
-guchar * _gdk_x11_device_xi2_translate_event_mask (GdkEventMask     event_mask,
-                                                   gint            *len);
+guchar * _gdk_x11_device_xi2_translate_event_mask (GdkX11DeviceManagerXI2 *device_manager_xi2,
+                                                   GdkEventMask            event_mask,
+                                                   gint                   *len);
 guint    _gdk_x11_device_xi2_translate_state      (XIModifierState *mods_state,
                                                    XIButtonState   *buttons_state,
                                                    XIGroupState    *group_state);
@@ -256,6 +237,16 @@ gint     _gdk_x11_device_xi2_get_id               (GdkX11DeviceXI2 *device);
 
 GdkDevice * _gdk_x11_device_manager_xi2_lookup    (GdkX11DeviceManagerXI2 *device_manager_xi2,
                                                    gint                    device_id);
+void     _gdk_x11_device_xi2_add_scroll_valuator  (GdkX11DeviceXI2    *device,
+                                                   guint               n_valuator,
+                                                   GdkScrollDirection  direction,
+                                                   gdouble             increment);
+gboolean  _gdk_x11_device_xi2_get_scroll_delta    (GdkX11DeviceXI2    *device,
+                                                   guint               n_valuator,
+                                                   gdouble             valuator_value,
+                                                   GdkScrollDirection *direction_ret,
+                                                   gdouble            *delta_ret);
+void     _gdk_device_xi2_reset_scroll_valuators   (GdkX11DeviceXI2    *device);
 
 #endif
 
@@ -275,12 +266,10 @@ guint   _gdk_x11_display_manager_lookup_keyval (GdkDisplayManager *manager,
                                                 const gchar       *name);
 gchar * _gdk_x11_display_manager_get_keyval_name (GdkDisplayManager *manager,
                                                   guint              keyval);
-#ifdef HAVE_XCONVERTCASE
 void    _gdk_x11_display_manager_keyval_convert_case (GdkDisplayManager *manager,
                                                       guint              symbol,
                                                       guint             *lower,
                                                       guint             *upper);
-#endif
 
 GdkCursor *_gdk_x11_display_get_cursor_for_type     (GdkDisplay    *display,
                                                      GdkCursorType  type);

@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -80,7 +78,7 @@ gtk_recent_chooser_default_init (GtkRecentChooserInterface *iface)
   quark_gtk_use_action_appearance = g_quark_from_static_string (gtk_use_action_appearance_key);
   
   /**
-   * GtkRecentChooser::selection-changed
+   * GtkRecentChooser::selection-changed:
    * @chooser: the object which received the signal
    *
    * This signal is emitted when there is a change in the set of
@@ -100,7 +98,7 @@ gtk_recent_chooser_default_init (GtkRecentChooserInterface *iface)
                   G_TYPE_NONE, 0);
    
   /**
-   * GtkRecentChooser::item-activated
+   * GtkRecentChooser::item-activated:
    * @chooser: the object which received the signal
    *
    * This signal is emitted when the user "activates" a recent item
@@ -895,10 +893,7 @@ gtk_recent_chooser_get_uris (GtkRecentChooser *chooser,
   if (length)
     *length = i;
   
-  g_list_foreach (items,
-  		  (GFunc) gtk_recent_info_unref,
-  		  NULL);
-  g_list_free (items);
+  g_list_free_full (items, (GDestroyNotify) gtk_recent_info_unref);
   
   return retval;
 }

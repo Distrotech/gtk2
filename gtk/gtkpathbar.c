@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -24,17 +22,20 @@
 
 #include <string.h>
 
-#include "gtktogglebutton.h"
 #include "gtkarrow.h"
+#include "gtkbox.h"
 #include "gtkdnd.h"
+#include "gtkiconfactory.h"
+#include "gtkicontheme.h"
 #include "gtkimage.h"
 #include "gtkintl.h"
-#include "gtkicontheme.h"
-#include "gtkiconfactory.h"
 #include "gtklabel.h"
-#include "gtkbox.h"
 #include "gtkmain.h"
 #include "gtkmarshalers.h"
+#include "gtksettings.h"
+#include "gtktogglebutton.h"
+#include "gtkwidgetpath.h"
+#include "gtkwidgetprivate.h"
 
 
 enum {
@@ -160,6 +161,7 @@ get_slider_button (GtkPathBar  *path_bar,
     atk_object_set_name (atk_obj, _("Down Path"));
 
   gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+  gtk_widget_add_events (button, GDK_SCROLL_MASK);
   gtk_container_add (GTK_CONTAINER (button),
                      gtk_arrow_new (arrow_type, GTK_SHADOW_OUT));
   gtk_container_add (GTK_CONTAINER (path_bar), button);
@@ -176,6 +178,8 @@ get_slider_button (GtkPathBar  *path_bar,
 static void
 gtk_path_bar_init (GtkPathBar *path_bar)
 {
+  GtkStyleContext *context;
+
   gtk_widget_set_has_window (GTK_WIDGET (path_bar), FALSE);
   gtk_widget_set_redraw_on_allocate (GTK_WIDGET (path_bar), FALSE);
 
@@ -204,6 +208,9 @@ gtk_path_bar_init (GtkPathBar *path_bar)
                     G_CALLBACK (gtk_path_bar_slider_button_press), path_bar);
   g_signal_connect (path_bar->down_slider_button, "button-release-event",
                     G_CALLBACK (gtk_path_bar_slider_button_release), path_bar);
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (path_bar));
+  gtk_style_context_add_class (context, GTK_STYLE_CLASS_LINKED);
 }
 
 static void
@@ -488,15 +495,18 @@ child_ordering_changed (GtkPathBar *path_bar)
   GList *l;
 
   if (path_bar->up_slider_button)
-    gtk_widget_reset_style (path_bar->up_slider_button);
+    _gtk_widget_invalidate_style_context (path_bar->up_slider_button,
+                                          GTK_CSS_CHANGE_POSITION | GTK_CSS_CHANGE_SIBLING_POSITION);
   if (path_bar->down_slider_button)
-    gtk_widget_reset_style (path_bar->down_slider_button);
+    _gtk_widget_invalidate_style_context (path_bar->down_slider_button,
+                                          GTK_CSS_CHANGE_POSITION | GTK_CSS_CHANGE_SIBLING_POSITION);
 
   for (l = path_bar->button_list; l; l = l->next)
     {
       ButtonData *data = l->data;
 
-      gtk_widget_reset_style (data->button);
+      _gtk_widget_invalidate_style_context (data->button,
+                                            GTK_CSS_CHANGE_POSITION | GTK_CSS_CHANGE_SIBLING_POSITION);
     }
 }
 
@@ -767,6 +777,8 @@ gtk_path_bar_scroll (GtkWidget      *widget,
     case GDK_SCROLL_UP:
       gtk_path_bar_scroll_up (GTK_PATH_BAR (widget));
       break;
+    case GDK_SCROLL_SMOOTH:
+      break;
     }
 
   return TRUE;
@@ -864,7 +876,7 @@ gtk_path_bar_get_path_for_child (GtkContainer *container,
   GtkPathBar *path_bar = GTK_PATH_BAR (container);
   GtkWidgetPath *path;
 
-  path = gtk_widget_path_copy (gtk_widget_get_path (GTK_WIDGET (path_bar)));
+  path = _gtk_widget_create_path (GTK_WIDGET (path_bar));
 
   if (gtk_widget_get_visible (child) &&
       gtk_widget_get_child_visible (child))
@@ -1125,7 +1137,7 @@ gtk_path_bar_slider_button_press (GtkWidget      *widget,
 				  GdkEventButton *event,
 				  GtkPathBar     *path_bar)
 {
-  if (event->type != GDK_BUTTON_PRESS || event->button != 1)
+  if (event->type != GDK_BUTTON_PRESS || event->button != GDK_BUTTON_PRIMARY)
     return FALSE;
 
   path_bar->ignore_click = FALSE;
@@ -1606,6 +1618,7 @@ make_directory_button (GtkPathBar  *path_bar,
   button_data->button = gtk_toggle_button_new ();
   atk_obj = gtk_widget_get_accessible (button_data->button);
   gtk_button_set_focus_on_click (GTK_BUTTON (button_data->button), FALSE);
+  gtk_widget_add_events (button_data->button, GDK_SCROLL_MASK);
 
   switch (button_data->type)
     {
@@ -1666,8 +1679,7 @@ make_directory_button (GtkPathBar  *path_bar,
 
 static gboolean
 gtk_path_bar_check_parent_path (GtkPathBar         *path_bar,
-				GFile              *file,
-				GtkFileSystem      *file_system)
+				GFile              *file)
 {
   GList *list;
   GList *current_path = NULL;
@@ -1751,6 +1763,8 @@ gtk_path_bar_set_file_finish (struct SetFileInfo *info,
 	  GtkWidget *button = BUTTON_DATA (l->data)->button;
 	  gtk_container_add (GTK_CONTAINER (info->path_bar), button);
 	}
+
+      child_ordering_changed (info->path_bar);
     }
   else
     {
@@ -1771,8 +1785,6 @@ gtk_path_bar_set_file_finish (struct SetFileInfo *info,
     g_object_unref (info->file);
   if (info->parent_file)
     g_object_unref (info->parent_file);
-
-  child_ordering_changed (info->path_bar);
 
   g_free (info);
 }
@@ -1820,17 +1832,23 @@ gtk_path_bar_get_info_callback (GCancellable *cancellable,
   if (BUTTON_IS_FAKE_ROOT (button_data))
     file_info->fake_root = file_info->new_buttons;
 
+  /* We have assigned the info for the innermost button, i.e. the deepest directory.
+   * Now, go on to fetch the info for this directory's parent.
+   */
+
   file_info->file = file_info->parent_file;
   file_info->first_directory = FALSE;
 
   if (!file_info->file)
     {
+      /* No parent?  Okay, we are done. */
       gtk_path_bar_set_file_finish (file_info, TRUE);
       return;
     }
 
   file_info->parent_file = g_file_get_parent (file_info->file);
 
+  /* Recurse asynchronously */
   file_info->path_bar->get_info_cancellable =
     _gtk_file_system_get_info (file_info->path_bar->file_system,
 			       file_info->file,
@@ -1839,23 +1857,21 @@ gtk_path_bar_get_info_callback (GCancellable *cancellable,
 			       file_info);
 }
 
-gboolean
+void
 _gtk_path_bar_set_file (GtkPathBar      *path_bar,
                         GFile           *file,
-                        const gboolean   keep_trail,
-                        GError         **error)
+                        const gboolean   keep_trail)
 {
   struct SetFileInfo *info;
 
-  g_return_val_if_fail (GTK_IS_PATH_BAR (path_bar), FALSE);
-  g_return_val_if_fail (G_IS_FILE (file), FALSE);
+  g_return_if_fail (GTK_IS_PATH_BAR (path_bar));
+  g_return_if_fail (G_IS_FILE (file));
 
   /* Check whether the new path is already present in the pathbar as buttons.
    * This could be a parent directory or a previous selected subdirectory.
    */
-  if (keep_trail &&
-      gtk_path_bar_check_parent_path (path_bar, file, path_bar->file_system))
-    return TRUE;
+  if (keep_trail && gtk_path_bar_check_parent_path (path_bar, file))
+    return;
 
   info = g_new0 (struct SetFileInfo, 1);
   info->file = g_object_ref (file);
@@ -1872,8 +1888,6 @@ _gtk_path_bar_set_file (GtkPathBar      *path_bar,
                                "standard::display-name,standard::is-hidden,standard::is-backup",
                                gtk_path_bar_get_info_callback,
                                info);
-
-  return TRUE;
 }
 
 /* FIXME: This should be a construct-only property */

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -99,15 +97,15 @@ struct _GtkTableRowCol
 
 
 GType	   gtk_table_get_type	      (void) G_GNUC_CONST;
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 GtkWidget* gtk_table_new	      (guint		rows,
 				       guint		columns,
 				       gboolean		homogeneous);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_resize	      (GtkTable	       *table,
 				       guint            rows,
 				       guint            columns);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_attach	      (GtkTable	       *table,
 				       GtkWidget       *child,
 				       guint		left_attach,
@@ -118,43 +116,43 @@ void	   gtk_table_attach	      (GtkTable	       *table,
 				       GtkAttachOptions yoptions,
 				       guint		xpadding,
 				       guint		ypadding);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_attach_defaults  (GtkTable	       *table,
 				       GtkWidget       *widget,
 				       guint		left_attach,
 				       guint		right_attach,
 				       guint		top_attach,
 				       guint		bottom_attach);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_set_row_spacing  (GtkTable	       *table,
 				       guint		row,
 				       guint		spacing);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 guint      gtk_table_get_row_spacing  (GtkTable        *table,
 				       guint            row);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_set_col_spacing  (GtkTable	       *table,
 				       guint		column,
 				       guint		spacing);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 guint      gtk_table_get_col_spacing  (GtkTable        *table,
 				       guint            column);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_set_row_spacings (GtkTable	       *table,
 				       guint		spacing);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 guint      gtk_table_get_default_row_spacing (GtkTable        *table);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_set_col_spacings (GtkTable	       *table,
 				       guint		spacing);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 guint      gtk_table_get_default_col_spacing (GtkTable        *table);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void	   gtk_table_set_homogeneous  (GtkTable	       *table,
 				       gboolean		homogeneous);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 gboolean   gtk_table_get_homogeneous  (GtkTable        *table);
-GDK_DEPRECATED_FOR(GtkGrid)
+GDK_DEPRECATED_IN_3_4_FOR(GtkGrid)
 void       gtk_table_get_size         (GtkTable        *table,
                                        guint           *rows,
                                        guint           *columns);

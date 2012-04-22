@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -32,7 +30,6 @@
 #define __GTK_RANGE_H__
 
 
-#include <gtk/gtkadjustment.h>
 #include <gtk/gtkwidget.h>
 
 
@@ -148,9 +145,11 @@ void               gtk_range_set_round_digits              (GtkRange      *range
 gint                gtk_range_get_round_digits              (GtkRange      *range);
 
 /* internal API */
-gdouble            _gtk_range_get_wheel_delta              (GtkRange      *range,
-                                                            GdkScrollDirection direction);
-
+gdouble            _gtk_range_get_wheel_delta              (GtkRange       *range,
+                                                            GdkEventScroll *event);
+void               _gtk_range_set_has_origin               (GtkRange      *range,
+                                                            gboolean       has_origin);
+gboolean           _gtk_range_get_has_origin               (GtkRange      *range);
 void               _gtk_range_set_stop_values              (GtkRange      *range,
                                                             gdouble       *values,
                                                             gint           n_values);

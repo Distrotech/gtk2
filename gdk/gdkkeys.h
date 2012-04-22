@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,6 +29,7 @@
 #ifndef __GDK_KEYS_H__
 #define __GDK_KEYS_H__
 
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdktypes.h>
 
 G_BEGIN_DECLS
@@ -110,10 +109,13 @@ PangoDirection gdk_keymap_get_direction            (GdkKeymap           *keymap)
 gboolean       gdk_keymap_have_bidi_layouts        (GdkKeymap           *keymap);
 gboolean       gdk_keymap_get_caps_lock_state      (GdkKeymap           *keymap);
 gboolean       gdk_keymap_get_num_lock_state       (GdkKeymap           *keymap);
+GDK_AVAILABLE_IN_3_4
+guint          gdk_keymap_get_modifier_state       (GdkKeymap           *keymap);
 void           gdk_keymap_add_virtual_modifiers    (GdkKeymap           *keymap,
                                                     GdkModifierType     *state);
 gboolean       gdk_keymap_map_virtual_modifiers    (GdkKeymap           *keymap,
                                                     GdkModifierType     *state);
+GDK_AVAILABLE_IN_3_4
 GdkModifierType gdk_keymap_get_modifier_mask       (GdkKeymap           *keymap,
                                                     GdkModifierIntent    intent);
 

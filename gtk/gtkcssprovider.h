@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_CSS_PROVIDER_H__
@@ -74,6 +72,7 @@ GType gtk_css_provider_get_type (void) G_GNUC_CONST;
 
 GtkCssProvider * gtk_css_provider_new (void);
 
+GDK_AVAILABLE_IN_3_2
 char *           gtk_css_provider_to_string      (GtkCssProvider  *provider);
 
 gboolean         gtk_css_provider_load_from_data (GtkCssProvider  *css_provider,

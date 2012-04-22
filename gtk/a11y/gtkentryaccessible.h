@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_ENTRY_ACCESSIBLE_H__
@@ -38,10 +36,6 @@ struct _GtkEntryAccessible
 {
   GtkWidgetAccessible parent;
 
-  gint position_insert;
-  gint position_delete;
-  gint length_insert;
-  gint length_delete;
   gint cursor_position;
   gint selection_bound;
 };

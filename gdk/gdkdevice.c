@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -1372,6 +1370,29 @@ _gdk_device_add_axis (GdkDevice   *device,
 }
 
 void
+_gdk_device_get_axis_info (GdkDevice   *device,
+			   guint        index_,
+			   GdkAtom      *label_atom,
+			   GdkAxisUse   *use,
+			   gdouble      *min_value,
+			   gdouble      *max_value,
+			   gdouble      *resolution)
+{
+  GdkAxisInfo *info;
+
+  g_return_if_fail (GDK_IS_DEVICE (device));
+  g_return_if_fail (index_ < device->axes->len);
+
+  info = &g_array_index (device->axes, GdkAxisInfo, index_);
+
+  *label_atom = info->label;
+  *use = info->use;
+  *min_value = info->min_value;
+  *max_value = info->max_value;
+  *resolution = info->resolution;
+}
+
+void
 _gdk_device_set_keys (GdkDevice *device,
                       guint      num_keys)
 {
@@ -1590,7 +1611,7 @@ _gdk_device_translate_axis (GdkDevice *device,
   return TRUE;
 }
 
-gboolean
+void
 _gdk_device_query_state (GdkDevice        *device,
                          GdkWindow        *window,
                          GdkWindow       **root_window,
@@ -1601,15 +1622,15 @@ _gdk_device_query_state (GdkDevice        *device,
                          gint             *win_y,
                          GdkModifierType  *mask)
 {
-  return GDK_DEVICE_GET_CLASS (device)->query_state (device,
-                                                     window,
-                                                     root_window,
-                                                     child_window,
-                                                     root_x,
-                                                     root_y,
-                                                     win_x,
-                                                     win_y,
-                                                     mask);
+  GDK_DEVICE_GET_CLASS (device)->query_state (device,
+                                              window,
+                                              root_window,
+                                              child_window,
+                                              root_x,
+                                              root_y,
+                                              win_x,
+                                              win_y,
+                                              mask);
 }
 
 GdkWindow *

@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_WINDOW_PRIVATE_H__
@@ -67,6 +65,9 @@ void            _gtk_window_set_is_toplevel        (GtkWindow *window,
 void            _gtk_window_get_wmclass            (GtkWindow  *window,
                                                     gchar     **wmclass_name,
                                                     gchar     **wmclass_class);
+
+void            _gtk_window_set_allocation         (GtkWindow     *window,
+                                                    GtkAllocation *allocation);
 
 typedef void (*GtkWindowKeysForeachFunc) (GtkWindow      *window,
                                           guint           keyval,

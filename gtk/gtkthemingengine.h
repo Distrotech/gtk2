@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -27,9 +25,10 @@
 #include <glib-object.h>
 #include <cairo.h>
 
-#include <gtk/gtkstylecontext.h>
-#include <gtk/gtkwidgetpath.h>
+#include <gtk/gtkborder.h>
 #include <gtk/gtkenums.h>
+#include <gtk/gtkstyleproperties.h>
+#include <gtk/gtktypes.h>
 
 G_BEGIN_DECLS
 
@@ -51,7 +50,7 @@ struct _GtkThemingEngine
 };
 
 /**
- * GtkThemingEngineClass
+ * GtkThemingEngineClass:
  * @parent_class: The parent class.
  * @render_line: Renders a line between two points.
  * @render_background: Renders the background area of a widget region.
@@ -182,9 +181,7 @@ struct _GtkThemingEngineClass
 
 GType gtk_theming_engine_get_type (void) G_GNUC_CONST;
 
-void _gtk_theming_engine_set_context (GtkThemingEngine *engine,
-                                      GtkStyleContext  *context);
-
+/* function implemented in gtkcsscustomproperty.c */
 void gtk_theming_engine_register_property (const gchar            *name_space,
                                            GtkStylePropertyParser  parse_func,
                                            GParamSpec             *pspec);

@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Some parts of this code come from quartzKeyboard.c,
  * from the Apple X11 Server.
@@ -136,7 +134,7 @@ const static struct {
   guint keycode;
   guint keyval;
   unsigned int modmask; /* So we can tell when a mod key is pressed/released */
-} known_keys[] = {
+} modifier_keys[] = {
   {  54, GDK_KEY_Meta_R,    NSCommandKeyMask },
   {  55, GDK_KEY_Meta_L,    NSCommandKeyMask },
   {  56, GDK_KEY_Shift_L,   NSShiftKeyMask },
@@ -145,23 +143,29 @@ const static struct {
   {  59, GDK_KEY_Control_L, NSControlKeyMask },
   {  60, GDK_KEY_Shift_R,   NSShiftKeyMask },
   {  61, GDK_KEY_Alt_R,     NSAlternateKeyMask },
-  {  62, GDK_KEY_Control_R, NSControlKeyMask },
-  { 122, GDK_KEY_F1, 0 },
-  { 120, GDK_KEY_F2, 0 },
-  {  99, GDK_KEY_F3, 0 },
-  { 118, GDK_KEY_F4, 0 },
-  {  96, GDK_KEY_F5, 0 },
-  {  97, GDK_KEY_F6, 0 },
-  {  98, GDK_KEY_F7, 0 },
-  { 100, GDK_KEY_F8, 0 },
-  { 101, GDK_KEY_F9, 0 },
-  { 109, GDK_KEY_F10, 0 },
-  { 103, GDK_KEY_F11, 0 },
-  { 111, GDK_KEY_F12, 0 },
-  { 105, GDK_KEY_F13, 0 },
-  { 107, GDK_KEY_F14, 0 },
-  { 113, GDK_KEY_F15, 0 },
-  { 106, GDK_KEY_F16, 0 }
+  {  62, GDK_KEY_Control_R, NSControlKeyMask }
+};
+
+const static struct {
+  guint keycode;
+  guint keyval;
+} function_keys[] = {
+  { 122, GDK_KEY_F1 },
+  { 120, GDK_KEY_F2 },
+  {  99, GDK_KEY_F3 },
+  { 118, GDK_KEY_F4 },
+  {  96, GDK_KEY_F5 },
+  {  97, GDK_KEY_F6 },
+  {  98, GDK_KEY_F7 },
+  { 100, GDK_KEY_F8 },
+  { 101, GDK_KEY_F9 },
+  { 109, GDK_KEY_F10 },
+  { 103, GDK_KEY_F11 },
+  { 111, GDK_KEY_F12 },
+  { 105, GDK_KEY_F13 },
+  { 107, GDK_KEY_F14 },
+  { 113, GDK_KEY_F15 },
+  { 106, GDK_KEY_F16 }
 };
 
 const static struct {
@@ -404,7 +408,6 @@ maybe_update_keymap (void)
 		                        0,
 		                        &state, 4, &nChars, chars);
 
-
                   /* FIXME: Theoretically, we can get multiple UTF-16 values;
 		   * we should convert them to proper unicode and figure
 		   * out whether there are really keyboard layouts that
@@ -470,13 +473,21 @@ maybe_update_keymap (void)
 	}
 #endif
 
-      for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
+      for (i = 0; i < G_N_ELEMENTS (modifier_keys); i++)
 	{
-	  p = keyval_array + known_keys[i].keycode * KEYVALS_PER_KEYCODE;
+	  p = keyval_array + modifier_keys[i].keycode * KEYVALS_PER_KEYCODE;
 
 	  if (p[0] == 0 && p[1] == 0 && 
 	      p[2] == 0 && p[3] == 0)
-	    p[0] = known_keys[i].keyval;
+	    p[0] = modifier_keys[i].keyval;
+	}
+
+      for (i = 0; i < G_N_ELEMENTS (function_keys); i++)
+	{
+	  p = keyval_array + function_keys[i].keycode * KEYVALS_PER_KEYCODE;
+
+          p[0] = function_keys[i].keyval;
+          p[1] = p[2] = p[3] = 0;
 	}
 
       for (i = 0; i < G_N_ELEMENTS (known_numeric_keys); i++)
@@ -692,12 +703,18 @@ gdk_quartz_keymap_translate_keyboard_state (GdkKeymap       *keymap,
 
   if (hardware_keycode < 0 || hardware_keycode >= NUM_KEYCODES)
     return FALSE;
-  
-  /* Check if shift or capslock modify the keyval */
-  for (bit = GDK_SHIFT_MASK; bit < GDK_CONTROL_MASK; bit <<= 1)
+
+  /* Check if modifiers modify the keyval */
+  for (bit = GDK_SHIFT_MASK; bit < GDK_BUTTON1_MASK; bit <<= 1)
     {
-      if (translate_keysym (hardware_keycode, group, state & ~bit, NULL, NULL) !=
-	  translate_keysym (hardware_keycode, group, state | bit, NULL, NULL))
+      if (translate_keysym (hardware_keycode,
+                            (bit == GDK_MOD1_MASK) ? 0 : group,
+                            state & ~bit,
+                            NULL, NULL) !=
+	  translate_keysym (hardware_keycode,
+                            (bit == GDK_MOD1_MASK) ? 1 : group,
+                            state | bit,
+                            NULL, NULL))
 	tmp_modifiers |= bit;
     }
 
@@ -751,6 +768,9 @@ gdk_quartz_keymap_get_modifier_mask (GdkKeymap         *keymap,
     case GDK_MODIFIER_INTENT_NO_TEXT_INPUT:
       return GDK_MOD2_MASK | GDK_CONTROL_MASK;
 
+    case GDK_MODIFIER_INTENT_SHIFT_GROUP:
+      return GDK_MOD1_MASK;
+
     default:
       g_return_val_if_reached (0);
     }
@@ -783,11 +803,11 @@ _gdk_quartz_keys_event_type (NSEvent *event)
   keycode = [event keyCode];
   flags = [event modifierFlags];
   
-  for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
+  for (i = 0; i < G_N_ELEMENTS (modifier_keys); i++)
     {
-      if (known_keys[i].keycode == keycode)
+      if (modifier_keys[i].keycode == keycode)
 	{
-	  if (flags & known_keys[i].modmask)
+	  if (flags & modifier_keys[i].modmask)
 	    return GDK_KEY_PRESS;
 	  else
 	    return GDK_KEY_RELEASE;
@@ -804,12 +824,12 @@ _gdk_quartz_keys_is_modifier (guint keycode)
 {
   gint i;
   
-  for (i = 0; i < G_N_ELEMENTS (known_keys); i++)
+  for (i = 0; i < G_N_ELEMENTS (modifier_keys); i++)
     {
-      if (known_keys[i].modmask == 0)
+      if (modifier_keys[i].modmask == 0)
 	break;
 
-      if (known_keys[i].keycode == keycode)
+      if (modifier_keys[i].keycode == keycode)
 	return TRUE;
     }
 

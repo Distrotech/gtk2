@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,6 +29,7 @@
 #ifndef __GDK_CURSOR_H__
 #define __GDK_CURSOR_H__
 
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdktypes.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
@@ -228,12 +227,10 @@ GdkCursor* gdk_cursor_new_from_pixbuf	 (GdkDisplay      *display,
 GdkCursor*  gdk_cursor_new_from_name	 (GdkDisplay      *display,
 					  const gchar     *name);
 GdkDisplay* gdk_cursor_get_display	 (GdkCursor	  *cursor);
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(g_object_ref)
+GDK_DEPRECATED_IN_3_0_FOR(g_object_ref)
 GdkCursor * gdk_cursor_ref               (GdkCursor       *cursor);
-GDK_DEPRECATED_FOR(g_object_unref)
+GDK_DEPRECATED_IN_3_0_FOR(g_object_unref)
 void        gdk_cursor_unref             (GdkCursor       *cursor);
-#endif
 GdkPixbuf*  gdk_cursor_get_image         (GdkCursor       *cursor);
 GdkCursorType gdk_cursor_get_cursor_type (GdkCursor       *cursor);
 

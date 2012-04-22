@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -192,15 +190,23 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
                                                         P_("Background color as a string"),
                                                         NULL,
                                                         GTK_PARAM_WRITABLE));
+
+  /**
+   * GtkCellView:background-gdk:
+   *
+   * The background color as a #GdkColor
+   *
+   * Deprecated: 3.4: Use #GtkCellView:background-rgba instead.
+   */
   g_object_class_install_property (gobject_class,
                                    PROP_BACKGROUND_GDK,
                                    g_param_spec_boxed ("background-gdk",
                                                       P_("Background color"),
                                                       P_("Background color as a GdkColor"),
                                                       GDK_TYPE_COLOR,
-                                                      GTK_PARAM_READWRITE));
+                                                      GTK_PARAM_READWRITE | G_PARAM_DEPRECATED));
   /**
-   * GtkCellView:background-rgba
+   * GtkCellView:background-rgba:
    *
    * The background color as a #GdkRGBA
    *
@@ -215,7 +221,7 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
                                                       GTK_PARAM_READWRITE));
 
   /**
-   * GtkCellView:model
+   * GtkCellView:model:
    *
    * The model for cell view
    *
@@ -231,7 +237,7 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
 
 
   /**
-   * GtkCellView:cell-area
+   * GtkCellView:cell-area:
    *
    * The #GtkCellArea rendering cells
    *
@@ -249,7 +255,7 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
 							 GTK_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   /**
-   * GtkCellView:cell-area-context
+   * GtkCellView:cell-area-context:
    *
    * The #GtkCellAreaContext used to compute the geometry of the cell view.
    *
@@ -274,7 +280,7 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
 							 GTK_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   /**
-   * GtkCellView:draw-sensitive
+   * GtkCellView:draw-sensitive:
    *
    * Whether all cells should be draw as sensitive for this view regardless
    * of the actual cell properties (used to make menus with submenus appear
@@ -292,7 +298,7 @@ gtk_cell_view_class_init (GtkCellViewClass *klass)
 							  GTK_PARAM_READWRITE));
 
   /**
-   * GtkCellView:fit-model
+   * GtkCellView:fit-model:
    *
    * Whether the view should request enough space to always fit
    * the size of every row in the model (used by the combo box to
@@ -440,20 +446,33 @@ gtk_cell_view_set_property (GObject      *object,
       break;
     case PROP_BACKGROUND:
       {
-	GdkColor color;
-	
+        GdkRGBA color;
+
 	if (!g_value_get_string (value))
-	  gtk_cell_view_set_background_color (view, NULL);
-	else if (gdk_color_parse (g_value_get_string (value), &color))
-	  gtk_cell_view_set_background_color (view, &color);
+          gtk_cell_view_set_background_rgba (view, NULL);
+	else if (gdk_rgba_parse (&color, g_value_get_string (value)))
+          gtk_cell_view_set_background_rgba (view, &color);
 	else
 	  g_warning ("Don't know color `%s'", g_value_get_string (value));
-	
-	g_object_notify (object, "background-gdk");
+
+        g_object_notify (object, "background-rgba");
+        g_object_notify (object, "background-gdk");
       }
       break;
     case PROP_BACKGROUND_GDK:
-      gtk_cell_view_set_background_color (view, g_value_get_boxed (value));
+      {
+        GdkColor *color;
+        GdkRGBA rgba;
+
+        color = g_value_get_boxed (value);
+
+        rgba.red = color->red / 65535.0;
+        rgba.green = color->green / 65535.0;
+        rgba.blue = color->blue / 65535.0;
+        rgba.alpha = 1.0;
+
+        gtk_cell_view_set_background_rgba (view, &rgba);
+      }
       break;
     case PROP_BACKGROUND_RGBA:
       gtk_cell_view_set_background_rgba (view, g_value_get_boxed (value));
@@ -790,8 +809,6 @@ gtk_cell_view_draw (GtkWidget *widget,
 
   if (gtk_widget_get_state_flags (widget) & GTK_STATE_FLAG_PRELIGHT)
     state = GTK_CELL_RENDERER_PRELIT;
-  else if (gtk_widget_get_state_flags (widget) & GTK_STATE_FLAG_INSENSITIVE)
-    state = GTK_CELL_RENDERER_INSENSITIVE;
   else
     state = 0;
       
@@ -1269,6 +1286,8 @@ gtk_cell_view_get_size_of_row (GtkCellView    *cell_view,
  * Sets the background color of @view.
  *
  * Since: 2.6
+ *
+ * Deprecated: 3.4: Use gtk_cell_view_set_background_rgba() instead.
  */
 void
 gtk_cell_view_set_background_color (GtkCellView    *cell_view,

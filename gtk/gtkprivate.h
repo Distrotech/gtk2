@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -29,6 +27,8 @@
 
 #include <glib-object.h>
 #include <gdk/gdk.h>
+
+#include "gtkcsstypesprivate.h"
 
 G_BEGIN_DECLS
 
@@ -61,6 +61,20 @@ gboolean _gtk_single_string_accumulator   (GSignalInvocationHint *ihint,
 GdkModifierType _gtk_replace_virtual_modifiers (GdkKeymap       *keymap,
                                                 GdkModifierType  modifiers);
 GdkModifierType _gtk_get_primary_accel_mod     (void);
+
+gboolean _gtk_translate_keyboard_accel_state   (GdkKeymap       *keymap,
+                                                guint            hardware_keycode,
+                                                GdkModifierType  state,
+                                                GdkModifierType  accel_mask,
+                                                gint             group,
+                                                guint           *keyval,
+                                                gint            *effective_group,
+                                                gint            *level,
+                                                GdkModifierType *consumed_modifiers);
+
+gboolean        _gtk_propagate_captured_event  (GtkWidget       *widget,
+                                                GdkEvent        *event,
+                                                GtkWidget       *topmost);
 
 G_END_DECLS
 

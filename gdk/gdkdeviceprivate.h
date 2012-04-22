@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GDK_DEVICE_PRIVATE_H__
@@ -84,7 +82,7 @@ struct _GdkDeviceClass
                               GdkScreen  *screen,
                               gint        x,
                               gint        y);
-  gboolean (* query_state)   (GdkDevice       *device,
+  void (* query_state)       (GdkDevice       *device,
                               GdkWindow       *window,
                               GdkWindow      **root_window,
                               GdkWindow      **child_window,
@@ -123,6 +121,13 @@ guint _gdk_device_add_axis   (GdkDevice   *device,
                               gdouble      min_value,
                               gdouble      max_value,
                               gdouble      resolution);
+void _gdk_device_get_axis_info (GdkDevice  *device,
+				guint       index,
+				GdkAtom    *label_atom,
+				GdkAxisUse *use,
+				gdouble    *min_value,
+				gdouble    *max_value,
+				gdouble    *resolution);
 
 void _gdk_device_set_keys    (GdkDevice   *device,
                               guint        num_keys);
@@ -153,7 +158,7 @@ void _gdk_device_add_slave (GdkDevice *device,
                             GdkDevice *slave);
 void _gdk_device_remove_slave (GdkDevice *device,
                                GdkDevice *slave);
-gboolean   _gdk_device_query_state            (GdkDevice        *device,
+void _gdk_device_query_state                  (GdkDevice        *device,
                                                GdkWindow        *window,
                                                GdkWindow       **root_window,
                                                GdkWindow       **child_window,

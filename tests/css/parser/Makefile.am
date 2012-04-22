@@ -149,15 +149,28 @@ EXTRA_DIST += \
 	at-valid-21.css \
 	at-valid-21.errors \
 	at-valid-21.ref.css \
+	background-position.css \
+	background-position.errors \
+	background-position.ref.css \
+	background-repeat.css \
+	background-repeat.ref.css \
+	background-shorthand.css \
+	background-shorthand.ref.css \
+        background-size.css \
+        background-size.ref.css \
 	boolean.css \
 	boolean.errors \
 	boolean.ref.css \
 	border.css \
 	border.errors \
 	border.ref.css \
+	border-color-currentcolor.css \
+	border-color-currentcolor.ref.css \
 	border-radius.css \
 	border-radius.errors \
 	border-radius.ref.css \
+	border-shorthand.css \
+	border-shorthand.ref.css \
 	close-at-end-of-file.css \
 	close-at-end-of-file.errors \
 	close-at-end-of-file.ref.css \
@@ -172,6 +185,7 @@ EXTRA_DIST += \
 	css-21-malformed-statements.css \
 	css-21-malformed-statements.errors \
 	css-21-malformed-statements.ref.css \
+	currentcolor-everywhere.css \
 	declarations.css \
 	declarations.errors \
 	declarations.ref.css \
@@ -253,6 +267,8 @@ EXTRA_DIST += \
 	does-not-exist.css \
 	does-not-exist.errors \
 	does-not-exist.ref.css \
+	doubled.css \
+	doubled.ref.css \
 	empty.css \
 	enum.css \
 	enum.errors \
@@ -278,14 +294,19 @@ EXTRA_DIST += \
 	integer.css \
 	integer.errors \
 	integer.ref.css \
+	linear-gradient.css \
+	linear-gradient.ref.css \
 	no-semicolon.css \
 	no-semicolon.ref.css \
+	nth-child.css \
+	nth-child.ref.css \
 	pseudo-classes-unknown.css \
 	pseudo-classes-unknown.errors \
 	pseudo-classes-unknown.ref.css \
 	selector.css \
-	selector.errors \
 	selector.ref.css \
+	shadow.css \
+	shadow.ref.css \
 	shorthand.css \
 	shorthand.ref.css \
 	simple.css \
@@ -293,4 +314,15 @@ EXTRA_DIST += \
 	single-slash.errors\
 	single-slash.ref.css \
 	test.png \
+	transition.css \
+	transition.ref.css \
+	value-inherit.css \
+	value-inherit-shorthand.css \
+	value-inherit-shorthand.ref.css \
+	value-initial.css \
+	value-initial-shorthand.css \
+	value-initial-shorthand.ref.css \
+	value-none.css \
+	value-none.errors \
+	value-none.ref.css \
 	widget-style-property.css

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -515,12 +513,10 @@ gdk_wayland_keymap_add_virtual_modifiers (GdkKeymap       *keymap,
 
   wayland_keymap = GDK_WAYLAND_KEYMAP (keymap);
 
-  for (i = 3; i < 8; i++)
+  for (i = 4; i < 8; i++)
     {
       if ((1 << i) & *state)
 	{
-	  if (wayland_keymap->modmap[i] & GDK_MOD1_MASK)
-	    *state |= GDK_MOD1_MASK;
 	  if (wayland_keymap->modmap[i] & GDK_SUPER_MASK)
 	    *state |= GDK_SUPER_MASK;
 	  if (wayland_keymap->modmap[i] & GDK_HYPER_MASK)
@@ -540,7 +536,7 @@ gdk_wayland_keymap_map_virtual_modifiers (GdkKeymap       *keymap,
   };
   int i, j;
   GdkWaylandKeymap *wayland_keymap;
-  gboolean retval;
+  gboolean retval = TRUE;
 
   wayland_keymap = GDK_WAYLAND_KEYMAP (keymap);
 
@@ -548,7 +544,7 @@ gdk_wayland_keymap_map_virtual_modifiers (GdkKeymap       *keymap,
     {
       if (*state & vmods[j])
 	{
-	  for (i = 3; i < 8; i++)
+	  for (i = 4; i < 8; i++)
 	    {
 	      if (wayland_keymap->modmap[i] & vmods[j])
 		{

@@ -12,14 +12,15 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include "gtkcssparserprivate.h"
+
+#include "gtkcssnumbervalueprivate.h"
+#include "gtkwin32themeprivate.h"
 
 #include <errno.h>
 #include <string.h>
@@ -91,6 +92,15 @@ _gtk_css_parser_begins_with (GtkCssParser *parser,
   return *parser->data == c;
 }
 
+gboolean
+_gtk_css_parser_has_prefix (GtkCssParser *parser,
+                            const char   *prefix)
+{
+  g_return_val_if_fail (GTK_IS_CSS_PARSER (parser), FALSE);
+
+  return g_ascii_strncasecmp (parser->data, prefix, strlen (prefix)) == 0;
+}
+
 guint
 _gtk_css_parser_get_line (GtkCssParser *parser)
 {
@@ -134,6 +144,23 @@ _gtk_css_parser_error (GtkCssParser *parser,
   _gtk_css_parser_take_error (parser, error);
 }
 
+void
+_gtk_css_parser_error_full (GtkCssParser        *parser,
+                            GtkCssProviderError  code,
+                            const char          *format,
+                            ...)
+{
+  GError *error;
+
+  va_list args;
+
+  va_start (args, format);
+  error = g_error_new_valist (GTK_CSS_PROVIDER_ERROR,
+                              code, format, args);
+  va_end (args);
+
+  _gtk_css_parser_take_error (parser, error);
+}
 static gboolean
 gtk_css_parser_new_line (GtkCssParser *parser)
 {
@@ -436,55 +463,6 @@ _gtk_css_parser_read_string (GtkCssParser *parser)
   return NULL;
 }
 
-char *
-_gtk_css_parser_read_uri (GtkCssParser *parser)
-{
-  char *result;
-
-  g_return_val_if_fail (GTK_IS_CSS_PARSER (parser), NULL);
-
-  if (!_gtk_css_parser_try (parser, "url(", TRUE))
-    {
-      _gtk_css_parser_error (parser, "expected 'url('");
-      return NULL;
-    }
-
-  _gtk_css_parser_skip_whitespace (parser);
-
-  if (_gtk_css_parser_is_string (parser))
-    {
-      result = _gtk_css_parser_read_string (parser);
-    }
-  else
-    {
-      GString *str = g_string_new (NULL);
-
-      while (_gtk_css_parser_read_char (parser, str, URLCHAR))
-        ;
-      result = g_string_free (str, FALSE);
-      if (result == NULL)
-        _gtk_css_parser_error (parser, "not a url");
-    }
-  
-  if (result == NULL)
-    return NULL;
-
-  _gtk_css_parser_skip_whitespace (parser);
-
-  if (*parser->data != ')')
-    {
-      _gtk_css_parser_error (parser, "missing ')' for url");
-      g_free (result);
-      return NULL;
-    }
-
-  parser->data++;
-
-  _gtk_css_parser_skip_whitespace (parser);
-
-  return result;
-}
-
 gboolean
 _gtk_css_parser_try_int (GtkCssParser *parser,
                          int          *value)
@@ -568,263 +546,292 @@ _gtk_css_parser_try_double (GtkCssParser *parser,
   return TRUE;
 }
 
-typedef enum {
-  COLOR_RGBA,
-  COLOR_RGB,
-  COLOR_LIGHTER,
-  COLOR_DARKER,
-  COLOR_SHADE,
-  COLOR_ALPHA,
-  COLOR_MIX
-} ColorType;
-
-static GtkSymbolicColor *
-gtk_css_parser_read_symbolic_color_function (GtkCssParser *parser,
-                                             ColorType     color)
+gboolean
+_gtk_css_parser_has_number (GtkCssParser *parser)
 {
-  GtkSymbolicColor *symbolic;
-  GtkSymbolicColor *child1, *child2;
-  double value;
+  /* ahem */
+  return strchr ("+-0123456789.", parser->data[0]) != NULL;
+}
 
-  if (!_gtk_css_parser_try (parser, "(", TRUE))
+GtkCssValue *
+_gtk_css_number_value_parse (GtkCssParser           *parser,
+                             GtkCssNumberParseFlags  flags)
+{
+  static const struct {
+    const char *name;
+    GtkCssUnit unit;
+    GtkCssNumberParseFlags required_flags;
+  } units[] = {
+    { "px",   GTK_CSS_PX,      GTK_CSS_PARSE_LENGTH },
+    { "pt",   GTK_CSS_PT,      GTK_CSS_PARSE_LENGTH },
+    { "em",   GTK_CSS_EM,      GTK_CSS_PARSE_LENGTH },
+    { "ex",   GTK_CSS_EX,      GTK_CSS_PARSE_LENGTH },
+    { "pc",   GTK_CSS_PC,      GTK_CSS_PARSE_LENGTH },
+    { "in",   GTK_CSS_IN,      GTK_CSS_PARSE_LENGTH },
+    { "cm",   GTK_CSS_CM,      GTK_CSS_PARSE_LENGTH },
+    { "mm",   GTK_CSS_MM,      GTK_CSS_PARSE_LENGTH },
+    { "rad",  GTK_CSS_RAD,     GTK_CSS_PARSE_ANGLE  },
+    { "deg",  GTK_CSS_DEG,     GTK_CSS_PARSE_ANGLE  },
+    { "grad", GTK_CSS_GRAD,    GTK_CSS_PARSE_ANGLE  },
+    { "turn", GTK_CSS_TURN,    GTK_CSS_PARSE_ANGLE  },
+    { "s",    GTK_CSS_S,       GTK_CSS_PARSE_TIME   },
+    { "ms",   GTK_CSS_MS,      GTK_CSS_PARSE_TIME   }
+  };
+  char *end, *unit_name;
+  double value;
+  GtkCssUnit unit;
+
+  g_return_val_if_fail (GTK_IS_CSS_PARSER (parser), NULL);
+
+  errno = 0;
+  value = g_ascii_strtod (parser->data, &end);
+  if (errno)
     {
-      _gtk_css_parser_error (parser, "Missing opening bracket in color definition");
+      _gtk_css_parser_error (parser, "not a number: %s", g_strerror (errno));
+      return NULL;
+    }
+  if (parser->data == end)
+    {
+      _gtk_css_parser_error (parser, "not a number");
       return NULL;
     }
 
-  if (color == COLOR_RGB || color == COLOR_RGBA)
+  parser->data = end;
+
+  if (flags & GTK_CSS_POSITIVE_ONLY &&
+      value < 0)
     {
-      GdkRGBA rgba;
-      double tmp;
+      _gtk_css_parser_error (parser, "negative values are not allowed.");
+      return NULL;
+    }
+
+  unit_name = _gtk_css_parser_try_ident (parser, FALSE);
+
+  if (unit_name)
+    {
       guint i;
 
-      for (i = 0; i < 3; i++)
+      for (i = 0; i < G_N_ELEMENTS (units); i++)
         {
-          if (i > 0 && !_gtk_css_parser_try (parser, ",", TRUE))
-            {
-              _gtk_css_parser_error (parser, "Expected ',' in color definition");
-              return NULL;
-            }
-
-          if (!_gtk_css_parser_try_double (parser, &tmp))
-            {
-              _gtk_css_parser_error (parser, "Invalid number for color value");
-              return NULL;
-            }
-          if (_gtk_css_parser_try (parser, "%", TRUE))
-            tmp /= 100.0;
-          else
-            tmp /= 255.0;
-          if (i == 0)
-            rgba.red = tmp;
-          else if (i == 1)
-            rgba.green = tmp;
-          else if (i == 2)
-            rgba.blue = tmp;
-          else
-            g_assert_not_reached ();
+          if (flags & units[i].required_flags &&
+              g_ascii_strcasecmp (unit_name, units[i].name) == 0)
+            break;
         }
 
-      if (color == COLOR_RGBA)
-        {
-          if (i > 0 && !_gtk_css_parser_try (parser, ",", TRUE))
-            {
-              _gtk_css_parser_error (parser, "Expected ',' in color definition");
-              return NULL;
-            }
+      g_free (unit_name);
 
-          if (!_gtk_css_parser_try_double (parser, &rgba.alpha))
-            {
-              _gtk_css_parser_error (parser, "Invalid number for alpha value");
-              return NULL;
-            }
+      if (i >= G_N_ELEMENTS (units))
+        {
+          _gtk_css_parser_error (parser, "`%s' is not a valid unit.", unit_name);
+          return NULL;
         }
-      else
-        rgba.alpha = 1.0;
-      
-      symbolic = gtk_symbolic_color_new_literal (&rgba);
+
+      unit = units[i].unit;
     }
   else
     {
-      child1 = _gtk_css_parser_read_symbolic_color (parser);
-      if (child1 == NULL)
-        return NULL;
-
-      if (color == COLOR_MIX)
+      if ((flags & GTK_CSS_PARSE_PERCENT) &&
+          _gtk_css_parser_try (parser, "%", FALSE))
         {
-          if (!_gtk_css_parser_try (parser, ",", TRUE))
-            {
-              _gtk_css_parser_error (parser, "Expected ',' in color definition");
-              gtk_symbolic_color_unref (child1);
-              return NULL;
-            }
-
-          child2 = _gtk_css_parser_read_symbolic_color (parser);
-          if (child2 == NULL)
-            {
-              gtk_symbolic_color_unref (child1);
-              return NULL;
-            }
+          unit = GTK_CSS_PERCENT;
+        }
+      else if (value == 0.0)
+        {
+          if (flags & GTK_CSS_PARSE_NUMBER)
+            unit = GTK_CSS_NUMBER;
+          else if (flags & GTK_CSS_PARSE_LENGTH)
+            unit = GTK_CSS_PX;
+          else if (flags & GTK_CSS_PARSE_ANGLE)
+            unit = GTK_CSS_DEG;
+          else if (flags & GTK_CSS_PARSE_TIME)
+            unit = GTK_CSS_S;
+          else
+            unit = GTK_CSS_PERCENT;
+        }
+      else if (flags & GTK_CSS_NUMBER_AS_PIXELS)
+        {
+          _gtk_css_parser_error_full (parser,
+                                      GTK_CSS_PROVIDER_ERROR_DEPRECATED,
+                                      "Not using units is deprecated. Assuming 'px'.");
+          unit = GTK_CSS_PX;
+        }
+      else if (flags & GTK_CSS_PARSE_NUMBER)
+        {
+          unit = GTK_CSS_NUMBER;
         }
       else
-        child2 = NULL;
-
-      if (color == COLOR_LIGHTER)
-        value = 1.3;
-      else if (color == COLOR_DARKER)
-        value = 0.7;
-      else
         {
-          if (!_gtk_css_parser_try (parser, ",", TRUE))
-            {
-              _gtk_css_parser_error (parser, "Expected ',' in color definition");
-              gtk_symbolic_color_unref (child1);
-              if (child2)
-                gtk_symbolic_color_unref (child2);
-              return NULL;
-            }
-
-          if (!_gtk_css_parser_try_double (parser, &value))
-            {
-              _gtk_css_parser_error (parser, "Expected number in color definition");
-              gtk_symbolic_color_unref (child1);
-              if (child2)
-                gtk_symbolic_color_unref (child2);
-              return NULL;
-            }
+          _gtk_css_parser_error (parser, "Unit is missing.");
+          return NULL;
         }
-      
-      switch (color)
-        {
-        case COLOR_LIGHTER:
-        case COLOR_DARKER:
-        case COLOR_SHADE:
-          symbolic = gtk_symbolic_color_new_shade (child1, value);
-          break;
-        case COLOR_ALPHA:
-          symbolic = gtk_symbolic_color_new_alpha (child1, value);
-          break;
-        case COLOR_MIX:
-          symbolic = gtk_symbolic_color_new_mix (child1, child2, value);
-          break;
-        default:
-          g_assert_not_reached ();
-          symbolic = NULL;
-        }
-
-      gtk_symbolic_color_unref (child1);
-      if (child2)
-        gtk_symbolic_color_unref (child2);
     }
 
-  if (!_gtk_css_parser_try (parser, ")", TRUE))
-    {
-      _gtk_css_parser_error (parser, "Expected ')' in color definition");
-      gtk_symbolic_color_unref (symbolic);
-      return NULL;
-    }
+  _gtk_css_parser_skip_whitespace (parser);
 
-  return symbolic;
+  return _gtk_css_number_value_new (value, unit);
 }
 
-static GtkSymbolicColor *
-gtk_css_parser_try_hash_color (GtkCssParser *parser)
+/* XXX: we should introduce GtkCssLenght that deals with
+ * different kind of units */
+gboolean
+_gtk_css_parser_try_length (GtkCssParser *parser,
+                            int          *value)
+{
+  if (!_gtk_css_parser_try_int (parser, value))
+    return FALSE;
+
+  /* FIXME: _try_uint skips spaces while the
+   * spec forbids them
+   */
+  _gtk_css_parser_try (parser, "px", TRUE);
+
+  return TRUE;
+}
+
+gboolean
+_gtk_css_parser_try_enum (GtkCssParser *parser,
+			  GType         enum_type,
+			  int          *value)
+{
+  GEnumClass *enum_class;
+  gboolean result;
+  const char *start;
+  char *str;
+
+  g_return_val_if_fail (GTK_IS_CSS_PARSER (parser), FALSE);
+  g_return_val_if_fail (value != NULL, FALSE);
+
+  result = FALSE;
+
+  enum_class = g_type_class_ref (enum_type);
+
+  start = parser->data;
+
+  str = _gtk_css_parser_try_ident (parser, TRUE);
+  if (str == NULL)
+    return FALSE;
+
+  if (enum_class->n_values)
+    {
+      GEnumValue *enum_value;
+
+      for (enum_value = enum_class->values; enum_value->value_name; enum_value++)
+	{
+	  if (enum_value->value_nick &&
+	      g_ascii_strcasecmp (str, enum_value->value_nick) == 0)
+	    {
+	      *value = enum_value->value;
+	      result = TRUE;
+	      break;
+	    }
+	}
+    }
+
+  g_free (str);
+  g_type_class_unref (enum_class);
+
+  if (!result)
+    parser->data = start;
+
+  return result;
+}
+
+gboolean
+_gtk_css_parser_try_hash_color (GtkCssParser *parser,
+                                GdkRGBA      *rgba)
 {
   if (parser->data[0] == '#' &&
       g_ascii_isxdigit (parser->data[1]) &&
       g_ascii_isxdigit (parser->data[2]) &&
       g_ascii_isxdigit (parser->data[3]))
     {
-      GdkRGBA rgba;
-      
       if (g_ascii_isxdigit (parser->data[4]) &&
           g_ascii_isxdigit (parser->data[5]) &&
           g_ascii_isxdigit (parser->data[6]))
         {
-          rgba.red   = ((get_xdigit (parser->data[1]) << 4) + get_xdigit (parser->data[2])) / 255.0;
-          rgba.green = ((get_xdigit (parser->data[3]) << 4) + get_xdigit (parser->data[4])) / 255.0;
-          rgba.blue  = ((get_xdigit (parser->data[5]) << 4) + get_xdigit (parser->data[6])) / 255.0;
-          rgba.alpha = 1.0;
+          rgba->red   = ((get_xdigit (parser->data[1]) << 4) + get_xdigit (parser->data[2])) / 255.0;
+          rgba->green = ((get_xdigit (parser->data[3]) << 4) + get_xdigit (parser->data[4])) / 255.0;
+          rgba->blue  = ((get_xdigit (parser->data[5]) << 4) + get_xdigit (parser->data[6])) / 255.0;
+          rgba->alpha = 1.0;
           parser->data += 7;
         }
       else
         {
-          rgba.red   = get_xdigit (parser->data[1]) / 15.0;
-          rgba.green = get_xdigit (parser->data[2]) / 15.0;
-          rgba.blue  = get_xdigit (parser->data[3]) / 15.0;
-          rgba.alpha = 1.0;
+          rgba->red   = get_xdigit (parser->data[1]) / 15.0;
+          rgba->green = get_xdigit (parser->data[2]) / 15.0;
+          rgba->blue  = get_xdigit (parser->data[3]) / 15.0;
+          rgba->alpha = 1.0;
           parser->data += 4;
         }
 
       _gtk_css_parser_skip_whitespace (parser);
 
-      return gtk_symbolic_color_new_literal (&rgba);
+      return TRUE;
     }
 
-  return NULL;
+  return FALSE;
 }
 
-GtkSymbolicColor *
-_gtk_css_parser_read_symbolic_color (GtkCssParser *parser)
+GFile *
+_gtk_css_parser_read_url (GtkCssParser *parser,
+                          GFile        *base)
 {
-  GtkSymbolicColor *symbolic;
-  guint color;
-  const char *names[] = {"rgba", "rgb",  "lighter", "darker", "shade", "alpha", "mix" };
-  char *name;
+  gchar *path;
+  char *scheme;
+  GFile *file;
 
-  g_return_val_if_fail (GTK_IS_CSS_PARSER (parser), NULL);
-
-  if (_gtk_css_parser_try (parser, "@", FALSE))
+  if (_gtk_css_parser_try (parser, "url", FALSE))
     {
-      name = _gtk_css_parser_try_name (parser, TRUE);
-
-      if (name)
+      if (!_gtk_css_parser_try (parser, "(", TRUE))
         {
-          symbolic = gtk_symbolic_color_new_name (name);
-        }
-      else
-        {
-          _gtk_css_parser_error (parser, "'%s' is not a valid symbolic color name", name);
-          symbolic = NULL;
+          _gtk_css_parser_skip_whitespace (parser);
+          if (_gtk_css_parser_try (parser, "(", TRUE))
+            {
+              _gtk_css_parser_error_full (parser,
+                                          GTK_CSS_PROVIDER_ERROR_DEPRECATED,
+                                          "Whitespace between 'url' and '(' is deprecated");
+            }
+          else
+            {
+              _gtk_css_parser_error (parser, "Expected '(' after 'url'");
+              return NULL;
+            }
         }
 
-      g_free (name);
-      return symbolic;
+      path = _gtk_css_parser_read_string (parser);
+      if (path == NULL)
+        return NULL;
+
+      if (!_gtk_css_parser_try (parser, ")", TRUE))
+        {
+          _gtk_css_parser_error (parser, "No closing ')' found for 'url'");
+          g_free (path);
+          return NULL;
+        }
+
+      scheme = g_uri_parse_scheme (path);
+      if (scheme != NULL)
+	{
+	  file = g_file_new_for_uri (path);
+	  g_free (path);
+	  g_free (scheme);
+	  return file;
+	}
+    }
+  else
+    {
+      path = _gtk_css_parser_try_name (parser, TRUE);
+      if (path == NULL)
+        {
+          _gtk_css_parser_error (parser, "Not a valid url");
+          return NULL;
+        }
     }
 
-  for (color = 0; color < G_N_ELEMENTS (names); color++)
-    {
-      if (_gtk_css_parser_try (parser, names[color], TRUE))
-        break;
-    }
+  file = g_file_resolve_relative_path (base, path);
+  g_free (path);
 
-  if (color < G_N_ELEMENTS (names))
-    return gtk_css_parser_read_symbolic_color_function (parser, color);
-
-  symbolic = gtk_css_parser_try_hash_color (parser);
-  if (symbolic)
-    return symbolic;
-
-  name = _gtk_css_parser_try_name (parser, TRUE);
-  if (name)
-    {
-      GdkRGBA rgba;
-
-      if (gdk_rgba_parse (&rgba, name))
-        {
-          symbolic = gtk_symbolic_color_new_literal (&rgba);
-        }
-      else
-        {
-          _gtk_css_parser_error (parser, "'%s' is not a valid color name", name);
-          symbolic = NULL;
-        }
-      g_free (name);
-      return symbolic;
-    }
-
-  _gtk_css_parser_error (parser, "Not a color definition");
-  return NULL;
+  return file;
 }
 
 void

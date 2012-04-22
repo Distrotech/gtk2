@@ -31,35 +31,34 @@ draw_callback (GtkWidget *widget,
 }
 
 static void
+response_cb (GtkDialog *dialog,
+             gint       response_id,
+             gpointer   user_data)
+{
+  if (response_id == GTK_RESPONSE_OK)
+    {
+      gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (dialog), &color);
+      gtk_widget_override_background_color (da, 0, &color);
+    }
+
+  gtk_widget_hide (GTK_WIDGET (dialog));
+}
+
+static void
 change_color_callback (GtkWidget *button,
                        gpointer   data)
 {
   GtkWidget *dialog;
-  GtkColorSelection *colorsel;
-  GtkColorSelectionDialog *selection_dialog;
-  gint response;
 
-  dialog = gtk_color_selection_dialog_new ("Changing color");
+  dialog = gtk_color_chooser_dialog_new ("Changing color", GTK_WINDOW (window));
+  gtk_color_chooser_set_rgba (GTK_COLOR_CHOOSER (dialog), &color);
 
-  gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (window));
+  g_signal_connect (dialog,
+                    "response",
+                    G_CALLBACK (response_cb),
+                    NULL);
 
-  selection_dialog = GTK_COLOR_SELECTION_DIALOG (dialog);
-  colorsel = GTK_COLOR_SELECTION (gtk_color_selection_dialog_get_color_selection (selection_dialog));
-
-  gtk_color_selection_set_previous_rgba (colorsel, &color);
-  gtk_color_selection_set_current_rgba (colorsel, &color);
-  gtk_color_selection_set_has_palette (colorsel, TRUE);
-
-  response = gtk_dialog_run (GTK_DIALOG (dialog));
-
-  if (response == GTK_RESPONSE_OK)
-    {
-      gtk_color_selection_get_current_rgba (colorsel, &color);
-
-      gtk_widget_override_background_color (da, 0, &color);
-    }
-
-  gtk_widget_destroy (dialog);
+  gtk_widget_show_all (dialog);
 }
 
 GtkWidget *

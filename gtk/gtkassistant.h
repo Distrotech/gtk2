@@ -18,9 +18,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -139,6 +137,7 @@ gint                  gtk_assistant_append_page           (GtkAssistant         
 gint                  gtk_assistant_insert_page           (GtkAssistant         *assistant,
                                                            GtkWidget            *page,
                                                            gint                  position);
+GDK_AVAILABLE_IN_3_2
 void                  gtk_assistant_remove_page           (GtkAssistant         *assistant,
                                                            gint                  page_num);
 void                  gtk_assistant_set_forward_page_func (GtkAssistant         *assistant,
@@ -156,22 +155,20 @@ void                  gtk_assistant_set_page_title        (GtkAssistant         
 const gchar *         gtk_assistant_get_page_title        (GtkAssistant         *assistant,
                                                            GtkWidget            *page);
 
-#if !defined (GTK_DISABLE_DEPRECATED) || defined (GTK_COMPILATION)
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 void                  gtk_assistant_set_page_header_image (GtkAssistant         *assistant,
                                                            GtkWidget            *page,
                                                            GdkPixbuf            *pixbuf);
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 GdkPixbuf            *gtk_assistant_get_page_header_image (GtkAssistant         *assistant,
                                                            GtkWidget            *page);
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 void                  gtk_assistant_set_page_side_image   (GtkAssistant         *assistant,
                                                            GtkWidget            *page,
                                                            GdkPixbuf            *pixbuf);
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 GdkPixbuf            *gtk_assistant_get_page_side_image   (GtkAssistant         *assistant,
                                                            GtkWidget            *page);
-#endif
 
 void                  gtk_assistant_set_page_complete     (GtkAssistant         *assistant,
                                                            GtkWidget            *page,

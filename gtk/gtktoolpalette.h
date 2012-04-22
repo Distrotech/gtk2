@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors:
  *      Mathias Hasselmann
@@ -126,12 +125,11 @@ void                           gtk_tool_palette_add_drag_dest         (GtkToolPa
                                                                        GtkToolPaletteDragTargets  targets,
                                                                        GdkDragAction              actions);
 
-#ifndef GTK_DISABLE_DEPRECATED
 
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_hadjustment)
 GtkAdjustment*                 gtk_tool_palette_get_hadjustment       (GtkToolPalette            *palette);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_vadjustment)
 GtkAdjustment*                 gtk_tool_palette_get_vadjustment       (GtkToolPalette            *palette);
-
-#endif
 
 const GtkTargetEntry*          gtk_tool_palette_get_drag_target_item  (void) G_GNUC_CONST;
 const GtkTargetEntry*          gtk_tool_palette_get_drag_target_group (void) G_GNUC_CONST;

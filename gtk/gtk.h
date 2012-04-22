@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -36,6 +34,7 @@
 #include <gtk/gtkaccelmap.h>
 #include <gtk/gtkaccessible.h>
 #include <gtk/gtkaction.h>
+#include <gtk/gtkactionable.h>
 #include <gtk/gtkactiongroup.h>
 #include <gtk/gtkactivatable.h>
 #include <gtk/gtkadjustment.h>
@@ -45,6 +44,7 @@
 #include <gtk/gtkappchooserwidget.h>
 #include <gtk/gtkappchooserbutton.h>
 #include <gtk/gtkapplication.h>
+#include <gtk/gtkapplicationwindow.h>
 #include <gtk/gtkarrow.h>
 #include <gtk/gtkaspectframe.h>
 #include <gtk/gtkassistant.h>
@@ -76,8 +76,10 @@
 #include <gtk/gtkcheckmenuitem.h>
 #include <gtk/gtkclipboard.h>
 #include <gtk/gtkcolorbutton.h>
-#include <gtk/gtkcolorsel.h>
-#include <gtk/gtkcolorseldialog.h>
+#include <gtk/gtkcolorchooser.h>
+#include <gtk/gtkcolorchooserdialog.h>
+#include <gtk/gtkcolorchooserwidget.h>
+#include <gtk/gtkcolorutils.h>
 #include <gtk/gtkcombobox.h>
 #include <gtk/gtkcomboboxtext.h>
 #include <gtk/gtkcontainer.h>
@@ -107,13 +109,13 @@
 #include <gtk/gtkframe.h>
 #include <gtk/gtkgradient.h>
 #include <gtk/gtkgrid.h>
-#include <gtk/gtkhsv.h>
 #include <gtk/gtkiconfactory.h>
 #include <gtk/gtkicontheme.h>
 #include <gtk/gtkiconview.h>
 #include <gtk/gtkimage.h>
 #include <gtk/gtkimagemenuitem.h>
 #include <gtk/gtkimcontext.h>
+#include <gtk/gtkimcontextinfo.h>
 #include <gtk/gtkimcontextsimple.h>
 #include <gtk/gtkimmulticontext.h>
 #include <gtk/gtkinfobar.h>
@@ -212,6 +214,7 @@
 #include <gtk/gtktreeview.h>
 #include <gtk/gtktreeviewcolumn.h>
 #include <gtk/gtktypebuiltins.h>
+#include <gtk/gtktypes.h>
 #include <gtk/gtkuimanager.h>
 #include <gtk/gtkversion.h>
 #include <gtk/gtkviewport.h>
@@ -220,12 +223,14 @@
 #include <gtk/gtkwidgetpath.h>
 #include <gtk/gtkwindow.h>
 
-#ifndef GTK_DISABLE_DEPRECATED
+#include <gtk/deprecated/gtkcolorsel.h>
+#include <gtk/deprecated/gtkcolorseldialog.h>
 #include <gtk/deprecated/gtkfontsel.h>
 #include <gtk/deprecated/gtkhandlebox.h>
 #include <gtk/deprecated/gtkhbbox.h>
 #include <gtk/deprecated/gtkhbox.h>
 #include <gtk/deprecated/gtkhpaned.h>
+#include <gtk/deprecated/gtkhsv.h>
 #include <gtk/deprecated/gtkhscale.h>
 #include <gtk/deprecated/gtkhscrollbar.h>
 #include <gtk/deprecated/gtkhseparator.h>
@@ -239,7 +244,6 @@
 #include <gtk/deprecated/gtkvscale.h>
 #include <gtk/deprecated/gtkvscrollbar.h>
 #include <gtk/deprecated/gtkvseparator.h>
-#endif
 
 #undef __GTK_H_INSIDE__
 

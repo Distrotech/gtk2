@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Written by Owen Taylor <otaylor@redhat.com>, based on code by
  * Carsten Haitzler <raster@rasterman.com>
@@ -184,8 +182,7 @@ pixbuf_rc_style_finalize (GObject *object)
 {
   PixbufRcStyle *rc_style = PIXBUF_RC_STYLE (object);
   
-  g_list_foreach (rc_style->img_list, (GFunc) theme_image_unref, NULL);
-  g_list_free (rc_style->img_list);
+  g_list_free_full (rc_style->img_list, theme_image_unref);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }

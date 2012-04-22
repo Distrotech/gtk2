@@ -32,6 +32,24 @@ EXTRA_DIST += \
 	background-color-transparent.css \
 	background-color-transparent.ref.ui \
 	background-color-transparent.ui \
+	background-origin.css \
+	background-origin.ref.ui \
+	background-origin.ui \
+	background-positioning-area-empty.ref.ui \
+	background-positioning-area-empty.ui \
+	background-position.css \
+	background-position.ref.ui \
+	background-position.ui \
+	background-size.css \
+	background-size.ref.ui \
+	background-size.ui \
+	background-size-keywords.css \
+	background-size-keywords.ref.ui \
+	background-size-keywords.ui \
+	background-window-transparent.css \
+	background-window-transparent.ref.ui \
+	background-window-transparent.ui \
+	reference-background-origin.png	\
 	border-color-default.css \
 	border-color-default.ref.ui \
 	border-color-default.ui \
@@ -57,6 +75,12 @@ EXTRA_DIST += \
 	border-radius-clamp.css\
 	border-radius-clamp.ref.ui \
 	border-radius-clamp.ui \
+	border-style.css \
+	border-style.ref.ui \
+	border-style.ui \
+	border-style-none.css \
+	border-style-none.ref.ui \
+	border-style-none.ui \
 	box-packing.css \
 	box-packing.ref.ui \
 	box-packing.ui \
@@ -75,18 +99,28 @@ EXTRA_DIST += \
 	css-match-exact.css \
 	css-match-exact.ref.ui \
 	css-match-exact.ui \
+	css-match-import.css \
+	css-match-import-import.css \
+	css-match-import.ui \
+	css-match-import.ref.ui \
 	css-match-inherit.css \
 	css-match-inherit.ref.ui \
 	css-match-inherit.ui \
+	css-match-inherit-different-state.css \
+	css-match-inherit-different-state.ref.ui \
+	css-match-inherit-different-state.ui \
 	css-match-name.css \
 	css-match-name.ref.ui \
 	css-match-name.ui \
 	css-match-region-matches-star.css \
-	css-match-region-matches-star.ref.ui \
 	css-match-region-matches-star.ui \
+	css-match-region-matches-star.ref.ui \
 	css-match-regions.css \
 	css-match-regions.ref.ui \
 	css-match-regions.ui \
+	css-match-siblings.css \
+	css-match-siblings.ref.ui \
+	css-match-siblings.ui \
 	css-match-style-property-order.css \
 	css-match-style-property-order.ref.ui \
 	css-match-style-property-order.ui \
@@ -96,10 +130,15 @@ EXTRA_DIST += \
 	css-match-type.css \
 	css-match-type.ref.ui \
 	css-match-type.ui \
+	css-multi-state.css \
+	css-multi-state.ref.ui \
+	css-multi-state.ui \
 	entry-progress-coloring.css \
 	entry-progress-coloring.ref.ui \
 	entry-progress-coloring.ui \
 	green-20x20.png \
+	grid-empty-with-spacing.ref.ui \
+	grid-empty-with-spacing.ui \
 	grid-expand.css \
 	grid-expand.ref.ui \
 	grid-expand.ui \
@@ -115,6 +154,15 @@ EXTRA_DIST += \
 	grid-spacing3.css \
 	grid-spacing3.ref.ui \
 	grid-spacing3.ui \
+	info-bar-message-types.css \
+	info-bar-message-types.ref.ui \
+	info-bar-message-types.ui \
+	inherit-and-initial.css \
+	inherit-and-initial.ref.ui \
+	inherit-and-initial.ui \
+	label-attribute-preference.css \
+	label-attribute-preference.ref.ui \
+	label-attribute-preference.ui \
 	label-shadows.css \
 	label-shadows.ref.ui \
 	label-shadows.ui \
@@ -128,8 +176,8 @@ EXTRA_DIST += \
 	messagedialog-secondarytext.ui \
 	messagedialog-secondarytext.ref.ui \
 	misc-alignment.css \
-	misc-alignment.ui \
 	misc-alignment.ref.ui \
+	misc-alignment.ui \
 	no-colors.css \
 	no-colors.ref.ui \
 	no-colors.ui \
@@ -137,11 +185,16 @@ EXTRA_DIST += \
 	nonresizable-size.ui \
 	notebook-childproperties.ui \
 	notebook-childproperties.ref.ui \
+	nth-child.css \
+	nth-child.ref.ui \
+	nth-child.ui \
 	paned-undersized.css \
 	paned-undersized.ref.ui \
 	paned-undersized.ui \
+	quit-mnemonic.css \
 	quit-mnemonic.ref.ui \
 	quit-mnemonic.ui \
+	reset-to-defaults.css \
 	rotated-layout.ref.ui \
 	rotated-layout.ui \
 	shorthand-entry-border.css \

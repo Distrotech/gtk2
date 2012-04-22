@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -50,9 +48,6 @@
 /* This is the window corresponding to the key window */
 static GdkWindow   *current_keyboard_window;
 
-/* This is the event mask and button state from the last event */
-static GdkModifierType current_keyboard_modifiers;
-static GdkModifierType current_button_state;
 
 static void append_event                        (GdkEvent  *event,
                                                  gboolean   windowing);
@@ -78,8 +73,8 @@ _gdk_quartz_display_has_pending (GdkDisplay *display)
          (_gdk_quartz_event_loop_check_pending ()));
 }
 
-static void
-break_all_grabs (guint32 time)
+void
+_gdk_quartz_events_break_all_grabs (guint32 time)
 {
   GList *list, *l;
   GdkDeviceManager *device_manager;
@@ -202,6 +197,25 @@ get_mouse_button_from_ns_event (NSEvent *event)
 }
 
 static GdkModifierType
+get_mouse_button_modifiers_from_ns_buttons (NSUInteger nsbuttons)
+{
+  GdkModifierType modifiers = 0;
+
+  if (nsbuttons & (1 << 0))
+    modifiers |= GDK_BUTTON1_MASK;
+  if (nsbuttons & (1 << 1))
+    modifiers |= GDK_BUTTON3_MASK;
+  if (nsbuttons & (1 << 2))
+    modifiers |= GDK_BUTTON2_MASK;
+  if (nsbuttons & (1 << 3))
+    modifiers |= GDK_BUTTON4_MASK;
+  if (nsbuttons & (1 << 4))
+    modifiers |= GDK_BUTTON5_MASK;
+
+  return modifiers;
+}
+
+static GdkModifierType
 get_mouse_button_modifiers_from_ns_event (NSEvent *event)
 {
   int button;
@@ -216,13 +230,10 @@ get_mouse_button_modifiers_from_ns_event (NSEvent *event)
 }
 
 static GdkModifierType
-get_keyboard_modifiers_from_ns_event (NSEvent *nsevent)
+get_keyboard_modifiers_from_ns_flags (NSUInteger nsflags)
 {
   GdkModifierType modifiers = 0;
-  int nsflags;
 
-  nsflags = [nsevent modifierFlags];
-  
   if (nsflags & NSAlphaShiftKeyMask)
     modifiers |= GDK_LOCK_MASK;
   if (nsflags & NSShiftKeyMask)
@@ -235,6 +246,12 @@ get_keyboard_modifiers_from_ns_event (NSEvent *nsevent)
     modifiers |= GDK_MOD2_MASK;
 
   return modifiers;
+}
+
+static GdkModifierType
+get_keyboard_modifiers_from_ns_event (NSEvent *nsevent)
+{
+  return get_keyboard_modifiers_from_ns_flags ([nsevent modifierFlags]);
 }
 
 /* Return an event mask from an NSEvent */
@@ -409,7 +426,8 @@ generate_motion_event (GdkWindow *window)
   event->motion.x_root = x_root;
   event->motion.y_root = y_root;
   /* FIXME event->axes */
-  event->motion.state = 0;
+  event->motion.state = _gdk_quartz_events_get_current_keyboard_modifiers () |
+                        _gdk_quartz_events_get_current_mouse_modifiers ();
   event->motion.is_hint = FALSE;
   event->motion.device = _gdk_display->core_pointer;
 
@@ -486,7 +504,8 @@ _gdk_quartz_events_send_enter_notify_event (GdkWindow *window)
   event->crossing.y_root = y_root;
   event->crossing.mode = GDK_CROSSING_NORMAL;
   event->crossing.detail = GDK_NOTIFY_ANCESTOR;
-  event->crossing.state = 0;
+  event->crossing.state = _gdk_quartz_events_get_current_keyboard_modifiers () |
+                          _gdk_quartz_events_get_current_mouse_modifiers ();
 
   gdk_event_set_device (event, _gdk_display->core_pointer);
 
@@ -762,7 +781,8 @@ fill_crossing_event (GdkWindow       *toplevel,
   event->crossing.y_root = y_root;
   event->crossing.mode = mode;
   event->crossing.detail = detail;
-  event->crossing.state = get_keyboard_modifiers_from_ns_event (nsevent);
+  event->crossing.state = get_keyboard_modifiers_from_ns_event (nsevent) |
+                         _gdk_quartz_events_get_current_mouse_modifiers ();
 
   gdk_event_set_device (event, _gdk_display->core_pointer);
 
@@ -780,9 +800,9 @@ fill_button_event (GdkWindow *window,
 {
   GdkEventType type;
   gint state;
-  gint button;
 
-  state = get_keyboard_modifiers_from_ns_event (nsevent);
+  state = get_keyboard_modifiers_from_ns_event (nsevent) |
+         _gdk_quartz_events_get_current_mouse_modifiers ();
 
   switch ([nsevent type])
     {
@@ -790,18 +810,19 @@ fill_button_event (GdkWindow *window,
     case NSRightMouseDown:
     case NSOtherMouseDown:
       type = GDK_BUTTON_PRESS;
+      state &= ~get_mouse_button_modifiers_from_ns_event (nsevent);
       break;
+
     case NSLeftMouseUp:
     case NSRightMouseUp:
     case NSOtherMouseUp:
       type = GDK_BUTTON_RELEASE;
       state |= get_mouse_button_modifiers_from_ns_event (nsevent);
       break;
+
     default:
       g_assert_not_reached ();
     }
-  
-  button = get_mouse_button_from_ns_event (nsevent);
 
   event->any.type = type;
   event->button.window = window;
@@ -812,7 +833,7 @@ fill_button_event (GdkWindow *window,
   event->button.y_root = y_root;
   /* FIXME event->axes */
   event->button.state = state;
-  event->button.button = button;
+  event->button.button = get_mouse_button_from_ns_event (nsevent);
   event->button.device = _gdk_display->core_pointer;
 }
 
@@ -825,22 +846,6 @@ fill_motion_event (GdkWindow *window,
                    gint       x_root,
                    gint       y_root)
 {
-  GdkModifierType state;
-
-  state = get_keyboard_modifiers_from_ns_event (nsevent);
-
-  switch ([nsevent type])
-    {
-    case NSLeftMouseDragged:
-    case NSRightMouseDragged:
-    case NSOtherMouseDragged:
-      state |= get_mouse_button_modifiers_from_ns_event (nsevent);
-      break;
-
-    case NSMouseMoved:
-      break;
-    }
-
   event->any.type = GDK_MOTION_NOTIFY;
   event->motion.window = window;
   event->motion.time = get_time_from_ns_event (nsevent);
@@ -849,7 +854,8 @@ fill_motion_event (GdkWindow *window,
   event->motion.x_root = x_root;
   event->motion.y_root = y_root;
   /* FIXME event->axes */
-  event->motion.state = state;
+  event->motion.state = get_keyboard_modifiers_from_ns_event (nsevent) |
+                        _gdk_quartz_events_get_current_mouse_modifiers ();
   event->motion.is_hint = FALSE;
   event->motion.device = _gdk_display->core_pointer;
 }
@@ -862,6 +868,8 @@ fill_scroll_event (GdkWindow          *window,
                    gint                y,
                    gint                x_root,
                    gint                y_root,
+                   gdouble             delta_x,
+                   gdouble             delta_y,
                    GdkScrollDirection  direction)
 {
   NSPoint point;
@@ -878,6 +886,8 @@ fill_scroll_event (GdkWindow          *window,
   event->scroll.state = get_keyboard_modifiers_from_ns_event (nsevent);
   event->scroll.direction = direction;
   event->scroll.device = _gdk_display->core_pointer;
+  event->scroll.delta_x = delta_x;
+  event->scroll.delta_y = delta_y;
 }
 
 static void
@@ -953,7 +963,14 @@ fill_key_event (GdkWindow    *window,
         event->key.state |= mask;
     }
 
-  event->key.state |= current_button_state;
+  event->key.state |= _gdk_quartz_events_get_current_mouse_modifiers ();
+
+  /* The X11 backend adds the first virtual modifier MOD2..MOD5 are
+   * mapped to. Since we only have one virtual modifier in the quartz
+   * backend, calling the standard function will do.
+   */
+  gdk_keymap_add_virtual_modifiers (gdk_keymap_get_for_display (_gdk_display),
+                                    &event->key.state);
 
   event->key.string = NULL;
 
@@ -1053,13 +1070,41 @@ synthesize_crossing_event (GdkWindow *window,
 GdkModifierType
 _gdk_quartz_events_get_current_keyboard_modifiers (void)
 {
-  return current_keyboard_modifiers;
+  if (gdk_quartz_osx_version () >= GDK_OSX_SNOW_LEOPARD)
+    {
+      return get_keyboard_modifiers_from_ns_flags ([NSClassFromString(@"NSEvent") modifierFlags]);
+    }
+  else
+    {
+      guint carbon_modifiers = GetCurrentKeyModifiers ();
+      GdkModifierType modifiers = 0;
+
+      if (carbon_modifiers & alphaLock)
+        modifiers |= GDK_LOCK_MASK;
+      if (carbon_modifiers & shiftKey)
+        modifiers |= GDK_SHIFT_MASK;
+      if (carbon_modifiers & controlKey)
+        modifiers |= GDK_CONTROL_MASK;
+      if (carbon_modifiers & optionKey)
+        modifiers |= GDK_MOD1_MASK;
+      if (carbon_modifiers & cmdKey)
+        modifiers |= GDK_MOD2_MASK;
+
+      return modifiers;
+    }
 }
 
 GdkModifierType
 _gdk_quartz_events_get_current_mouse_modifiers (void)
 {
-  return current_button_state;
+  if (gdk_quartz_osx_version () >= GDK_OSX_SNOW_LEOPARD)
+    {
+      return get_mouse_button_modifiers_from_ns_buttons ([NSClassFromString(@"NSEvent") pressedMouseButtons]);
+    }
+  else
+    {
+      return get_mouse_button_modifiers_from_ns_buttons (GetCurrentButtonState ());
+    }
 }
 
 /* Detect window resizing */
@@ -1133,7 +1178,7 @@ gdk_event_translate (GdkEvent *event,
   if (event_type == NSAppKitDefined)
     {
       if ([nsevent subtype] == NSApplicationDeactivatedEventType)
-        break_all_grabs (get_time_from_ns_event (nsevent));
+        _gdk_quartz_events_break_all_grabs (get_time_from_ns_event (nsevent));
 
       /* This could potentially be used to break grabs when clicking
        * on the title. The subtype 20 is undocumented so it's probably
@@ -1142,25 +1187,6 @@ gdk_event_translate (GdkEvent *event,
 
       /* Leave all AppKit events to AppKit. */
       return FALSE;
-    }
-
-  /* Keep track of button state, since we don't get that information
-   * for key events. 
-   */
-  switch (event_type)
-    {
-    case NSLeftMouseDown:
-    case NSRightMouseDown:
-    case NSOtherMouseDown:
-      current_button_state |= get_mouse_button_modifiers_from_ns_event (nsevent);
-      break;
-    case NSLeftMouseUp:
-    case NSRightMouseUp:
-    case NSOtherMouseUp:
-      current_button_state &= ~get_mouse_button_modifiers_from_ns_event (nsevent);
-      break;
-    default:
-      break;
     }
 
   if (_gdk_default_filters)
@@ -1211,9 +1237,15 @@ gdk_event_translate (GdkEvent *event,
    */
   if ([(GdkQuartzNSWindow *)nswindow isInMove])
     {
-      break_all_grabs (get_time_from_ns_event (nsevent));
+      _gdk_quartz_events_break_all_grabs (get_time_from_ns_event (nsevent));
       return FALSE;
     }
+
+  /* Also when in a manual resize, we ignore events so that these are
+   * pushed to GdkQuartzWindow's sendEvent handler.
+   */
+  if ([(GdkQuartzWindow *)nswindow isInManualResize])
+    return FALSE;
 
   /* Find the right GDK window to send the event to, taking grabs and
    * event masks into consideration.
@@ -1274,8 +1306,6 @@ gdk_event_translate (GdkEvent *event,
         }
     }
 
-  current_keyboard_modifiers = get_keyboard_modifiers_from_ns_event (nsevent);
-
   return_val = TRUE;
 
   switch (event_type)
@@ -1298,28 +1328,64 @@ gdk_event_translate (GdkEvent *event,
 
     case NSScrollWheel:
       {
-	float dx = [nsevent deltaX];
-	float dy = [nsevent deltaY];
-	GdkScrollDirection direction;
+        GdkScrollDirection direction;
+	float dx;
+	float dy;
+#ifdef AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER
+	if (gdk_quartz_osx_version() >= GDK_OSX_LION &&
+	    [nsevent hasPreciseScrollingDeltas])
+	  {
+	    dx = [nsevent scrollingDeltaX];
+	    dy = [nsevent scrollingDeltaY];
+            direction = GDK_SCROLL_SMOOTH;
 
-        if (dy != 0)
+            fill_scroll_event (window, event, nsevent, x, y, x_root, y_root,
+                               -dx, -dy, direction);
+
+            /* Fall through for scroll buttons emulation */
+	  }
+#endif
+        dx = [nsevent deltaX];
+        dy = [nsevent deltaY];
+
+        if (dy != 0.0)
           {
             if (dy < 0.0)
               direction = GDK_SCROLL_DOWN;
             else
               direction = GDK_SCROLL_UP;
 
-            fill_scroll_event (window, event, nsevent, x, y, x_root, y_root, direction);
+            dy = fabs (dy);
+            dx = 0.0;
           }
-
-        if (dx != 0)
+        else if (dx != 0.0)
           {
             if (dx < 0.0)
               direction = GDK_SCROLL_RIGHT;
             else
               direction = GDK_SCROLL_LEFT;
 
-            fill_scroll_event (window, event, nsevent, x, y, x_root, y_root, direction);
+            dx = fabs (dx);
+            dy = 0.0;
+          }
+
+        if (dx != 0.0 || dy != 0.0)
+          {
+            if ([nsevent hasPreciseScrollingDeltas])
+              {
+                GdkEvent *emulated_event;
+
+                emulated_event = gdk_event_new (GDK_SCROLL);
+                _gdk_event_set_pointer_emulated (emulated_event, TRUE);
+                fill_scroll_event (window, emulated_event, nsevent,
+                                   x, y, x_root, y_root,
+                                   dx, dy, direction);
+                append_event (emulated_event, TRUE);
+              }
+            else
+              fill_scroll_event (window, event, nsevent,
+                                 x, y, x_root, y_root,
+                                 dx, dy, direction);
           }
       }
       break;

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -59,51 +57,6 @@ _gdk_win32_display_list_devices (GdkDisplay *dpy)
   return _gdk_input_devices;
 }
 
-/* FIXME: this routine currently needs to be called between creation
-   and the corresponding configure event (because it doesn't get the
-   root_relative_geometry).  This should work with
-   gtk_window_set_extension_events, but will likely fail in other
-   cases */
-
-void
-gdk_input_set_extension_events (GdkWindow *window, gint mask,
-                                GdkExtensionMode mode)
-{
-  GdkDeviceManager *device_manager;
-  GList *devices, *d;
-
-  g_return_if_fail (GDK_IS_WINDOW (window));
-
-  if (GDK_WINDOW_DESTROYED (window))
-    return;
-
-  if (mode == GDK_EXTENSION_EVENTS_NONE)
-    mask = 0;
-
-  window->extension_events = mask;
-
-  device_manager = gdk_display_get_device_manager (_gdk_display);
-  devices = gdk_device_manager_list_devices (device_manager,
-                                             GDK_DEVICE_TYPE_FLOATING);
-
-  for (d = devices; d; d = d->next)
-    {
-      GdkDevice *dev;
-      gint dev_mask;
-
-      dev = d->data;
-      dev_mask = mask;
-
-      if (gdk_device_get_mode (dev) == GDK_MODE_DISABLED ||
-          (!gdk_device_get_has_cursor (dev) && mode == GDK_EXTENSION_EVENTS_CURSOR))
-        dev_mask = 0;
-
-      gdk_window_set_device_events (window, dev, mask);
-    }
-
-  g_list_free (devices);
-}
-
 void
 _gdk_input_init (GdkDisplay *display)
 {
@@ -121,4 +74,7 @@ _gdk_input_init (GdkDisplay *display)
   _gdk_input_devices = g_list_append (NULL, display->core_pointer);
   _gdk_input_devices = g_list_concat (_gdk_input_devices,
                                       g_list_copy (device_manager->wintab_devices));
+
+  _gdk_input_wintab_init_check (GDK_DEVICE_MANAGER (device_manager));
+
 }

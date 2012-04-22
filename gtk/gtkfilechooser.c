@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -81,7 +79,7 @@
  * However, filenames are <emphasis>always</emphasis> returned in
  * the character set specified by the
  * <envar>G_FILENAME_ENCODING</envar> environment variable.
- * Please see the Glib documentation for more details about this
+ * Please see the GLib documentation for more details about this
  * variable.
  * <note>
  *    This means that while you can pass the result of
@@ -556,7 +554,7 @@ gtk_file_chooser_default_init (GtkFileChooserInterface *iface)
   GType iface_type = G_TYPE_FROM_INTERFACE (iface);
 
   /**
-   * GtkFileChooser::current-folder-changed
+   * GtkFileChooser::current-folder-changed:
    * @chooser: the object which received the signal.
    *
    * This signal is emitted when the current folder in a #GtkFileChooser
@@ -582,7 +580,7 @@ gtk_file_chooser_default_init (GtkFileChooserInterface *iface)
 		G_TYPE_NONE, 0);
 
   /**
-   * GtkFileChooser::selection-changed
+   * GtkFileChooser::selection-changed:
    * @chooser: the object which received the signal.
    *
    * This signal is emitted when there is a change in the set of selected files
@@ -609,7 +607,7 @@ gtk_file_chooser_default_init (GtkFileChooserInterface *iface)
 		G_TYPE_NONE, 0);
 
   /**
-   * GtkFileChooser::update-preview
+   * GtkFileChooser::update-preview:
    * @chooser: the object which received the signal.
    *
    * This signal is emitted when the preview in a file chooser should be
@@ -643,7 +641,7 @@ gtk_file_chooser_default_init (GtkFileChooserInterface *iface)
 		G_TYPE_NONE, 0);
 
   /**
-   * GtkFileChooser::file-activated
+   * GtkFileChooser::file-activated:
    * @chooser: the object which received the signal.
    *
    * This signal is emitted when the user "activates" a file in the file

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -92,7 +90,7 @@ typedef enum
 } GtkArrowPlacement;
 
 /**
- * GtkArrowType
+ * GtkArrowType:
  * @GTK_ARROW_UP: Represents an upward pointing arrow.
  * @GTK_ARROW_DOWN: Represents a downward pointing arrow.
  * @GTK_ARROW_LEFT: Represents a left pointing arrow.
@@ -842,6 +840,7 @@ typedef enum
  * @GTK_STATE_FLAG_INSENSITIVE: Widget is insensitive.
  * @GTK_STATE_FLAG_INCONSISTENT: Widget is inconsistent.
  * @GTK_STATE_FLAG_FOCUSED: Widget has the keyboard focus.
+ * @GTK_STATE_FLAG_BACKDROP: Widget is in a background toplevel window.
  *
  * Describes a widget state.
  */
@@ -853,7 +852,8 @@ typedef enum
   GTK_STATE_FLAG_SELECTED     = 1 << 2,
   GTK_STATE_FLAG_INSENSITIVE  = 1 << 3,
   GTK_STATE_FLAG_INCONSISTENT = 1 << 4,
-  GTK_STATE_FLAG_FOCUSED      = 1 << 5
+  GTK_STATE_FLAG_FOCUSED      = 1 << 5,
+  GTK_STATE_FLAG_BACKDROP     = 1 << 6
 } GtkStateFlags;
 
 /**
@@ -905,9 +905,15 @@ typedef enum {
 /**
  * GtkBorderStyle:
  * @GTK_BORDER_STYLE_NONE: No visible border
- * @GTK_BORDER_STYLE_SOLID: A solid border
- * @GTK_BORDER_STYLE_INSET: An inset border
- * @GTK_BORDER_STYLE_OUTSET: An outset border
+ * @GTK_BORDER_STYLE_SOLID: A single line segment
+ * @GTK_BORDER_STYLE_INSET: Looks as if the content is sunken into the canvas
+ * @GTK_BORDER_STYLE_OUTSET: Looks as if the content is coming out of the canvas
+ * @GTK_BORDER_STYLE_HIDDEN: Same as @GTK_BORDER_STYLE_NONE
+ * @GTK_BORDER_STYLE_DOTTED: A series of round dots
+ * @GTK_BORDER_STYLE_DASHED: A series of square-ended dashes
+ * @GTK_BORDER_STYLE_DOUBLE: Two parrallel lines with some space between them
+ * @GTK_BORDER_STYLE_GROOVE: Looks as if it were carved in the canvas
+ * @GTK_BORDER_STYLE_RIDGE: Looks as if it were coming out of the canvas
  *
  * Describes how the border of a UI element should be rendered.
  */
@@ -915,7 +921,13 @@ typedef enum {
   GTK_BORDER_STYLE_NONE,
   GTK_BORDER_STYLE_SOLID,
   GTK_BORDER_STYLE_INSET,
-  GTK_BORDER_STYLE_OUTSET
+  GTK_BORDER_STYLE_OUTSET,
+  GTK_BORDER_STYLE_HIDDEN,
+  GTK_BORDER_STYLE_DOTTED,
+  GTK_BORDER_STYLE_DASHED,
+  GTK_BORDER_STYLE_DOUBLE,
+  GTK_BORDER_STYLE_GROOVE,
+  GTK_BORDER_STYLE_RIDGE
 } GtkBorderStyle;
 
 G_END_DECLS

@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -422,6 +420,8 @@ static void     gtk_ui_manager_buildable_custom_tag_end (GtkBuildable 	 *buildab
 							 GObject      	 *child,
 							 const gchar  	 *tagname,
 							 gpointer     	 *data);
+static void gtk_ui_manager_do_set_add_tearoffs          (GtkUIManager *manager,
+                                                         gboolean      add_tearoffs);
 
 
 
@@ -678,9 +678,7 @@ gtk_ui_manager_finalize (GObject *object)
   g_node_destroy (manager->private_data->root_node);
   manager->private_data->root_node = NULL;
   
-  g_list_foreach (manager->private_data->action_groups,
-                  (GFunc) g_object_unref, NULL);
-  g_list_free (manager->private_data->action_groups);
+  g_list_free_full (manager->private_data->action_groups, g_object_unref);
   manager->private_data->action_groups = NULL;
 
   g_object_unref (manager->private_data->accel_group);
@@ -775,7 +773,7 @@ gtk_ui_manager_set_property (GObject         *object,
   switch (prop_id)
     {
     case PROP_ADD_TEAROFFS:
-      gtk_ui_manager_set_add_tearoffs (manager, g_value_get_boolean (value));
+      gtk_ui_manager_do_set_add_tearoffs (manager, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -897,18 +895,25 @@ gtk_ui_manager_get_add_tearoffs (GtkUIManager *manager)
  * Deprecated: 3.4: Tearoff menus are deprecated and should not
  *     be used in newly written code.
  **/
-void 
+void
 gtk_ui_manager_set_add_tearoffs (GtkUIManager *manager,
-				 gboolean      add_tearoffs)
+                                 gboolean      add_tearoffs)
 {
   g_return_if_fail (GTK_IS_UI_MANAGER (manager));
 
+  gtk_ui_manager_do_set_add_tearoffs (manager, add_tearoffs);
+}
+
+static void
+gtk_ui_manager_do_set_add_tearoffs (GtkUIManager *manager,
+                                    gboolean      add_tearoffs)
+{
   add_tearoffs = add_tearoffs != FALSE;
 
   if (add_tearoffs != manager->private_data->add_tearoffs)
     {
       manager->private_data->add_tearoffs = add_tearoffs;
-      
+
       dirty_all_nodes (manager);
 
       g_object_notify (G_OBJECT (manager), "add-tearoffs");
@@ -958,6 +963,10 @@ cb_proxy_post_activate (GtkActionGroup *group,
  * Inserts an action group into the list of action groups associated 
  * with @manager. Actions in earlier groups hide actions with the same 
  * name in later groups. 
+ *
+ * If @pos is larger than the number of action groups in @manager, or
+ * negative, @action_group will be inserted at the end of the internal
+ * list.
  *
  * Since: 2.4
  **/
@@ -1383,8 +1392,7 @@ free_node (GNode *node)
 {
   Node *info = NODE_INFO (node);
   
-  g_list_foreach (info->uifiles, (GFunc) node_ui_reference_free, NULL);
-  g_list_free (info->uifiles);
+  g_list_free_full (info->uifiles, node_ui_reference_free);
 
   if (info->action)
     g_object_unref (info->action);
@@ -1991,6 +1999,41 @@ gtk_ui_manager_add_ui_from_file (GtkUIManager *manager,
 
   res = add_ui_from_string (manager, buffer, length, FALSE, error);
   g_free (buffer);
+
+  return res;
+}
+
+/**
+ * gtk_ui_manager_add_ui_from_resource:
+ * @manager: a #GtkUIManager object
+ * @resource_path: the resource path of the file to parse
+ * @error: return location for an error
+ *
+ * Parses a resource file containing a <link linkend="XML-UI">UI definition</link> and
+ * merges it with the current contents of @manager.
+ *
+ * Return value: The merge id for the merged UI. The merge id can be used
+ *   to unmerge the UI with gtk_ui_manager_remove_ui(). If an error occurred,
+ *   the return value is 0.
+ *
+ * Since: 3.4
+ **/
+guint
+gtk_ui_manager_add_ui_from_resource (GtkUIManager *manager,
+				     const gchar  *resource_path,
+				     GError      **error)
+{
+  GBytes *data;
+  guint res;
+
+  g_return_val_if_fail (GTK_IS_UI_MANAGER (manager), 0);
+
+  data = g_resources_lookup_data (resource_path, 0, error);
+  if (data == NULL)
+    return 0;
+
+  res = add_ui_from_string (manager, g_bytes_get_data (data, NULL), g_bytes_get_size (data), FALSE, error);
+  g_bytes_unref (data);
 
   return res;
 }

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -26,20 +24,29 @@
 #include "gdkasync.h"
 #include "gdkprivate-x11.h"
 
-#ifdef XINPUT_2
-
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/XInput2.h>
 
-#endif
+
+typedef struct _ScrollValuator ScrollValuator;
+
+struct _ScrollValuator
+{
+  guint n_valuator       : 4;
+  guint direction        : 4;
+  guint last_value_valid : 1;
+  gdouble last_value;
+  gdouble increment;
+};
 
 struct _GdkX11DeviceXI2
 {
   GdkDevice parent_instance;
 
   gint device_id;
+  GArray *scroll_valuators;
 };
 
 struct _GdkX11DeviceXI2Class
@@ -49,8 +56,8 @@ struct _GdkX11DeviceXI2Class
 
 G_DEFINE_TYPE (GdkX11DeviceXI2, gdk_x11_device_xi2, GDK_TYPE_DEVICE)
 
-#ifdef XINPUT_2
 
+static void gdk_x11_device_xi2_finalize     (GObject      *object);
 static void gdk_x11_device_xi2_get_property (GObject      *object,
                                              guint         prop_id,
                                              GValue       *value,
@@ -71,15 +78,15 @@ static void gdk_x11_device_xi2_warp (GdkDevice *device,
                                      GdkScreen *screen,
                                      gint       x,
                                      gint       y);
-static gboolean gdk_x11_device_xi2_query_state (GdkDevice        *device,
-                                                GdkWindow        *window,
-                                                GdkWindow       **root_window,
-                                                GdkWindow       **child_window,
-                                                gint             *root_x,
-                                                gint             *root_y,
-                                                gint             *win_x,
-                                                gint             *win_y,
-                                                GdkModifierType  *mask);
+static void gdk_x11_device_xi2_query_state (GdkDevice        *device,
+                                            GdkWindow        *window,
+                                            GdkWindow       **root_window,
+                                            GdkWindow       **child_window,
+                                            gint             *root_x,
+                                            gint             *root_y,
+                                            gint             *win_x,
+                                            gint             *win_y,
+                                            GdkModifierType  *mask);
 
 static GdkGrabStatus gdk_x11_device_xi2_grab   (GdkDevice     *device,
                                                 GdkWindow     *window,
@@ -112,6 +119,7 @@ gdk_x11_device_xi2_class_init (GdkX11DeviceXI2Class *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GdkDeviceClass *device_class = GDK_DEVICE_CLASS (klass);
 
+  object_class->finalize = gdk_x11_device_xi2_finalize;
   object_class->get_property = gdk_x11_device_xi2_get_property;
   object_class->set_property = gdk_x11_device_xi2_set_property;
 
@@ -136,6 +144,17 @@ gdk_x11_device_xi2_class_init (GdkX11DeviceXI2Class *klass)
 static void
 gdk_x11_device_xi2_init (GdkX11DeviceXI2 *device)
 {
+  device->scroll_valuators = g_array_new (FALSE, FALSE, sizeof (ScrollValuator));
+}
+
+static void
+gdk_x11_device_xi2_finalize (GObject *object)
+{
+  GdkX11DeviceXI2 *device = GDK_X11_DEVICE_XI2 (object);
+
+  g_array_free (device->scroll_valuators, TRUE);
+
+  G_OBJECT_CLASS (gdk_x11_device_xi2_parent_class)->finalize (object);
 }
 
 static void
@@ -192,10 +211,12 @@ gdk_x11_device_xi2_get_state (GdkDevice       *device,
 
       display = gdk_device_get_display (device);
 
+      gdk_x11_display_error_trap_push (display);
       info = XIQueryDevice (GDK_DISPLAY_XDISPLAY (display),
                             device_xi2->device_id, &ndevices);
+      gdk_x11_display_error_trap_pop_ignored (display);
 
-      for (i = 0, j = 0; i < info->num_classes; i++)
+      for (i = 0, j = 0; info && i < info->num_classes; i++)
         {
           XIAnyClassInfo *class_info = info->classes[i];
           GdkAxisUse use;
@@ -234,7 +255,8 @@ gdk_x11_device_xi2_get_state (GdkDevice       *device,
           j++;
         }
 
-      XIFreeDeviceInfo (info);
+      if (info)
+        XIFreeDeviceInfo (info);
     }
 
   if (mask)
@@ -284,7 +306,7 @@ gdk_x11_device_xi2_warp (GdkDevice *device,
                  0, 0, 0, 0, x, y);
 }
 
-static gboolean
+static void
 gdk_x11_device_xi2_query_state (GdkDevice        *device,
                                 GdkWindow        *window,
                                 GdkWindow       **root_window,
@@ -304,27 +326,20 @@ gdk_x11_device_xi2_query_state (GdkDevice        *device,
   XIModifierState mod_state;
   XIGroupState group_state;
 
-  if (!window || GDK_WINDOW_DESTROYED (window))
-    return FALSE;
-
   display = gdk_window_get_display (window);
   default_screen = gdk_display_get_default_screen (display);
 
-  if (G_LIKELY (GDK_X11_DISPLAY (display)->trusted_client))
-    {
-      if (!XIQueryPointer (GDK_WINDOW_XDISPLAY (window),
-                           device_xi2->device_id,
-                           GDK_WINDOW_XID (window),
-                           &xroot_window,
-                           &xchild_window,
-                           &xroot_x, &xroot_y,
-                           &xwin_x, &xwin_y,
-                           &button_state,
-                           &mod_state,
-                           &group_state))
-        return FALSE;
-    }
-  else
+  if (!GDK_X11_DISPLAY (display)->trusted_client ||
+      !XIQueryPointer (GDK_WINDOW_XDISPLAY (window),
+                       device_xi2->device_id,
+                       GDK_WINDOW_XID (window),
+                       &xroot_window,
+                       &xchild_window,
+                       &xroot_x, &xroot_y,
+                       &xwin_x, &xwin_y,
+                       &button_state,
+                       &mod_state,
+                       &group_state))
     {
       XSetWindowAttributes attributes;
       Display *xdisplay;
@@ -371,8 +386,6 @@ gdk_x11_device_xi2_query_state (GdkDevice        *device,
     *mask = _gdk_x11_device_xi2_translate_state (&mod_state, &button_state, &group_state);
 
   free (button_state.mask);
-
-  return TRUE;
 }
 
 static GdkGrabStatus
@@ -385,6 +398,7 @@ gdk_x11_device_xi2_grab (GdkDevice    *device,
                          guint32       time_)
 {
   GdkX11DeviceXI2 *device_xi2 = GDK_X11_DEVICE_XI2 (device);
+  GdkX11DeviceManagerXI2 *device_manager_xi2;
   GdkDisplay *display;
   XIEventMask mask;
   Window xwindow;
@@ -392,6 +406,7 @@ gdk_x11_device_xi2_grab (GdkDevice    *device,
   gint status;
 
   display = gdk_device_get_display (device);
+  device_manager_xi2 = GDK_X11_DEVICE_MANAGER_XI2 (gdk_display_get_device_manager (display));
 
   /* FIXME: confine_to is actually unused */
 
@@ -406,7 +421,9 @@ gdk_x11_device_xi2_grab (GdkDevice    *device,
     }
 
   mask.deviceid = device_xi2->device_id;
-  mask.mask = _gdk_x11_device_xi2_translate_event_mask (event_mask, &mask.mask_len);
+  mask.mask = _gdk_x11_device_xi2_translate_event_mask (device_manager_xi2,
+                                                        event_mask,
+                                                        &mask.mask_len);
 
 #ifdef G_ENABLE_DEBUG
   if (_gdk_debug_flags & GDK_DEBUG_NOGRABS)
@@ -622,10 +639,17 @@ gdk_x11_device_xi2_select_window_events (GdkDevice    *device,
                                          GdkEventMask  event_mask)
 {
   GdkX11DeviceXI2 *device_xi2 = GDK_X11_DEVICE_XI2 (device);
+  GdkX11DeviceManagerXI2 *device_manager_xi2;
+  GdkDisplay *display;
   XIEventMask evmask;
 
+  display = gdk_device_get_display (device);
+  device_manager_xi2 = GDK_X11_DEVICE_MANAGER_XI2 (gdk_display_get_device_manager (display));
+
   evmask.deviceid = device_xi2->device_id;
-  evmask.mask = _gdk_x11_device_xi2_translate_event_mask (event_mask, &evmask.mask_len);
+  evmask.mask = _gdk_x11_device_xi2_translate_event_mask (device_manager_xi2,
+                                                          event_mask,
+                                                          &evmask.mask_len);
 
   XISelectEvents (GDK_WINDOW_XDISPLAY (window),
                   GDK_WINDOW_XID (window),
@@ -635,10 +659,14 @@ gdk_x11_device_xi2_select_window_events (GdkDevice    *device,
 }
 
 guchar *
-_gdk_x11_device_xi2_translate_event_mask (GdkEventMask  event_mask,
-                                          gint         *len)
+_gdk_x11_device_xi2_translate_event_mask (GdkX11DeviceManagerXI2 *device_manager_xi2,
+                                          GdkEventMask            event_mask,
+                                          gint                   *len)
 {
   guchar *mask;
+  gint minor;
+
+  g_object_get (device_manager_xi2, "minor", &minor, NULL);
 
   *len = XIMaskLen (XI_LASTEVENT);
   mask = g_new0 (guchar, *len);
@@ -687,6 +715,17 @@ _gdk_x11_device_xi2_translate_event_mask (GdkEventMask  event_mask,
       XISetMask (mask, XI_FocusOut);
     }
 
+#ifdef XINPUT_2_2
+  /* XInput 2.2 includes multitouch support */
+  if (minor >= 2 &&
+      event_mask & GDK_TOUCH_MASK)
+    {
+      XISetMask (mask, XI_TouchBegin);
+      XISetMask (mask, XI_TouchUpdate);
+      XISetMask (mask, XI_TouchEnd);
+    }
+#endif /* XINPUT_2_2 */
+
   return mask;
 }
 
@@ -698,7 +737,7 @@ _gdk_x11_device_xi2_translate_state (XIModifierState *mods_state,
   guint state = 0;
 
   if (mods_state)
-    state = (guint) mods_state->base | mods_state->latched | mods_state->locked;
+    state = mods_state->effective;
 
   if (buttons_state)
     {
@@ -736,18 +775,88 @@ _gdk_x11_device_xi2_translate_state (XIModifierState *mods_state,
     }
 
   if (group_state)
-    {
-      gint group;
-
-      group = group_state->base + group_state->latched + group_state->locked;
-
-      /* FIXME: do we need the XKB complications for this ? */
-      group = CLAMP(group, 0, 3);
-
-      state |= group << 13;
-    }
+    state |= (group_state->effective) << 13;
 
   return state;
+}
+
+void
+_gdk_x11_device_xi2_add_scroll_valuator (GdkX11DeviceXI2    *device,
+                                         guint               n_valuator,
+                                         GdkScrollDirection  direction,
+                                         gdouble             increment)
+{
+  ScrollValuator scroll;
+
+  g_return_if_fail (GDK_IS_X11_DEVICE_XI2 (device));
+  g_return_if_fail (n_valuator < gdk_device_get_n_axes (GDK_DEVICE (device)));
+
+  scroll.n_valuator = n_valuator;
+  scroll.direction = direction;
+  scroll.last_value_valid = FALSE;
+  scroll.increment = increment;
+
+  g_array_append_val (device->scroll_valuators, scroll);
+}
+
+gboolean
+_gdk_x11_device_xi2_get_scroll_delta (GdkX11DeviceXI2    *device,
+                                      guint               n_valuator,
+                                      gdouble             valuator_value,
+                                      GdkScrollDirection *direction_ret,
+                                      gdouble            *delta_ret)
+{
+  guint i;
+
+  g_return_val_if_fail (GDK_IS_X11_DEVICE_XI2 (device), FALSE);
+  g_return_val_if_fail (n_valuator < gdk_device_get_n_axes (GDK_DEVICE (device)), FALSE);
+
+  for (i = 0; i < device->scroll_valuators->len; i++)
+    {
+      ScrollValuator *scroll;
+
+      scroll = &g_array_index (device->scroll_valuators, ScrollValuator, i);
+
+      if (scroll->n_valuator == n_valuator)
+        {
+          if (direction_ret)
+            *direction_ret = scroll->direction;
+
+          if (delta_ret)
+            *delta_ret = 0;
+
+          if (scroll->last_value_valid)
+            {
+              if (delta_ret)
+                *delta_ret = (valuator_value - scroll->last_value) / scroll->increment;
+
+              scroll->last_value = valuator_value;
+            }
+          else
+            {
+              scroll->last_value = valuator_value;
+              scroll->last_value_valid = TRUE;
+            }
+
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
+void
+_gdk_device_xi2_reset_scroll_valuators (GdkX11DeviceXI2 *device)
+{
+  guint i;
+
+  for (i = 0; i < device->scroll_valuators->len; i++)
+    {
+      ScrollValuator *scroll;
+
+      scroll = &g_array_index (device->scroll_valuators, ScrollValuator, i);
+      scroll->last_value_valid = FALSE;
+    }
 }
 
 gint
@@ -757,17 +866,3 @@ _gdk_x11_device_xi2_get_id (GdkX11DeviceXI2 *device)
 
   return device->device_id;
 }
-
-#else /* XINPUT_2 */
-
-static void
-gdk_x11_device_xi2_class_init (GdkX11DeviceXI2Class *klass)
-{
-}
-
-static void
-gdk_x11_device_xi2_init (GdkX11DeviceXI2 *device)
-{
-}
-
-#endif /* XINPUT_2 */

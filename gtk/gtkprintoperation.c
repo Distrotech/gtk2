@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -2420,7 +2418,7 @@ gtk_print_operation_set_embed_page_setup (GtkPrintOperation  *op,
  * gtk_print_operation_get_embed_page_setup:
  * @op: a #GtkPrintOperation
  *
- * Gets the value of #GtkPrintOperation::embed-page-setup property.
+ * Gets the value of #GtkPrintOperation:embed-page-setup property.
  * 
  * Returns: whether page setup selection combos are embedded
  *
@@ -3305,7 +3303,7 @@ gtk_print_operation_set_support_selection (GtkPrintOperation  *op,
  * gtk_print_operation_get_support_selection:
  * @op: a #GtkPrintOperation
  *
- * Gets the value of #GtkPrintOperation::support-selection property.
+ * Gets the value of #GtkPrintOperation:support-selection property.
  * 
  * Returns: whether the application supports print of selection
  *
@@ -3354,7 +3352,7 @@ gtk_print_operation_set_has_selection (GtkPrintOperation  *op,
  * gtk_print_operation_get_has_selection:
  * @op: a #GtkPrintOperation
  *
- * Gets the value of #GtkPrintOperation::has-selection property.
+ * Gets the value of #GtkPrintOperation:has-selection property.
  * 
  * Returns: whether there is a selection
  *

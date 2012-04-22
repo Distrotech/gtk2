@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,6 +29,7 @@
 #ifndef __GDK_MAIN_H__
 #define __GDK_MAIN_H__
 
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdktypes.h>
 
 G_BEGIN_DECLS
@@ -78,32 +77,28 @@ const gchar *         gdk_get_display_arg_name (void);
 gchar*        gdk_get_display        (void);
 
 #ifndef GDK_MULTIDEVICE_SAFE
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gdk_device_grab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_grab)
 GdkGrabStatus gdk_pointer_grab       (GdkWindow    *window,
                                       gboolean      owner_events,
                                       GdkEventMask  event_mask,
                                       GdkWindow    *confine_to,
                                       GdkCursor    *cursor,
                                       guint32       time_);
-GDK_DEPRECATED_FOR(gdk_device_grab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_grab)
 GdkGrabStatus gdk_keyboard_grab      (GdkWindow    *window,
                                       gboolean      owner_events,
                                       guint32       time_);
-#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 #ifndef GDK_MULTIHEAD_SAFE
 
 #ifndef GDK_MULTIDEVICE_SAFE
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gdk_device_ungrab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_ungrab)
 void          gdk_pointer_ungrab     (guint32       time_);
-GDK_DEPRECATED_FOR(gdk_device_ungrab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_ungrab)
 void          gdk_keyboard_ungrab    (guint32       time_);
-GDK_DEPRECATED_FOR(gdk_display_device_is_grabbed)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_display_device_is_grabbed)
 gboolean      gdk_pointer_is_grabbed (void);
-#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 gint gdk_screen_width  (void) G_GNUC_CONST;

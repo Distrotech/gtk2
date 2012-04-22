@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -788,7 +786,7 @@ gtk_tool_item_get_orientation (GtkToolItem *tool_item)
  * show text</listitem>
  * <listitem> GTK_TOOLBAR_BOTH_HORIZ, meaning the tool item should show
  * both an icon and a label, arranged horizontally (however, note the 
- * #GtkToolButton::has_text_horizontally that makes tool buttons not
+ * #GtkToolButton:has_text_horizontally property that makes tool buttons not
  * show labels when the toolbar style is GTK_TOOLBAR_BOTH_HORIZ.
  * </listitem>
  * </itemizedlist>

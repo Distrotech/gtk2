@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Cosimo Cecchi <ccecchi@redhat.com>
  */
@@ -118,6 +116,7 @@ install_mime_types_ready_cb (GObject      *source,
     }
 
   g_simple_async_result_complete (self->priv->result);
+  g_clear_object (&self->priv->result);
 }
 
 static void

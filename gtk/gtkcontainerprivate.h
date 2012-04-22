@@ -20,11 +20,14 @@
 #ifndef __GTK_CONTAINER_PRIVATE_H__
 #define __GTK_CONTAINER_PRIVATE_H__
 
+#include "gtkcontainer.h"
+
 G_BEGIN_DECLS
 
 
 GList *  _gtk_container_get_all_children       (GtkContainer *container);
 void     _gtk_container_queue_resize           (GtkContainer *container);
+void     _gtk_container_queue_restyle          (GtkContainer *container);
 void     _gtk_container_resize_invalidate      (GtkContainer *container);
 void     _gtk_container_clear_resize_widgets   (GtkContainer *container);
 gchar*   _gtk_container_child_composite_name   (GtkContainer *container,
@@ -34,9 +37,6 @@ GList *  _gtk_container_focus_sort             (GtkContainer     *container,
                                                 GList            *children,
                                                 GtkDirectionType  direction,
                                                 GtkWidget        *old_focus);
-gboolean _gtk_container_get_need_resize        (GtkContainer *container);
-void     _gtk_container_set_need_resize        (GtkContainer *container,
-                                                gboolean      need_resize);
 gboolean _gtk_container_get_reallocate_redraws (GtkContainer *container);
 
 

@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #import "GdkQuartzNSWindow.h"
@@ -116,10 +114,15 @@
   switch ([event type])
     {
     case NSLeftMouseUp:
+    {
+      double time = ((double)[event timestamp]) * 1000.0;
+
+      _gdk_quartz_events_break_all_grabs (time);
       inManualMove = NO;
       inManualResize = NO;
       inMove = NO;
       break;
+    }
 
     case NSLeftMouseDragged:
       if ([self trackManualMove] || [self trackManualResize])
@@ -313,6 +316,11 @@
   [self setFrameOrigin:newOrigin];
 
   return YES;
+}
+
+-(BOOL)isInManualResize
+{
+  return inManualResize;
 }
 
 -(void)beginManualMove

@@ -12,14 +12,12 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
-#include "gtkaccelmap.h"
+#include "gtkaccelmapprivate.h"
 
 #include "gtkmarshalers.h"
 #include "gtkwindowprivate.h"
@@ -179,9 +177,8 @@ accel_path_lookup (const gchar *accel_path)
 void
 _gtk_accel_map_init (void)
 {
-  g_assert (accel_entry_ht == NULL);
-
-  accel_entry_ht = g_hash_table_new (accel_entry_hash, accel_entry_equal);
+  if (accel_entry_ht == NULL)
+    accel_entry_ht = g_hash_table_new (accel_entry_hash, accel_entry_equal);
 }
 
 gboolean
@@ -1067,3 +1064,20 @@ do_accel_map_changed (AccelEntry *entry)
 		   entry->accel_key,
 		   entry->accel_mods);
 }
+
+gchar *
+_gtk_accel_path_for_action (const gchar *action_name,
+                            GVariant    *parameter)
+{
+  GString *s;
+
+  s = g_string_new ("<GAction>/");
+  g_string_append (s, action_name);
+  if (parameter)
+    {
+      g_string_append_c (s, '/');
+      g_variant_print_string (parameter, s, FALSE);
+    }
+  return g_string_free (s, FALSE);
+}
+

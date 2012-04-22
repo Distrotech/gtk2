@@ -165,9 +165,11 @@ gdk_event_get_keyval
 gdk_event_get_root_coords
 gdk_event_get_screen
 gdk_event_get_scroll_direction
+gdk_event_get_scroll_deltas
 gdk_event_get_source_device
 gdk_event_get_state
 gdk_event_get_time
+gdk_event_get_event_sequence
 gdk_event_get_type
 gdk_event_handler_set
 gdk_event_mask_get_type
@@ -184,7 +186,6 @@ gdk_events_get_center
 gdk_events_get_distance
 gdk_events_pending
 gdk_event_type_get_type
-gdk_extension_mode_get_type
 gdk_filter_return_get_type
 gdk_flush
 gdk_get_default_root_window
@@ -209,6 +210,7 @@ gdk_keymap_get_entries_for_keycode
 gdk_keymap_get_entries_for_keyval
 gdk_keymap_get_for_display
 gdk_keymap_get_modifier_mask
+gdk_keymap_get_modifier_state
 gdk_keymap_get_num_lock_state
 gdk_keymap_get_type
 gdk_keymap_have_bidi_layouts
@@ -271,6 +273,7 @@ gdk_screen_get_height_mm
 gdk_screen_get_monitor_at_point
 gdk_screen_get_monitor_at_window
 gdk_screen_get_monitor_geometry
+gdk_screen_get_monitor_workarea
 gdk_screen_get_monitor_height_mm
 gdk_screen_get_monitor_plug_name
 gdk_screen_get_monitor_width_mm
@@ -354,6 +357,7 @@ gdk_win32_pixbuf_to_hicon_libgtk_only
 gdk_win32_selection_add_targets
 gdk_win32_set_modal_dialog_libgtk_only
 gdk_win32_window_is_win32
+gdk_win32_window_get_impl_hwnd
 gdk_win32_window_get_handle
 gdk_win32_window_get_type
 gdk_win32_display_get_type
@@ -527,9 +531,7 @@ gdk_x11_device_get_id
 gdk_x11_device_manager_core_get_type
 gdk_x11_device_manager_lookup
 gdk_x11_device_manager_xi2_get_type
-gdk_x11_device_manager_xi_get_type
 gdk_x11_device_xi2_get_type
-gdk_x11_device_xi_get_type
 gdk_x11_display_broadcast_startup_message
 gdk_x11_display_error_trap_pop
 gdk_x11_display_error_trap_pop_ignored
@@ -578,7 +580,9 @@ gdk_x11_window_get_type
 gdk_x11_window_get_xid
 gdk_x11_window_move_to_current_desktop
 gdk_x11_window_set_theme_variant
+gdk_x11_window_set_hide_titlebar_when_maximized
 gdk_x11_window_set_user_time
+gdk_x11_window_set_utf8_property
 gdk_x11_xatom_to_atom
 gdk_x11_xatom_to_atom_for_display
 #endif

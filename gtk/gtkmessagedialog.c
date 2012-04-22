@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -293,7 +291,7 @@ gtk_message_dialog_class_init (GtkMessageDialogClass *class)
                                                         GTK_PARAM_READWRITE));
 
   /**
-   * GtkMessageDialog:message-area
+   * GtkMessageDialog:message-area:
    *
    * The #GtkVBox that corresponds to the message area of this dialog.  See
    * gtk_message_dialog_get_message_area() for a detailed description of this
@@ -352,6 +350,9 @@ gtk_message_dialog_init (GtkMessageDialog *dialog)
   gtk_widget_set_halign (priv->secondary_label, GTK_ALIGN_START);
   gtk_widget_set_valign (priv->secondary_label, GTK_ALIGN_START);
 
+  gtk_misc_set_alignment (GTK_MISC (priv->label), 0.0, 0.0);
+  gtk_misc_set_alignment (GTK_MISC (priv->secondary_label), 0.0, 0.0);
+
   hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   priv->message_area = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 
@@ -386,25 +387,27 @@ static void
 setup_primary_label_font (GtkMessageDialog *dialog)
 {
   GtkMessageDialogPrivate *priv = dialog->priv;
-  gint size;
-  PangoFontDescription *font_desc;
-  GtkStyleContext *context;
-  GtkStateFlags state;
-
-  /* unset the font settings */
-  gtk_widget_override_font (priv->label, NULL);
 
   if (priv->has_secondary_text && !priv->has_primary_markup)
     {
-      context = gtk_widget_get_style_context (priv->label);
-      state = gtk_widget_get_state_flags (priv->label);
+      PangoAttrList *attributes;
+      PangoAttribute *attr;
 
-      size = pango_font_description_get_size (gtk_style_context_get_font (context, state));
-      font_desc = pango_font_description_new ();
-      pango_font_description_set_weight (font_desc, PANGO_WEIGHT_BOLD);
-      pango_font_description_set_size (font_desc, size * PANGO_SCALE_LARGE);
-      gtk_widget_override_font (priv->label, font_desc);
-      pango_font_description_free (font_desc);
+      attributes = pango_attr_list_new ();
+
+      attr = pango_attr_weight_new (PANGO_WEIGHT_BOLD);
+      pango_attr_list_insert (attributes, attr);
+
+      attr = pango_attr_scale_new (PANGO_SCALE_LARGE);
+      pango_attr_list_insert (attributes, attr);
+
+      gtk_label_set_attributes (GTK_LABEL (priv->label), attributes);
+      pango_attr_list_unref (attributes);
+    }
+  else
+    {
+      /* unset the font settings */
+      gtk_label_set_attributes (GTK_LABEL (priv->label), NULL);
     }
 }
 
@@ -1008,8 +1011,6 @@ gtk_message_dialog_style_updated (GtkWidget *widget)
       gtk_container_set_border_width (GTK_CONTAINER (parent),
                                       MAX (0, border_width - 7));
     }
-
-  setup_primary_label_font (dialog);
 
   GTK_WIDGET_CLASS (gtk_message_dialog_parent_class)->style_updated (widget);
 }

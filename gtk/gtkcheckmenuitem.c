@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -560,7 +558,7 @@ gtk_real_check_menu_item_draw_indicator (GtkCheckMenuItem *check_menu_item,
 
       if (priv->active ||
           priv->always_show_toggle ||
-          (gtk_widget_get_state_flags (widget) & GTK_STATE_FLAG_PRELIGHT))
+          (state & GTK_STATE_FLAG_PRELIGHT))
         {
           gtk_style_context_save (context);
 
@@ -568,9 +566,6 @@ gtk_real_check_menu_item_draw_indicator (GtkCheckMenuItem *check_menu_item,
             state |= GTK_STATE_FLAG_INCONSISTENT;
           else if (priv->active)
             state |= GTK_STATE_FLAG_ACTIVE;
-
-          if (!gtk_widget_is_sensitive (widget))
-            state |= GTK_STATE_FLAG_INSENSITIVE;
 
           gtk_style_context_set_state (context, state);
 

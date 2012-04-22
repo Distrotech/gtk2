@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,6 +29,7 @@
 #ifndef __GDK_EVENTS_H__
 #define __GDK_EVENTS_H__
 
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdkcolor.h>
 #include <gdk/gdktypes.h>
 #include <gdk/gdkdnd.h>
@@ -74,12 +73,63 @@ G_BEGIN_DECLS
  */
 #define GDK_PRIORITY_REDRAW     (G_PRIORITY_HIGH_IDLE + 20)
 
+/**
+ * GDK_EVENT_PROPAGATE:
+ *
+ * Use this macro as the return value for continuing the propagation of
+ * an event handler.
+ *
+ * Since: 3.4
+ */
+#define GDK_EVENT_PROPAGATE     (FALSE)
+
+/**
+ * GDK_EVENT_STOP:
+ *
+ * Use this macro as the return value for stopping the propagation of
+ * an event handler.
+ *
+ * Since: 3.4
+ */
+#define GDK_EVENT_STOP          (TRUE)
+
+/**
+ * GDK_BUTTON_PRIMARY:
+ *
+ * The primary button. This is typically the left mouse button, or the
+ * right button in a left-handed setup.
+ *
+ * Since: 3.4
+ */
+#define GDK_BUTTON_PRIMARY      (1)
+
+/**
+ * GDK_BUTTON_MIDDLE:
+ *
+ * The middle button.
+ *
+ * Since: 3.4
+ */
+#define GDK_BUTTON_MIDDLE       (2)
+
+/**
+ * GDK_BUTTON_SECONDARY:
+ *
+ * The secondary button. This is typically the right mouse button, or the
+ * left button in a left-handed setup.
+ *
+ * Since: 3.4
+ */
+#define GDK_BUTTON_SECONDARY    (3)
+
+
 
 typedef struct _GdkEventAny	    GdkEventAny;
 typedef struct _GdkEventExpose	    GdkEventExpose;
 typedef struct _GdkEventVisibility  GdkEventVisibility;
 typedef struct _GdkEventMotion	    GdkEventMotion;
 typedef struct _GdkEventButton	    GdkEventButton;
+typedef struct _GdkEventTouch       GdkEventTouch;
 typedef struct _GdkEventScroll      GdkEventScroll;  
 typedef struct _GdkEventKey	    GdkEventKey;
 typedef struct _GdkEventFocus	    GdkEventFocus;
@@ -93,6 +143,8 @@ typedef struct _GdkEventDND         GdkEventDND;
 typedef struct _GdkEventWindowState GdkEventWindowState;
 typedef struct _GdkEventSetting     GdkEventSetting;
 typedef struct _GdkEventGrabBroken  GdkEventGrabBroken;
+
+typedef struct _GdkEventSequence    GdkEventSequence;
 
 typedef union  _GdkEvent	    GdkEvent;
 
@@ -213,6 +265,14 @@ typedef GdkFilterReturn (*GdkFilterFunc) (GdkXEvent *xevent,
  *   was added in 2.8.
  * @GDK_DAMAGE: the content of the window has been changed. This event type
  *   was added in 2.14.
+ * @GDK_TOUCH_BEGIN: A new touch event sequence has just started. This event
+ *   type was added in 3.4.
+ * @GDK_TOUCH_UPDATE: A touch event sequence has been updated. This event type
+ *   was added in 3.4.
+ * @GDK_TOUCH_END: A touch event sequence has finished. This event type
+ *   was added in 3.4.
+ * @GDK_TOUCH_CANCEL: A touch event sequence has been canceled. This event type
+ *   was added in 3.4.
  * @GDK_EVENT_LAST: marks the end of the GdkEventType enumeration. Added in 2.18
  *
  * Specifies the type of the event.
@@ -260,6 +320,10 @@ typedef enum
   GDK_OWNER_CHANGE      = 34,
   GDK_GRAB_BROKEN       = 35,
   GDK_DAMAGE            = 36,
+  GDK_TOUCH_BEGIN       = 37,
+  GDK_TOUCH_UPDATE      = 38,
+  GDK_TOUCH_END         = 39,
+  GDK_TOUCH_CANCEL      = 40,
   GDK_EVENT_LAST        /* helper variable for decls */
 } GdkEventType;
 
@@ -284,6 +348,8 @@ typedef enum
  * @GDK_SCROLL_DOWN: the window is scrolled down.
  * @GDK_SCROLL_LEFT: the window is scrolled to the left.
  * @GDK_SCROLL_RIGHT: the window is scrolled to the right.
+ * @GDK_SCROLL_SMOOTH: the scrolling is determined by the delta values
+ *   in #GdkEventScroll. See gdk_event_get_scroll_deltas().
  *
  * Specifies the direction for #GdkEventScroll.
  */
@@ -292,7 +358,8 @@ typedef enum
   GDK_SCROLL_UP,
   GDK_SCROLL_DOWN,
   GDK_SCROLL_LEFT,
-  GDK_SCROLL_RIGHT
+  GDK_SCROLL_RIGHT,
+  GDK_SCROLL_SMOOTH
 } GdkScrollDirection;
 
 /**
@@ -335,6 +402,13 @@ typedef enum
  * @GDK_CROSSING_GTK_UNGRAB: crossing because a GTK+ grab is deactivated.
  * @GDK_CROSSING_STATE_CHANGED: crossing because a GTK+ widget changed
  *   state (e.g. sensitivity).
+ * @GDK_CROSSING_TOUCH_BEGIN: crossing because a touch sequence has begun,
+ *   this event is synthetic as the pointer might have not left the window.
+ * @GDK_CROSSING_TOUCH_END: crossing because a touch sequence has ended,
+ *   this event is synthetic as the pointer might have not left the window.
+ * @GDK_CROSSING_DEVICE_SWITCH: crossing because of a device switch (i.e.
+ *   a mouse taking control of the pointer after a touch device), this event
+ *   is synthetic as the pointer didn't leave the window.
  *
  * Specifies the crossing mode for #GdkEventCrossing.
  */
@@ -345,7 +419,10 @@ typedef enum
   GDK_CROSSING_UNGRAB,
   GDK_CROSSING_GTK_GRAB,
   GDK_CROSSING_GTK_UNGRAB,
-  GDK_CROSSING_STATE_CHANGED
+  GDK_CROSSING_STATE_CHANGED,
+  GDK_CROSSING_TOUCH_BEGIN,
+  GDK_CROSSING_TOUCH_END,
+  GDK_CROSSING_DEVICE_SWITCH
 } GdkCrossingMode;
 
 /**
@@ -371,6 +448,7 @@ typedef enum
  *   decorations.
  * @GDK_WINDOW_STATE_ABOVE: the window is kept above other windows.
  * @GDK_WINDOW_STATE_BELOW: the window is kept below other windows.
+ * @GDK_WINDOW_STATE_FOCUSED: the window is presented as focused (with active decorations).
  *
  * Specifies the state of a toplevel window.
  */
@@ -382,7 +460,8 @@ typedef enum
   GDK_WINDOW_STATE_STICKY     = 1 << 3,
   GDK_WINDOW_STATE_FULLSCREEN = 1 << 4,
   GDK_WINDOW_STATE_ABOVE      = 1 << 5,
-  GDK_WINDOW_STATE_BELOW      = 1 << 6
+  GDK_WINDOW_STATE_BELOW      = 1 << 6,
+  GDK_WINDOW_STATE_FOCUSED    = 1 << 7
 } GdkWindowState;
 
 /**
@@ -545,7 +624,7 @@ struct _GdkEventMotion
  *
  * Used for button press and button release events. The
  * @type field will be one of %GDK_BUTTON_PRESS,
- * %GDK_2BUTTON_PRESS, %GDK_3BUTTON_PRESS, and %GDK_BUTTON_RELEASE.
+ * %GDK_2BUTTON_PRESS, %GDK_3BUTTON_PRESS or %GDK_BUTTON_RELEASE,
  *
  * Double and triple-clicks result in a sequence of events being received.
  * For double-clicks the order of events will be:
@@ -594,6 +673,57 @@ struct _GdkEventButton
 };
 
 /**
+ * GdkEventTouch:
+ * @type: the type of the event (%GDK_TOUCH_BEGIN, %GDK_TOUCH_UPDATE,
+ *   %GDK_TOUCH_END, %GDK_TOUCH_CANCEL)
+ * @window: the window which received the event
+ * @send_event: %TRUE if the event was sent explicitly (e.g. using
+ *   <function>XSendEvent</function>)
+ * @time: the time of the event in milliseconds.
+ * @x: the x coordinate of the pointer relative to the window
+ * @y: the y coordinate of the pointer relative to the window
+ * @axes: @x, @y translated to the axes of @device, or %NULL if @device is
+ *   the mouse
+ * @state: (type GdkModifierType): a bit-mask representing the state of
+ *   the modifier keys (e.g. Control, Shift and Alt) and the pointer
+ *   buttons. See #GdkModifierType
+ * @sequence: the event sequence that the event belongs to
+ * @emulating_pointer: whether the event should be used for emulating
+ *   pointer event
+ * @device: the device where the event originated
+ * @x_root: the x coordinate of the pointer relative to the root of the
+ *   screen
+ * @y_root: the y coordinate of the pointer relative to the root of the
+ *   screen
+ *
+ * Used for touch events.
+ * @type field will be one of %GDK_TOUCH_BEGIN, %GDK_TOUCH_UPDATE,
+ * %GDK_TOUCH_END or %GDK_TOUCH_CANCEL.
+ *
+ * Touch events are grouped into sequences by means of the @sequence
+ * field, which can also be obtained with gdk_event_get_event_sequence().
+ * Each sequence begins with a %GDK_TOUCH_BEGIN event, followed by
+ * any number of %GDK_TOUCH_UPDATE events, and ends with a %GDK_TOUCH_END
+ * (or %GDK_TOUCH_CANCEL) event. With multitouch devices, there may be
+ * several active sequences at the same time.
+ */
+struct _GdkEventTouch
+{
+  GdkEventType type;
+  GdkWindow *window;
+  gint8 send_event;
+  guint32 time;
+  gdouble x;
+  gdouble y;
+  gdouble *axes;
+  guint state;
+  GdkEventSequence *sequence;
+  gboolean emulating_pointer;
+  GdkDevice *device;
+  gdouble x_root, y_root;
+};
+
+/**
  * GdkEventScroll:
  * @type: the type of the event (%GDK_SCROLL).
  * @window: the window which received the event.
@@ -629,6 +759,8 @@ struct _GdkEventScroll
   GdkScrollDirection direction;
   GdkDevice *device;
   gdouble x_root, y_root;
+  gdouble delta_x;
+  gdouble delta_y;
 };
 
 /**
@@ -1021,6 +1153,7 @@ union _GdkEvent
   GdkEventVisibility	    visibility;
   GdkEventMotion	    motion;
   GdkEventButton	    button;
+  GdkEventTouch             touch;
   GdkEventScroll            scroll;
   GdkEventKey		    key;
   GdkEventCrossing	    crossing;
@@ -1057,16 +1190,26 @@ gboolean  gdk_event_get_coords		(const GdkEvent  *event,
 gboolean  gdk_event_get_root_coords	(const GdkEvent *event,
 					 gdouble	*x_root,
 					 gdouble	*y_root);
+GDK_AVAILABLE_IN_3_2
 gboolean  gdk_event_get_button          (const GdkEvent *event,
                                          guint          *button);
+GDK_AVAILABLE_IN_3_2
 gboolean  gdk_event_get_click_count     (const GdkEvent *event,
                                          guint          *click_count);
+GDK_AVAILABLE_IN_3_2
 gboolean  gdk_event_get_keyval          (const GdkEvent *event,
                                          guint          *keyval);
+GDK_AVAILABLE_IN_3_2
 gboolean  gdk_event_get_keycode         (const GdkEvent *event,
                                          guint16        *keycode);
+GDK_AVAILABLE_IN_3_2
 gboolean gdk_event_get_scroll_direction (const GdkEvent *event,
                                          GdkScrollDirection *direction);
+GDK_AVAILABLE_IN_3_4
+gboolean  gdk_event_get_scroll_deltas   (const GdkEvent *event,
+                                         gdouble         *delta_x,
+                                         gdouble         *delta_y);
+
 gboolean  gdk_event_get_axis            (const GdkEvent  *event,
                                          GdkAxisUse       axis_use,
                                          gdouble         *value);
@@ -1077,6 +1220,7 @@ void       gdk_event_set_source_device  (GdkEvent        *event,
                                          GdkDevice       *device);
 GdkDevice* gdk_event_get_source_device  (const GdkEvent  *event);
 void       gdk_event_request_motions    (const GdkEventMotion *event);
+GDK_AVAILABLE_IN_3_4
 gboolean   gdk_event_triggers_context_menu (const GdkEvent *event);
 
 gboolean  gdk_events_get_distance       (GdkEvent        *event1,
@@ -1097,6 +1241,9 @@ void	  gdk_event_handler_set 	(GdkEventFunc    func,
 void       gdk_event_set_screen         (GdkEvent        *event,
                                          GdkScreen       *screen);
 GdkScreen *gdk_event_get_screen         (const GdkEvent  *event);
+
+GDK_AVAILABLE_IN_3_4
+GdkEventSequence *gdk_event_get_event_sequence (const GdkEvent *event);
 
 void	  gdk_set_show_events		(gboolean	 show_events);
 gboolean  gdk_get_show_events		(void);

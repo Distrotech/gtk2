@@ -17,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -1635,7 +1633,7 @@ gtk_font_selection_set_preview_text  (GtkFontSelection *fontsel,
 
 /**
  * SECTION:gtkfontseldlg
- * @Short_description: A dialog box for selecting fonts
+ * @Short_description: Deprecated dialog box for selecting fonts
  * @Title: GtkFontSelectionDialog
  * @See_also: #GtkFontSelection, #GtkDialog, #GtkFontChooserDialog
  *

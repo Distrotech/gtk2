@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Global clipboard abstraction. 
  */
@@ -1818,7 +1816,7 @@ gtk_clipboard_wait_is_uris_available (GtkClipboard *clipboard)
 }
 
 /**
- * gtk_clipboard_wait_for_targets
+ * gtk_clipboard_wait_for_targets:
  * @clipboard: a #GtkClipboard
  * @targets: (out) (array length=n_targets) (transfer container): location
  *           to store an array of targets. The result stored here must
@@ -1826,9 +1824,9 @@ gtk_clipboard_wait_is_uris_available (GtkClipboard *clipboard)
  * @n_targets: location to store number of items in @targets.
  *
  * Returns a list of targets that are present on the clipboard, or %NULL
- * if there aren't any targets available. The returned list must be 
+ * if there aren't any targets available. The returned list must be
  * freed with g_free().
- * This function waits for the data to be received using the main 
+ * This function waits for the data to be received using the main
  * loop, so events, timeouts, etc, may be dispatched during the wait.
  *
  * Return value: %TRUE if any targets are present on the clipboard,
@@ -2017,7 +2015,7 @@ gtk_clipboard_store_timeout (GtkClipboard *clipboard)
 {
   g_main_loop_quit (clipboard->store_loop);
   
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 /**

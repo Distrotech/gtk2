@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GDK_H_INSIDE__) && !defined (GDK_COMPILATION)
@@ -36,23 +34,6 @@ G_BEGIN_DECLS
 typedef struct _GdkTimeCoord GdkTimeCoord;
 
 /**
- * GdkExtensionMode:
- * @GDK_EXTENSION_EVENTS_NONE: no extension events are desired.
- * @GDK_EXTENSION_EVENTS_ALL: all extension events are desired.
- * @GDK_EXTENSION_EVENTS_CURSOR: extension events are desired only if a cursor
- *                               will be displayed for the device.
- *
- * An enumeration used to specify which extension events
- * are desired for a particular widget.
- */
-typedef enum
-{
-  GDK_EXTENSION_EVENTS_NONE,
-  GDK_EXTENSION_EVENTS_ALL,
-  GDK_EXTENSION_EVENTS_CURSOR
-} GdkExtensionMode;
-
-/**
  * GdkInputSource:
  * @GDK_SOURCE_MOUSE: the device is a mouse. (This will be reported for the core
  *                    pointer, even if it is something else, such as a trackball.)
@@ -61,6 +42,10 @@ typedef enum
  *                     of a stylus on a graphics tablet.
  * @GDK_SOURCE_CURSOR: the device is a graphics tablet "puck" or similar device.
  * @GDK_SOURCE_KEYBOARD: the device is a keyboard.
+ * @GDK_SOURCE_TOUCHSCREEN: the device is a direct-input touch device, such
+ *     as a touchscreen or tablet. This device type has been added in 3.4.
+ * @GDK_SOURCE_TOUCHPAD: the device is an indirect touch device, such
+ *     as a touchpad. This device type has been added in 3.4.
  *
  * An enumeration describing the type of an input device in general terms.
  */
@@ -70,7 +55,9 @@ typedef enum
   GDK_SOURCE_PEN,
   GDK_SOURCE_ERASER,
   GDK_SOURCE_CURSOR,
-  GDK_SOURCE_KEYBOARD
+  GDK_SOURCE_KEYBOARD,
+  GDK_SOURCE_TOUCHSCREEN,
+  GDK_SOURCE_TOUCHPAD
 } GdkInputSource;
 
 /**

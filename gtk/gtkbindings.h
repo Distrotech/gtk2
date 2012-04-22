@@ -15,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -180,13 +178,11 @@ void           gtk_binding_entry_remove      (GtkBindingSet       *binding_set,
                                               guint                keyval,
                                               GdkModifierType      modifiers);
 
-#ifndef GTK_DISABLE_DEPRECATED
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_0
 void           gtk_binding_set_add_path      (GtkBindingSet       *binding_set,
                                               GtkPathType          path_type,
                                               const gchar         *path_pattern,
                                               GtkPathPriorityType  priority);
-#endif
 
 G_END_DECLS
 

@@ -1,7 +1,7 @@
 ## Makefile.am for gtk+/tests
 include $(top_srcdir)/Makefile.decl
 
-SUBDIRS = css reftests a11y
+SUBDIRS = css reftests a11y visuals
 
 AM_CPPFLAGS =				\
 	-I$(top_srcdir)			\
@@ -14,7 +14,7 @@ AM_CPPFLAGS =				\
 DEPS = \
 	$(top_builddir)/gtk/libgtk-3.la
 
-LDADDS = \
+LDADD = \
 	$(top_builddir)/gtk/libgtk-3.la	\
 	$(top_builddir)/gdk/libgdk-3.la	\
 	$(GTK_DEP_LIBS)			\
@@ -39,6 +39,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testcairo			\
 	testcalendar			\
 	testclipboard			\
+	testcolorchooser		\
 	testcombo			\
 	testcombochange			\
 	testcellrenderertext		\
@@ -63,6 +64,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testicontheme			\
 	testimage			\
 	testinput			\
+	testkineticscrolling		\
 	testlockbutton			\
 	testmenubars			\
 	testmountoperation		\
@@ -75,6 +77,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testoffscreenwindow		\
 	testorientable			\
 	testoverlay			\
+	testoverlaystyleclass		\
 	testprint			\
 	testrecentchooser 		\
 	testrecentchoosermenu		\
@@ -86,6 +89,7 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	teststatusicon			\
 	testtoolbar			\
 	stresstest-toolbar		\
+	testtreechanging                \
 	testtreeedit			\
 	testtreemodel			\
 	testtreeview			\
@@ -120,8 +124,8 @@ noinst_PROGRAMS =  $(TEST_PROGS)	\
 	testpixbuf-save			\
 	testpixbuf-color		\
 	testpixbuf-scale		\
-	widget-factory			\
-	testundecorated
+	testgmenu			\
+	testlogout
 
 if USE_X11
 noinst_PROGRAMS += testerrors
@@ -157,6 +161,7 @@ testbuttons_DEPENDENCIES = $(TEST_DEPS)
 testcairo_DEPENDENCIES = $(TEST_DEPS)
 testcalendar_DEPENDENCIES = $(TEST_DEPS)
 testclipboard_DEPENDENCIES = $(TEST_DEPS)
+testcolorchooser_DEPENDENCIES = $(TEST_DEPS)
 testcombo_DEPENDENCIES = $(TEST_DEPS)
 testcombochange_DEPENDENCIES = $(TEST_DEPS)
 testcellrenderertext_DEPENDENCIES = $(TEST_DEPS)
@@ -178,6 +183,7 @@ testgrid_DEPENDENCIES = $(TEST_DEPS)
 testgtk_DEPENDENCIES = $(TEST_DEPS)
 testinput_DEPENDENCIES = $(TEST_DEPS)
 testimage_DEPENDENCIES = $(TEST_DEPS)
+testkineticscrolling_DEPENDENCIES = $(TEST_DEPS)
 testlockbutton_DEPENDENCIES = $(TEST_DEPS)
 testmenubars_DEPENDENCIES = $(TEST_DEPS)
 testmountoperation_DEPENDENCIES = $(TEST_DEPS)
@@ -192,6 +198,7 @@ testappchooser_DEPENDENCIES = $(TEST_DEPS)
 testappchooserbutton_DEPENDENCIES = $(TEST_DEPS)
 testorientable_DEPENDENCIES = $(TEST_DEPS)
 testoverlay_DEPENDENCIES = $(TEST_DEPS)
+testoverlaystyleclass_DEPENDENCIES = $(TEST_DEPS)
 testprint_DEPENDENCIES = $(TEST_DEPS)
 testrecentchooser_DEPENDENCIES = $(TEST_DEPS)
 testrecentchoosermenu_DEPENDENCIES = $(TEST_DEPS)
@@ -202,6 +209,7 @@ testsocket_DEPENDENCIES = $(DEPS)
 testsocket_child_DEPENDENCIES = $(DEPS)
 testspinbutton_DEPENDENCIES = $(TEST_DEPS)
 teststatusicon_DEPENDENCIES = $(TEST_DEPS)
+testtreechanging_DEPENDENCIES =	$(DEPS)
 testtreeedit_DEPENDENCIES = $(DEPS)
 testtreemodel_DEPENDENCIES = $(DEPS)
 testtreeview_DEPENDENCIES = $(DEPS)
@@ -235,108 +243,8 @@ testanimation_DEPENDENCIES = $(TEST_DEPS)
 testpixbuf_save_DEPENDENCIES = $(TEST_DEPS)
 testpixbuf_color_DEPENDENCIES = $(TEST_DEPS)
 testpixbuf_scale_DEPENDENCIES = $(TEST_DEPS)
-widget_factory_DEPENDENCIES = $(TEST_DEPS)
-testundecorated_DEPENDENCIES = $(TEST_DEPS)
-
-flicker_LDADD = $(LDADDS)
-simple_LDADD = $(LDADDS)
-print_editor_LDADD = $(LDADDS)
-testaccel_LDADD = $(LDADDS)
-testadjustsize_LDADD = $(LDADDS)
-testassistant_LDADD = $(LDADDS)
-testbbox_LDADD = $(LDADDS)
-testboxcss_LDADD = $(LDADDS)
-testbuttons_LDADD = $(LDADDS)
-testcairo_LDADD = $(LDADDS)
-testcalendar_LDADD = $(LDADDS)
-testclipboard_LDADD = $(LDADDS)
-testcombo_LDADD = $(LDADDS)
-testcombochange_LDADD = $(LDADDS)
-testcellrenderertext_LDADD = $(LDADDS)
-testdnd_LDADD = $(LDADDS)
-testellipsise_LDADD = $(LDADDS)
-testentrycompletion_LDADD = $(LDADDS)
-testentryicons_LDADD = $(LDADDS)
-testerrors_LDADD = $(LDADDS)
-testfilechooser_LDADD = $(LDADDS)
-testfilechooserbutton_LDADD = $(LDADDS)
-testfontselection_LDADD = $(LDADDS)
-testfontselectiondialog_LDADD = $(LDADDS)
-testfontchooser_LDADD = $(LDADDS)
-testfontchooserdialog_LDADD = $(LDADDS)
-testframe_LDADD = $(LDADDS)
-testgeometry_LDADD = $(LDADDS)
-testgiconpixbuf_LDADD = $(LDADDS)
-testgrid_LDADD = $(LDADDS)
-testgtk_LDADD = $(LDADDS)
-testheightforwidth_LDADD = $(LDADDS)
-testicontheme_LDADD = $(LDADDS)
-testiconview_LDADD = $(LDADDS)
-testiconview_keynav_LDADD = $(LDADDS)
-testinput_LDADD = $(LDADDS)
-testimage_LDADD = $(LDADDS)
-testlockbutton_LDADD = $(LDADDS)
-testmenubars_LDADD = $(LDADDS)
-testmountoperation_LDADD = $(LDADDS)
-testmultidisplay_LDADD = $(LDADDS)
-testmultiscreen_LDADD = $(LDADDS)
-testnotebookdnd_LDADD = $(LDADDS)
-testnouiprint_LDADD = $(LDADDS)
-testnumerableicon_LDADD = $(LDADDS)
-testoffscreen_LDADD = $(LDADDS)
-testoffscreenwindow_LDADD = $(LDADDS)
-testappchooser_LDADD = $(LDADDS)
-testappchooserbutton_LDADD = $(LDADDS)
-testorientable_LDADD = $(LDADDS)
-testoverlay_LDADD = $(LDADDS)
-testprint_LDADD = $(LDADDS)
-testrecentchooser_LDADD = $(LDADDS)
-testrecentchoosermenu_LDADD = $(LDADDS)
-testrichtext_LDADD = $(LDADDS)
-testscale_LDADD = $(LDADDS)
-testselection_LDADD = $(LDADDS)
-testsocket_LDADD = $(LDADDS)
-testsocket_child_LDADD = $(LDADDS)
-testspinbutton_LDADD = $(LDADDS)
-teststatusicon_LDADD = $(LDADDS)
-testtoolbar_LDADD = $(LDADDS)
-stresstest_toolbar_LDADD = $(LDADDS)
-testtreeedit_LDADD = $(LDADDS)
-testtreemodel_LDADD = $(LDADDS)
-testtreeview_LDADD = $(LDADDS)
-testtreefocus_LDADD = $(LDADDS)
-testtreeflow_LDADD = $(LDADDS)
-testtreecolumns_LDADD = $(LDADDS)
-testtreecolumnsizing_LDADD = $(LDADDS)
-testtreesort_LDADD = $(LDADDS)
-testverticalcells_LDADD = $(LDADDS)
-treestoretest_LDADD = $(LDADDS)
-testxinerama_LDADD = $(LDADDS)
-testmerge_LDADD = $(LDADDS)
-testactions_LDADD = $(LDADDS)
-testgrouping_LDADD = $(LDADDS)
-testtooltips_LDADD = $(LDADDS)
-testvolumebutton_LDADD = $(LDADDS)
-testscrolledwindow_LDADD = $(LDADDS)
-testcellarea_LDADD = $(LDADDS)
-testtreemenu_LDADD = $(LDADDS)
-testwindows_LDADD = $(LDADDS)
-testexpand_LDADD = $(LDADDS)
-testexpander_LDADD = $(LDADDS)
-testswitch_LDADD = $(LDADDS)
-styleexamples_LDADD = $(LDADDS)
-testtoplevelembed_LDADD = $(LDADDS)
-testnoscreen_LDADD = $(LDADDS)
-testtreepos_LDADD = $(LDADDS)
-testsensitive_LDADD = $(LDADDS)
-testtextview_LDADD = $(LDADDS)
-testanimation_LDADD = $(LDADDS)
-testpixbuf_save_LDADD = $(LDADDS)
-testpixbuf_color_LDADD = $(LDADDS)
-testpixbuf_scale_LDADD = $(LDADDS)
-widget_factory_LDADD = $(LDADDS)
-testundecorated_LDADD = $(LDADDS)
-
+testgmenu_DEPENDENCIES = $(TEST_DEPS)
+testlogout_DEPENDENCIES = $(TEST_DEPS)
 
 testboxcss_SOURCES =	\
 	testboxcss.c	\
@@ -378,6 +286,10 @@ testgrid_SOURCES =	\
 testgtk_SOURCES =	\
 	prop-editor.c   \
 	testgtk.c
+
+testtreechanging_SOURCES =	\
+	prop-editor.c		\
+	testtreechanging.c
 
 testtreeedit_SOURCES = 	\
 	testtreeedit.c
@@ -483,6 +395,9 @@ testoffscreenwindow_SOURCES =	\
 testoverlay_SOURCES =	\
 	testoverlay.c
 
+testoverlaystyleclass_SOURCES =	\
+	testoverlaystyleclass.c
+
 testappchooser_SOURCES = \
 	testappchooser.c
 
@@ -512,9 +427,9 @@ testpixbuf_color_SOURCES = testpixbuf-color.c
 
 testpixbuf_save_SOURCES = testpixbuf-save.c
 
-widget_factory_SOURCES = widget-factory.c
+testcolorchooser_SOURCES = testcolorchooser.c
 
-testundecorated_SOURCES = testundecorated.c
+testkineticscrolling_SOURCES = testkineticscrolling.c
 
 EXTRA_DIST += 			\
 	gradient1.png		\
@@ -536,8 +451,7 @@ EXTRA_DIST += 			\
 	merge-2.ui		\
 	merge-3.ui		\
 	gnome-textfile.png	\
-	makefile.msc		\
-	widget-factory.ui
+	makefile.msc
 
 
 -include $(top_srcdir)/git.mk

@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -291,7 +289,6 @@ gdk_quartz_screen_get_display (GdkScreen *screen)
   return _gdk_display;
 }
 
-
 static GdkWindow *
 gdk_quartz_screen_get_root_window (GdkScreen *screen)
 {
@@ -304,7 +301,7 @@ gdk_quartz_screen_get_number (GdkScreen *screen)
   return 0;
 }
 
-gchar * 
+gchar *
 _gdk_windowing_substitute_screen_number (const gchar *display_name,
 					 int          screen_number)
 {
@@ -416,6 +413,30 @@ gdk_quartz_screen_get_monitor_geometry (GdkScreen    *screen,
   *dest = GDK_QUARTZ_SCREEN (screen)->screen_rects[monitor_num];
 }
 
+static void
+gdk_quartz_screen_get_monitor_workarea (GdkScreen    *screen,
+                                        gint          monitor_num,
+                                        GdkRectangle *dest)
+{
+  GdkQuartzScreen *quartz_screen = GDK_QUARTZ_SCREEN (screen);
+  NSArray *array;
+  NSScreen *nsscreen;
+  NSRect rect;
+
+  GDK_QUARTZ_ALLOC_POOL;
+
+  array = [NSScreen screens];
+  nsscreen = [array objectAtIndex:monitor_num];
+  rect = [nsscreen visibleFrame];
+
+  dest->x = rect.origin.x - quartz_screen->min_x;
+  dest->y = quartz_screen->height - (rect.origin.y + rect.size.height) + quartz_screen->min_y;
+  dest->width = rect.size.width;
+  dest->height = rect.size.height;
+
+  GDK_QUARTZ_RELEASE_POOL;
+}
+
 static gchar *
 gdk_quartz_screen_make_display_name (GdkScreen *screen)
 {
@@ -462,6 +483,7 @@ gdk_quartz_screen_class_init (GdkQuartzScreenClass *klass)
   screen_class->get_monitor_height_mm = gdk_quartz_screen_get_monitor_height_mm;
   screen_class->get_monitor_plug_name = gdk_quartz_screen_get_monitor_plug_name;
   screen_class->get_monitor_geometry = gdk_quartz_screen_get_monitor_geometry;
+  screen_class->get_monitor_workarea = gdk_quartz_screen_get_monitor_workarea;
   screen_class->is_composited = gdk_quartz_screen_is_composited;
   screen_class->make_display_name = gdk_quartz_screen_make_display_name;
   screen_class->get_active_window = gdk_quartz_screen_get_active_window;

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -152,8 +150,10 @@ void       gtk_device_grab_add     (GtkWidget          *widget,
 void       gtk_device_grab_remove  (GtkWidget          *widget,
                                     GdkDevice          *device);
 
+GDK_DEPRECATED_IN_3_4
 guint      gtk_key_snooper_install (GtkKeySnoopFunc snooper,
                                     gpointer        func_data);
+GDK_DEPRECATED_IN_3_4
 void       gtk_key_snooper_remove  (guint           snooper_handler_id);
 
 GdkEvent * gtk_get_current_event        (void);

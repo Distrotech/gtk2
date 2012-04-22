@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -55,13 +53,11 @@ static void gtk_cell_renderer_accel_set_property (GObject         *object,
                                                   guint            param_id,
                                                   const GValue    *value,
                                                   GParamSpec      *pspec);
-static void gtk_cell_renderer_accel_get_size     (GtkCellRenderer    *cell,
-                                                  GtkWidget          *widget,
-                                                  const GdkRectangle *cell_area,
-                                                  gint               *x_offset,
-                                                  gint               *y_offset,
-                                                  gint               *width,
-                                                  gint               *height);
+static void gtk_cell_renderer_accel_get_preferred_width 
+                                                 (GtkCellRenderer *cell,
+                                                  GtkWidget       *widget,
+                                                  gint            *minimum_size,
+                                                  gint            *natural_size);
 static GtkCellEditable *
            gtk_cell_renderer_accel_start_editing (GtkCellRenderer      *cell,
                                                   GdkEvent             *event,
@@ -136,7 +132,7 @@ gtk_cell_renderer_accel_class_init (GtkCellRendererAccelClass *cell_accel_class)
   object_class->set_property = gtk_cell_renderer_accel_set_property;
   object_class->get_property = gtk_cell_renderer_accel_get_property;
 
-  cell_renderer_class->get_size      = gtk_cell_renderer_accel_get_size;
+  cell_renderer_class->get_preferred_width = gtk_cell_renderer_accel_get_preferred_width;
   cell_renderer_class->start_editing = gtk_cell_renderer_accel_start_editing;
 
   /**
@@ -301,18 +297,9 @@ convert_keysym_state_to_string (GtkCellRendererAccel *accel,
         {
           gchar *name;
 
-          name = gtk_accelerator_get_label (keysym, mask);
+          name = gtk_accelerator_get_label_with_keycode (NULL, keysym, keycode, mask);
           if (name == NULL)
-            name = gtk_accelerator_name (keysym, mask);
-
-          if (keysym == 0)
-            {
-              gchar *tmp;
-
-              tmp = name;
-              name = g_strdup_printf ("%s0x%02x", tmp, keycode);
-              g_free (tmp);
-            }
+            name = gtk_accelerator_name_with_keycode (NULL, keysym, keycode, mask);
 
           return name;
         }
@@ -416,31 +403,28 @@ gtk_cell_renderer_accel_set_property  (GObject      *object,
 }
 
 static void
-gtk_cell_renderer_accel_get_size (GtkCellRenderer    *cell,
-                                  GtkWidget          *widget,
-                                  const GdkRectangle *cell_area,
-                                  gint               *x_offset,
-                                  gint               *y_offset,
-                                  gint               *width,
-                                  gint               *height)
+gtk_cell_renderer_accel_get_preferred_width (GtkCellRenderer    *cell,
+                                             GtkWidget          *widget,
+                                             gint               *minimum_size,
+                                             gint               *natural_size)
 
 {
   GtkCellRendererAccelPrivate *priv = GTK_CELL_RENDERER_ACCEL (cell)->priv;
-  GtkRequisition requisition;
+  GtkRequisition min_req, nat_req;
 
   if (priv->sizing_label == NULL)
     priv->sizing_label = gtk_label_new (_("New accelerator..."));
 
-  gtk_widget_get_preferred_size (priv->sizing_label, &requisition, NULL);
+  gtk_widget_get_preferred_size (priv->sizing_label, &min_req, &nat_req);
 
-  GTK_CELL_RENDERER_CLASS (gtk_cell_renderer_accel_parent_class)->get_size (cell, widget, cell_area,
-                                                                            x_offset, y_offset, width, height);
+  GTK_CELL_RENDERER_CLASS (gtk_cell_renderer_accel_parent_class)->get_preferred_width (cell, widget,
+                                                                                       minimum_size, natural_size);
 
   /* FIXME: need to take the cell_area et al. into account */
-  if (width)
-    *width = MAX (*width, requisition.width);
-  if (height)
-    *height = MAX (*height, requisition.height);
+  if (minimum_size)
+    *minimum_size = MAX (*minimum_size, min_req.width);
+  if (natural_size)
+    *natural_size = MAX (*natural_size, nat_req.width);
 }
 
 static gboolean
@@ -451,6 +435,7 @@ grab_key_callback (GtkWidget            *widget,
   GtkCellRendererAccelPrivate *priv = accel->priv;
   GdkModifierType accel_mods = 0;
   guint accel_key;
+  guint keyval;
   gchar *path;
   gboolean edited;
   gboolean cleared;
@@ -465,16 +450,28 @@ grab_key_callback (GtkWidget            *widget,
   edited = FALSE;
   cleared = FALSE;
 
-  gdk_keymap_translate_keyboard_state (gdk_keymap_get_for_display (display),
-                                       event->hardware_keycode,
-                                       event->state,
-                                       event->group,
-                                       NULL, NULL, NULL, &consumed_modifiers);
-
   accel_mods = event->state;
-  gdk_keymap_add_virtual_modifiers (gdk_keymap_get_for_display (display), &accel_mods);
 
-  accel_key = gdk_keyval_to_lower (event->keyval);
+  if (event->keyval == GDK_KEY_Sys_Req && 
+      (accel_mods & GDK_MOD1_MASK) != 0)
+    {
+      /* HACK: we don't want to use SysRq as a keybinding (but we do
+       * want Alt+Print), so we avoid translation from Alt+Print to SysRq
+       */
+      keyval = GDK_KEY_Print;
+      consumed_modifiers = 0;
+    }
+  else
+    {
+      _gtk_translate_keyboard_accel_state (gdk_keymap_get_for_display (display),
+                                           event->hardware_keycode,
+                                           event->state,
+                                           gtk_accelerator_get_default_mod_mask (),
+                                           event->group,
+                                           &keyval, NULL, NULL, &consumed_modifiers);
+    }
+
+  accel_key = gdk_keyval_to_lower (keyval);
   if (accel_key == GDK_KEY_ISO_Left_Tab) 
     accel_key = GDK_KEY_Tab;
 
@@ -487,22 +484,22 @@ grab_key_callback (GtkWidget            *widget,
   
   /* Put shift back if it changed the case of the key, not otherwise.
    */
-  if (accel_key != event->keyval)
+  if (accel_key != keyval)
     accel_mods |= GDK_SHIFT_MASK;
     
   if (accel_mods == 0)
     {
-      switch (event->keyval)
-        {
-        case GDK_KEY_Escape:
-          goto out; /* cancel */
-        case GDK_KEY_BackSpace:
-          /* clear the accelerator on Backspace */
-          cleared = TRUE;
-          goto out;
-        default:
-          break;
-        }
+      switch (keyval)
+	{
+	case GDK_KEY_Escape:
+	  goto out; /* cancel */
+	case GDK_KEY_BackSpace:
+	  /* clear the accelerator on Backspace */
+	  cleared = TRUE;
+	  goto out;
+	default:
+	  break;
+	}
     }
 
   if (priv->accel_mode == GTK_CELL_RENDERER_ACCEL_MODE_GTK)
@@ -736,7 +733,7 @@ gtk_cell_renderer_accel_start_editing (GtkCellRenderer      *cell,
   gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
 
   gtk_style_context_get_background_color (context, GTK_STATE_FLAG_SELECTED, &color);
-  gtk_widget_override_background_color (label, 0, &color);
+  gtk_widget_override_background_color (eventbox, 0, &color);
 
   gtk_style_context_get_color (context, GTK_STATE_FLAG_SELECTED, &color);
   gtk_widget_override_color (label, 0, &color);

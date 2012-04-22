@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -818,8 +816,9 @@ gtk_print_settings_set_use_color (GtkPrintSettings *settings,
 gboolean
 gtk_print_settings_get_collate (GtkPrintSettings *settings)
 {
-  return gtk_print_settings_get_bool (settings, 
-				      GTK_PRINT_SETTINGS_COLLATE);
+  return gtk_print_settings_get_bool_with_default (settings,
+                                                   GTK_PRINT_SETTINGS_COLLATE,
+                                                   TRUE);
 }
 
 /**
@@ -1808,7 +1807,7 @@ gtk_print_settings_load_key_file (GtkPrintSettings *settings,
       gchar *value;
 
       value = g_key_file_get_string (key_file,
-				     KEYFILE_GROUP_NAME,
+				     group_name,
 				     keys[i],
 				     NULL);
       if (!value)

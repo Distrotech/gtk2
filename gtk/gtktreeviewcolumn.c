@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -37,6 +35,7 @@
 #include "gtkprivate.h"
 #include "gtkintl.h"
 #include "gtktypebuiltins.h"
+#include "a11y/gtktreeviewaccessible.h"
 
 
 /**
@@ -1103,7 +1102,7 @@ gtk_tree_view_column_button_event (GtkWidget *widget,
 
   if (event->type == GDK_BUTTON_PRESS &&
       priv->reorderable &&
-      ((GdkEventButton *)event)->button == 1)
+      ((GdkEventButton *)event)->button == GDK_BUTTON_PRIMARY)
     {
       priv->maybe_reordered = TRUE;
       gdk_window_get_device_position (gtk_button_get_event_window (GTK_BUTTON (widget)),
@@ -1937,7 +1936,11 @@ gtk_tree_view_column_set_visible (GtkTreeViewColumn *tree_column,
     _gtk_tree_view_column_cell_set_dirty (tree_column, TRUE);
 
   if (priv->tree_view)
-    _gtk_tree_view_reset_header_styles (GTK_TREE_VIEW (priv->tree_view));
+    {
+      _gtk_tree_view_reset_header_styles (GTK_TREE_VIEW (priv->tree_view));
+      _gtk_tree_view_accessible_toggle_visibility (GTK_TREE_VIEW (priv->tree_view),
+                                                   tree_column);
+    }
 
   gtk_tree_view_column_update_button (tree_column);
   g_object_notify (G_OBJECT (tree_column), "visible");
@@ -2494,8 +2497,8 @@ gtk_tree_view_column_get_expand (GtkTreeViewColumn *tree_column)
  * @tree_column: A #GtkTreeViewColumn.
  * @clickable: %TRUE if the header is active.
  * 
- * Sets the header to be active if @active is %TRUE.  When the header is active,
- * then it can take keyboard focus, and can be clicked.
+ * Sets the header to be active if @clickable is %TRUE.  When the header is
+ * active, then it can take keyboard focus, and can be clicked.
  **/
 void
 gtk_tree_view_column_set_clickable (GtkTreeViewColumn *tree_column,

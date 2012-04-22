@@ -160,6 +160,7 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File RelativePath="..\..\..\demos\gtk-demo\application.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\appwindow.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\assistant.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\builder.c" />
@@ -198,6 +199,7 @@
 			<File RelativePath="..\..\..\demos\gtk-demo\textscroll.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\textview.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\toolpalette.c" />
+			<File RelativePath="..\..\..\demos\gtk-demo\transparent.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\tree_store.c" />
 			<File RelativePath="..\..\..\demos\gtk-demo\ui_manager.c" />
 		</Filter>

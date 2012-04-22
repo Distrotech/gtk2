@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -100,6 +99,8 @@ struct _GtkMenuPrivate
   guint seen_item_enter       : 1;
   guint ignore_button_release : 1;
   guint no_toggle_size        : 1;
+  guint drag_already_pressed  : 1;
+  guint drag_scroll_started   : 1;
 
   /* info used for the table */
   guint *heights;
@@ -126,6 +127,9 @@ struct _GtkMenuPrivate
   gint navigation_height;
 
   guint navigation_timeout;
+
+  gdouble drag_start_y;
+  gint initial_drag_offset;
 };
 
 G_END_DECLS

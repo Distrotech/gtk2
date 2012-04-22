@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -246,14 +244,14 @@ gdk_display_manager_get (void)
         manager = g_object_new (gdk_win32_display_manager_get_type (), NULL);
       else
 #endif
-#ifdef GDK_WINDOWING_WAYLAND
-      if (backend == NULL || strcmp (backend, "wayland") == 0)
-        manager = g_object_new (gdk_wayland_display_manager_get_type (), NULL);
-      else
-#endif
 #ifdef GDK_WINDOWING_X11
       if (backend == NULL || strcmp (backend, "x11") == 0)
         manager = g_object_new (gdk_x11_display_manager_get_type (), NULL);
+      else
+#endif
+#ifdef GDK_WINDOWING_WAYLAND
+      if (backend == NULL || strcmp (backend, "wayland") == 0)
+        manager = g_object_new (gdk_wayland_display_manager_get_type (), NULL);
       else
 #endif
 #ifdef GDK_WINDOWING_BROADWAY

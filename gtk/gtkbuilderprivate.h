@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_BUILDER_PRIVATE_H__
@@ -41,6 +39,12 @@ typedef struct {
   GObject *object;
   CommonInfo *parent;
 } ObjectInfo;
+
+typedef struct {
+  TagInfo tag;
+  gchar *id;
+  GHashTable *objects;
+} MenuInfo;
 
 typedef struct {
   TagInfo tag;
@@ -117,6 +121,9 @@ void _gtk_builder_parser_parse_buffer (GtkBuilder *builder,
 GObject * _gtk_builder_construct (GtkBuilder *builder,
                                   ObjectInfo *info,
 				  GError    **error);
+void      _gtk_builder_add_object (GtkBuilder  *builder,
+                                   const gchar *id,
+                                   GObject     *object);
 void      _gtk_builder_add (GtkBuilder *builder,
                             ChildInfo *child_info);
 void      _gtk_builder_add_signals (GtkBuilder *builder,
@@ -140,7 +147,17 @@ gboolean  _gtk_builder_flags_from_string (GType       type,
 gchar * _gtk_builder_parser_translate (const gchar *domain,
 				       const gchar *context,
 				       const gchar *text);
+gchar *   _gtk_builder_get_resource_path (GtkBuilder *builder,
+					  const gchar *string);
 gchar *   _gtk_builder_get_absolute_filename (GtkBuilder *builder,
 					      const gchar *string);
+
+void      _gtk_builder_menu_start (ParserData   *parser_data,
+                                   const gchar  *element_name,
+                                   const gchar **attribute_names,
+                                   const gchar **attribute_values,
+                                   GError      **error);
+void      _gtk_builder_menu_end   (ParserData  *parser_data);
+
 
 #endif /* __GTK_BUILDER_PRIVATE_H__ */

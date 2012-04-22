@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -210,14 +208,12 @@ GdkPixbuf *           gtk_icon_info_load_symbolic_for_context (GtkIconInfo      
                                                                GtkStyleContext  *context,
                                                                gboolean         *was_symbolic,
                                                                GError          **error);
-#ifndef GTK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gtk_icon_info_load_symbol_for_context)
+GDK_DEPRECATED_IN_3_0_FOR(gtk_icon_info_load_symbol_for_context)
 GdkPixbuf *           gtk_icon_info_load_symbolic_for_style  (GtkIconInfo   *icon_info,
                                                               GtkStyle      *style,
                                                               GtkStateType   state,
                                                               gboolean      *was_symbolic,
                                                               GError       **error);
-#endif
 void                  gtk_icon_info_set_raw_coordinates (GtkIconInfo  *icon_info,
 							 gboolean      raw_coordinates);
 

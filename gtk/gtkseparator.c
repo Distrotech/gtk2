@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -243,9 +241,6 @@ gtk_separator_draw (GtkWidget *widget,
 
   gtk_style_context_get_padding (context, state, &padding);
 
-  gtk_style_context_save (context);
-  gtk_style_context_set_state (context, state);
-
   if (private->orientation == GTK_ORIENTATION_HORIZONTAL)
     {
       if (wide_separators)
@@ -268,8 +263,6 @@ gtk_separator_draw (GtkWidget *widget,
                          (width - padding.left) / 2, 0,
                          (width - padding.left) / 2, height - 1);
     }
-
-  gtk_style_context_restore (context);
 
   return FALSE;
 }

@@ -1,5 +1,6 @@
 * {
-  font: Monospace 12
+  font: Monospace 12;
+  padding: 0;
 }
 
 GtkPaned GtkEventBox {

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -24,10 +22,10 @@
 #ifndef __GTK_STYLE_CONTEXT_H__
 #define __GTK_STYLE_CONTEXT_H__
 
-#include <glib-object.h>
-#include <gtk/gtkstyleprovider.h>
-#include <gtk/gtkwidgetpath.h>
 #include <gtk/gtkborder.h>
+#include <gtk/gtkcsssection.h>
+#include <gtk/gtkstyleprovider.h>
+#include <gtk/gtktypes.h>
 #include <atk/atk.h>
 
 G_BEGIN_DECLS
@@ -39,7 +37,6 @@ G_BEGIN_DECLS
 #define GTK_IS_STYLE_CONTEXT_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE    ((c), GTK_TYPE_STYLE_CONTEXT))
 #define GTK_STYLE_CONTEXT_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS  ((o), GTK_TYPE_STYLE_CONTEXT, GtkStyleContextClass))
 
-typedef struct _GtkStyleContext GtkStyleContext;
 typedef struct _GtkStyleContextClass GtkStyleContextClass;
 typedef struct _GtkStyleContextPrivate GtkStyleContextPrivate;
 
@@ -147,7 +144,6 @@ struct _GtkStyleContextClass
  * A property holding the element's background as a #cairo_pattern_t.
  */
 #define GTK_STYLE_PROPERTY_BACKGROUND_IMAGE "background-image"
-
 
 /* Predefined set of CSS classes */
 
@@ -335,6 +331,16 @@ struct _GtkStyleContextClass
 #define GTK_STYLE_CLASS_SCROLLBAR "scrollbar"
 
 /**
+ * GTK_STYLE_CLASS_SCROLLBARS_JUNCTION:
+ *
+ * A CSS class to match the junction area between an horizontal
+ * and vertical scrollbar, when they're both shown.
+ * 
+ * This is used in #GtkScrolledWindow.
+ */
+#define GTK_STYLE_CLASS_SCROLLBARS_JUNCTION "scrollbars-junction"
+
+/**
  * GTK_STYLE_CLASS_SCALE:
  *
  * A CSS class to match scale widgets.
@@ -388,6 +394,14 @@ struct _GtkStyleContextClass
  * This should be used in conjunction with #GTK_STYLE_CLASS_PRIMARY_TOOLBAR.
  */
 #define GTK_STYLE_CLASS_RAISED "raised"
+
+/**
+ * GTK_STYLE_CLASS_LINKED:
+ *
+ * A CSS class to match a linked area, such as a box containing buttons
+ * belonging to the same control.
+ */
+#define GTK_STYLE_CLASS_LINKED "linked"
 
 /**
  * GTK_STYLE_CLASS_GRIP:
@@ -640,6 +654,33 @@ struct _GtkStyleContextClass
  */
 #define GTK_STYLE_CLASS_RIGHT "right"
 
+/**
+ * GTK_STYLE_CLASS_PULSE:
+ *
+ * A CSS class to use when rendering a pulse in an indeterminate progress bar.
+ *
+ * This is used by #GtkProgressBar and #GtkEntry.
+ */
+#define GTK_STYLE_CLASS_PULSE "pulse"
+
+/**
+ * GTK_STYLE_CLASS_ARROW:
+ *
+ * A CSS class used when rendering an arrow element.
+ *
+ * Note that #gtk_render_arrow automatically adds this style class
+ * to the style context when rendering an arrow element.
+ */
+#define GTK_STYLE_CLASS_ARROW "arrow"
+
+/**
+ * GTK_STYLE_CLASS_OSD:
+ *
+ * A CSS class used when rendering an OSD (On Screen Display) element,
+ * on top of another container.
+ */
+#define GTK_STYLE_CLASS_OSD "osd"
+
 /* Predefined set of widget regions */
 
 /**
@@ -670,7 +711,6 @@ struct _GtkStyleContextClass
  */
 #define GTK_STYLE_REGION_TAB "tab"
 
-
 GType gtk_style_context_get_type (void) G_GNUC_CONST;
 
 GtkStyleContext * gtk_style_context_new (void);
@@ -691,6 +731,8 @@ void gtk_style_context_remove_provider (GtkStyleContext  *context,
 void gtk_style_context_save    (GtkStyleContext *context);
 void gtk_style_context_restore (GtkStyleContext *context);
 
+GtkCssSection * gtk_style_context_get_section (GtkStyleContext *context,
+                                               const gchar     *property);
 void gtk_style_context_get_property (GtkStyleContext *context,
                                      const gchar     *property,
                                      GtkStateFlags    state,
@@ -706,6 +748,7 @@ void          gtk_style_context_set_state    (GtkStyleContext *context,
                                               GtkStateFlags    flags);
 GtkStateFlags gtk_style_context_get_state    (GtkStyleContext *context);
 
+GDK_DEPRECATED_IN_3_6
 gboolean      gtk_style_context_state_is_running (GtkStyleContext *context,
                                                   GtkStateType     state,
                                                   gdouble         *progress);
@@ -713,6 +756,10 @@ gboolean      gtk_style_context_state_is_running (GtkStyleContext *context,
 void          gtk_style_context_set_path     (GtkStyleContext *context,
                                               GtkWidgetPath   *path);
 const GtkWidgetPath * gtk_style_context_get_path (GtkStyleContext *context);
+GDK_AVAILABLE_IN_3_4
+void          gtk_style_context_set_parent   (GtkStyleContext *context,
+                                              GtkStyleContext *parent);
+GtkStyleContext *gtk_style_context_get_parent (GtkStyleContext *context);
 
 GList *  gtk_style_context_list_classes (GtkStyleContext *context);
 
@@ -764,20 +811,25 @@ gboolean gtk_style_context_lookup_color (GtkStyleContext *context,
                                          const gchar     *color_name,
                                          GdkRGBA         *color);
 
+GDK_DEPRECATED_IN_3_6
 void  gtk_style_context_notify_state_change (GtkStyleContext *context,
                                              GdkWindow       *window,
                                              gpointer         region_id,
                                              GtkStateType     state,
                                              gboolean         state_value);
+GDK_DEPRECATED_IN_3_6
 void  gtk_style_context_cancel_animations   (GtkStyleContext *context,
                                              gpointer         region_id);
+GDK_DEPRECATED_IN_3_6
 void  gtk_style_context_scroll_animations   (GtkStyleContext *context,
                                              GdkWindow       *window,
                                              gint             dx,
                                              gint             dy);
 
+GDK_DEPRECATED_IN_3_6
 void gtk_style_context_push_animatable_region (GtkStyleContext *context,
                                                gpointer         region_id);
+GDK_DEPRECATED_IN_3_6
 void gtk_style_context_pop_animatable_region  (GtkStyleContext *context);
 
 /* Some helper functions to retrieve most common properties */
@@ -901,12 +953,22 @@ void        gtk_render_activity    (GtkStyleContext     *context,
 GdkPixbuf * gtk_render_icon_pixbuf (GtkStyleContext     *context,
                                     const GtkIconSource *source,
                                     GtkIconSize          size);
+GDK_AVAILABLE_IN_3_2
 void        gtk_render_icon        (GtkStyleContext     *context,
                                     cairo_t             *cr,
                                     GdkPixbuf           *pixbuf,
                                     gdouble              x,
                                     gdouble              y);
-
+GDK_AVAILABLE_IN_3_4
+void        gtk_render_insertion_cursor
+                                   (GtkStyleContext     *context,
+                                    cairo_t             *cr,
+                                    gdouble              x,
+                                    gdouble              y,
+                                    PangoLayout         *layout,
+                                    int                  index,
+                                    PangoDirection       direction);
+GDK_DEPRECATED_IN_3_4
 void   gtk_draw_insertion_cursor    (GtkWidget          *widget,
                                      cairo_t            *cr,
                                      const GdkRectangle *location,

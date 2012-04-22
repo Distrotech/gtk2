@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -126,11 +124,12 @@ typedef enum {
 
 GType          gtk_ui_manager_get_type            (void) G_GNUC_CONST;
 GtkUIManager  *gtk_ui_manager_new                 (void);
-#ifndef GTK_DISABLE_DEPRECATED
+GDK_DEPRECATED_IN_3_4
 void           gtk_ui_manager_set_add_tearoffs    (GtkUIManager          *manager,
-						   gboolean               add_tearoffs);
+                                                   gboolean               add_tearoffs);
+GDK_DEPRECATED_IN_3_4
 gboolean       gtk_ui_manager_get_add_tearoffs    (GtkUIManager          *manager);
-#endif
+
 void           gtk_ui_manager_insert_action_group (GtkUIManager          *manager,
 						   GtkActionGroup        *action_group,
 						   gint                   pos);
@@ -150,6 +149,9 @@ guint          gtk_ui_manager_add_ui_from_string  (GtkUIManager          *manage
 						   GError               **error);
 guint          gtk_ui_manager_add_ui_from_file    (GtkUIManager          *manager,
 						   const gchar           *filename,
+						   GError               **error);
+guint          gtk_ui_manager_add_ui_from_resource(GtkUIManager          *manager,
+						   const gchar           *resource_path,
 						   GError               **error);
 void           gtk_ui_manager_add_ui              (GtkUIManager          *manager,
 						   guint                  merge_id,

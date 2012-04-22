@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -79,13 +77,17 @@ void       gtk_grid_attach_next_to         (GtkGrid         *grid,
                                             GtkPositionType  side,
                                             gint             width,
                                             gint             height);
+GDK_AVAILABLE_IN_3_2
 GtkWidget *gtk_grid_get_child_at           (GtkGrid         *grid,
                                             gint             left,
                                             gint             top);
+GDK_AVAILABLE_IN_3_2
 void       gtk_grid_insert_row             (GtkGrid         *grid,
                                             gint             position);
+GDK_AVAILABLE_IN_3_2
 void       gtk_grid_insert_column          (GtkGrid         *grid,
                                             gint             position);
+GDK_AVAILABLE_IN_3_2
 void       gtk_grid_insert_next_to         (GtkGrid         *grid,
                                             GtkWidget       *sibling,
                                             GtkPositionType  side);

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -57,8 +55,15 @@ GType    gdk_x11_window_get_type          (void);
 Window   gdk_x11_window_get_xid           (GdkWindow   *window);
 void     gdk_x11_window_set_user_time     (GdkWindow   *window,
                                            guint32      timestamp);
+void     gdk_x11_window_set_utf8_property    (GdkWindow *window,
+					      const gchar *name,
+					      const gchar *value);
+GDK_AVAILABLE_IN_3_2
 void     gdk_x11_window_set_theme_variant (GdkWindow   *window,
                                            char        *variant);
+GDK_AVAILABLE_IN_3_4
+void     gdk_x11_window_set_hide_titlebar_when_maximized (GdkWindow *window,
+                                                          gboolean   hide_titlebar_when_maximized);
 void     gdk_x11_window_move_to_current_desktop (GdkWindow   *window);
 
 /**

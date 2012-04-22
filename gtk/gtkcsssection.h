@@ -12,22 +12,21 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_CSS_SECTION_H__
 #define __GTK_CSS_SECTION_H__
 
 #include <gio/gio.h>
+#include <gdk/gdk.h>
 
 G_BEGIN_DECLS
 
 #define GTK_TYPE_CSS_SECTION         (gtk_css_section_get_type ())
 
 /**
- * GtkCssSection:
+ * GtkCssSectionType:
  * @GTK_CSS_SECTION_DOCUMENT: The section describes a complete document.
  *   This section time is the only one where gtk_css_section_get_parent()
  *   might return %NULL.
@@ -66,17 +65,27 @@ typedef enum
 
 typedef struct _GtkCssSection GtkCssSection;
 
+GDK_AVAILABLE_IN_3_2
 GType              gtk_css_section_get_type            (void) G_GNUC_CONST;
 
+GDK_AVAILABLE_IN_3_2
 GtkCssSection *    gtk_css_section_ref                 (GtkCssSection        *section);
+GDK_AVAILABLE_IN_3_2
 void               gtk_css_section_unref               (GtkCssSection        *section);
 
+GDK_AVAILABLE_IN_3_2
 GtkCssSectionType  gtk_css_section_get_section_type    (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 GtkCssSection *    gtk_css_section_get_parent          (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 GFile *            gtk_css_section_get_file            (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 guint              gtk_css_section_get_start_line      (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 guint              gtk_css_section_get_start_position  (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 guint              gtk_css_section_get_end_line        (const GtkCssSection  *section);
+GDK_AVAILABLE_IN_3_2
 guint              gtk_css_section_get_end_position    (const GtkCssSection  *section);
 
 G_END_DECLS

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -43,8 +41,8 @@
 
 #include "gtkdnd.h"
 #include "gtkiconfactory.h"
+#include "gtkiconhelperprivate.h"
 #include "gtkicontheme.h"
-#include "gtkimageprivate.h"
 #include "gtkinvisible.h"
 #include "gtkmain.h"
 #include "gtkplug.h"
@@ -52,7 +50,6 @@
 #include "gtktooltip.h"
 #include "gtkwindow.h"
 #include "gtkintl.h"
-#include "gtkdndcursors.h"
 #include "gtkselectionprivate.h"
 
 
@@ -97,15 +94,7 @@ struct _GtkDragSourceSite
   GtkTargetList     *target_list;        /* Targets for drag data */
   GdkDragAction      actions;            /* Possible actions */
 
-  /* Drag icon */
-  GtkImageType icon_type;
-  union
-  {
-    GtkImagePixbufData pixbuf;
-    GtkImageStockData stock;
-    GtkImageIconNameData name;
-    GtkImageGIconData gicon;
-  } icon_data;
+  GtkIconHelper     *icon_helper;
 
   /* Stored button press information to detect drag beginning */
   gint               state;
@@ -141,7 +130,7 @@ struct _GtkDragSourceInfo
   guint              drop_timeout;     /* Timeout for aborting drop */
   guint              destroy_icon : 1; /* If true, destroy icon_window */
   guint              have_grab : 1;    /* Do we still have the pointer grab */
-  GdkPixbuf         *icon_pixbuf;
+  GtkIconHelper     *icon_helper;
   GdkCursor         *drag_cursors[6];
 };
 
@@ -207,7 +196,8 @@ static void          gtk_drag_get_event_actions (GdkEvent        *event,
 					         GdkDragAction    actions,
 					         GdkDragAction   *suggested_action,
 					         GdkDragAction   *possible_actions);
-static GdkCursor *   gtk_drag_get_cursor         (GdkDisplay     *display,
+static GdkCursor *   gtk_drag_get_cursor         (GtkWidget      *widget,
+                                                  GdkDisplay     *display,
 						  GdkDragAction   action,
 						  GtkDragSourceInfo *info);
 static void          gtk_drag_update_cursor      (GtkDragSourceInfo *info);
@@ -303,12 +293,11 @@ static gboolean gtk_drag_button_release_cb     (GtkWidget         *widget,
 					        gpointer           data);
 static gboolean gtk_drag_abort_timeout         (gpointer           data);
 
-static void     set_icon_stock_pixbuf          (GdkDragContext    *context,
-						const gchar       *stock_id,
-						GdkPixbuf         *pixbuf,
-						gint               hot_x,
-						gint               hot_y,
-						gboolean           force_window);
+static void     set_icon_helper (GdkDragContext    *context,
+                                 GtkIconHelper     *helper,
+                                 gint               hot_x,
+                                 gint               hot_y,
+                                 gboolean           force_window);
 
 /************************
  * Cursor and Icon data *
@@ -317,16 +306,15 @@ static void     set_icon_stock_pixbuf          (GdkDragContext    *context,
 static struct {
   GdkDragAction action;
   const gchar  *name;
-  const guint8 *data;
   GdkPixbuf    *pixbuf;
   GdkCursor    *cursor;
 } drag_cursors[] = {
   { GDK_ACTION_DEFAULT, NULL },
-  { GDK_ACTION_ASK,   "dnd-ask",  dnd_cursor_ask,  NULL, NULL },
-  { GDK_ACTION_COPY,  "dnd-copy", dnd_cursor_copy, NULL, NULL },
-  { GDK_ACTION_MOVE,  "dnd-move", dnd_cursor_move, NULL, NULL },
-  { GDK_ACTION_LINK,  "dnd-link", dnd_cursor_link, NULL, NULL },
-  { 0              ,  "dnd-none", dnd_cursor_none, NULL, NULL },
+  { GDK_ACTION_ASK,   "dnd-ask",  NULL, NULL },
+  { GDK_ACTION_COPY,  "dnd-copy", NULL, NULL },
+  { GDK_ACTION_MOVE,  "dnd-move", NULL, NULL },
+  { GDK_ACTION_LINK,  "dnd-link", NULL, NULL },
+  { 0              ,  "dnd-none", NULL, NULL },
 };
 
 /*********************
@@ -742,7 +730,7 @@ gtk_drag_get_event_actions (GdkEvent *event,
 	  break;
 	}
 
-      if ((button == 2 || button == 3) && (actions & GDK_ACTION_ASK))
+      if ((button == GDK_BUTTON_MIDDLE || button == GDK_BUTTON_SECONDARY) && (actions & GDK_ACTION_ASK))
 	{
 	  *suggested_action = GDK_ACTION_ASK;
 	  *possible_actions = actions;
@@ -828,8 +816,25 @@ gtk_drag_can_use_rgba_cursor (GdkDisplay *display,
   return TRUE;
 }
 
+static void
+ensure_drag_cursor_pixbuf (int i)
+{
+  if (drag_cursors[i].pixbuf == NULL)
+    {
+      char *path = g_strconcat ("/org/gtk/libgtk/cursor/",  drag_cursors[i].name, ".png", NULL);
+      GInputStream *stream = g_resources_open_stream (path, 0, NULL);
+      if (stream != NULL)
+	{
+	  drag_cursors[i].pixbuf = gdk_pixbuf_new_from_stream (stream, NULL, NULL);
+	  g_object_unref (stream);
+	}
+      g_free (path);
+    }
+}
+
 static GdkCursor *
-gtk_drag_get_cursor (GdkDisplay        *display,
+gtk_drag_get_cursor (GtkWidget         *widget,
+                     GdkDisplay        *display,
 		     GdkDragAction      action,
 		     GtkDragSourceInfo *info)
 {
@@ -852,10 +857,6 @@ gtk_drag_get_cursor (GdkDisplay        *display,
     if (drag_cursors[i].action == action)
       break;
 
-  if (drag_cursors[i].pixbuf == NULL)
-    drag_cursors[i].pixbuf = 
-      gdk_pixbuf_new_from_inline (-1, drag_cursors[i].data, FALSE, NULL);
-
   if (drag_cursors[i].cursor != NULL)
     {
       if (display != gdk_cursor_get_display (drag_cursors[i].cursor))
@@ -869,14 +870,17 @@ gtk_drag_get_cursor (GdkDisplay        *display,
     drag_cursors[i].cursor = gdk_cursor_new_from_name (display, drag_cursors[i].name);
   
   if (drag_cursors[i].cursor == NULL)
-    drag_cursors[i].cursor = gdk_cursor_new_from_pixbuf (display, drag_cursors[i].pixbuf, 0, 0);
+    {
+      ensure_drag_cursor_pixbuf (i);
+      drag_cursors[i].cursor = gdk_cursor_new_from_pixbuf (display, drag_cursors[i].pixbuf, 0, 0);
+    }
 
-  if (info && info->icon_pixbuf) 
+  if (info && info->icon_helper) 
     {
       gint cursor_width, cursor_height;
       gint icon_width, icon_height;
       gint width, height;
-      GdkPixbuf *cursor_pixbuf, *pixbuf;
+      GdkPixbuf *cursor_pixbuf, *pixbuf, *icon_pixbuf;
       gint hot_x, hot_y;
       gint icon_x, icon_y, ref_x, ref_y;
 
@@ -889,15 +893,21 @@ gtk_drag_get_cursor (GdkDisplay        *display,
 	  info->drag_cursors[i] = NULL;
         }
 
+      icon_pixbuf = _gtk_icon_helper_ensure_pixbuf (info->icon_helper,
+                                                    gtk_widget_get_style_context (widget));
+
       icon_x = info->hot_x;
       icon_y = info->hot_y;
-      icon_width = gdk_pixbuf_get_width (info->icon_pixbuf);
-      icon_height = gdk_pixbuf_get_height (info->icon_pixbuf);
+      icon_width = gdk_pixbuf_get_width (icon_pixbuf);
+      icon_height = gdk_pixbuf_get_height (icon_pixbuf);
 
       hot_x = hot_y = 0;
       cursor_pixbuf = gdk_cursor_get_image (drag_cursors[i].cursor);
       if (!cursor_pixbuf)
-	cursor_pixbuf = g_object_ref (drag_cursors[i].pixbuf);
+	{
+	  ensure_drag_cursor_pixbuf (i);
+	  cursor_pixbuf = g_object_ref (drag_cursors[i].pixbuf);
+	}
       else
 	{
 	  if (gdk_pixbuf_get_option (cursor_pixbuf, "x_hot"))
@@ -1001,7 +1011,7 @@ gtk_drag_get_cursor (GdkDisplay        *display,
 	  
 	  gdk_pixbuf_fill (pixbuf, 0xff000000);
 	  
-	  gdk_pixbuf_composite (info->icon_pixbuf, pixbuf,
+	  gdk_pixbuf_composite (icon_pixbuf, pixbuf,
 				ref_x - icon_x, ref_y - icon_y, 
 				icon_width, icon_height,
 				ref_x - icon_x, ref_y - icon_y, 
@@ -1022,6 +1032,7 @@ gtk_drag_get_cursor (GdkDisplay        *display,
 	}
       
       g_object_unref (cursor_pixbuf);
+      g_object_unref (icon_pixbuf);
       
       if (info->drag_cursors[i] != NULL)
 	return info->drag_cursors[i];
@@ -1047,7 +1058,8 @@ gtk_drag_update_cursor (GtkDragSourceInfo *info)
   if (i == G_N_ELEMENTS (drag_cursors))
     return;
 
-  cursor = gtk_drag_get_cursor (gdk_cursor_get_display (info->cursor), 
+  cursor = gtk_drag_get_cursor (info->widget,
+                                gdk_cursor_get_display (info->cursor), 
 				drag_cursors[i].action, info);
   
   if (cursor != info->cursor)
@@ -2005,8 +2017,7 @@ gtk_drag_find_widget (GtkWidget           *widget,
             g_object_add_weak_pointer (G_OBJECT (parent), (gpointer *) &parent);
         }
 
-      g_list_foreach (hierarchy, (GFunc) g_object_unref, NULL);
-      g_list_free (hierarchy);
+      g_list_free_full (hierarchy, g_object_unref);
 
       if (found)
         return TRUE;
@@ -2411,6 +2422,22 @@ gtk_drag_dest_drop (GtkWidget	     *widget,
  * Source side *
  ***************/
 
+static GtkIconHelper *
+gtk_drag_source_site_get_icon_helper (GtkDragSourceSite *site)
+{
+  GtkIconHelper *helper;
+
+  if (site)
+    helper = g_object_ref (site->icon_helper);
+  else
+    helper = _gtk_icon_helper_new ();
+
+  if (_gtk_icon_helper_get_is_empty (helper))
+    _gtk_icon_helper_set_stock_id (helper, GTK_STOCK_DND, GTK_ICON_SIZE_DND);
+
+  return helper;
+}
+
 /* Like GtkDragBegin, but also takes a GtkDragSourceSite,
  * so that we can set the icon from the source site information
  */
@@ -2439,7 +2466,8 @@ gtk_drag_begin_internal (GtkWidget         *widget,
   gtk_drag_get_event_actions (event, button, actions,
 			      &suggested_action, &possible_actions);
   
-  cursor = gtk_drag_get_cursor (gtk_widget_get_display (widget), 
+  cursor = gtk_drag_get_cursor (widget,
+                                gtk_widget_get_display (widget), 
 			        suggested_action,
 				NULL);
   
@@ -2546,46 +2574,16 @@ gtk_drag_begin_internal (GtkWidget         *widget,
    * application may have set one in ::drag_begin, or it may
    * not have set one.
    */
-  if (!info->icon_window && !info->icon_pixbuf)
-    {
-      if (!site || site->icon_type == GTK_IMAGE_EMPTY)
-	gtk_drag_set_icon_default (context);
-      else
-	switch (site->icon_type)
-	  {
-	  case GTK_IMAGE_PIXBUF:
-	    gtk_drag_set_icon_pixbuf (context,
-				      site->icon_data.pixbuf.pixbuf,
-				      -2, -2);
-	    break;
-	  case GTK_IMAGE_STOCK:
-	    gtk_drag_set_icon_stock (context,
-				     site->icon_data.stock.stock_id,
-				     -2, -2);
-	    break;
-	  case GTK_IMAGE_ICON_NAME:
-	    gtk_drag_set_icon_name (context,
-			    	    site->icon_data.name.icon_name,
-				    -2, -2);
-	    break;
-	  case GTK_IMAGE_GICON:
-	    gtk_drag_set_icon_gicon (context,
-				     site->icon_data.gicon.icon,
-				     -2, -2);
-	    break;
-	  case GTK_IMAGE_EMPTY:
-	  default:
-	    g_assert_not_reached();
-	    break;
-	  }
-    }
+  if (!info->icon_window && !info->icon_helper)
+    info->icon_helper = gtk_drag_source_site_get_icon_helper (site);
 
   /* We need to composite the icon into the cursor, if we are
    * not using an icon window.
    */
-  if (info->icon_pixbuf)  
+  if (info->icon_helper)
     {
-      cursor = gtk_drag_get_cursor (gtk_widget_get_display (widget), 
+      cursor = gtk_drag_get_cursor (widget,
+                                    gtk_widget_get_display (widget), 
   			            suggested_action,
 			  	    info);
   
@@ -2721,8 +2719,7 @@ gtk_drag_source_set (GtkWidget            *widget,
   else
     {
       site = g_slice_new0 (GtkDragSourceSite);
-
-      site->icon_type = GTK_IMAGE_EMPTY;
+      site->icon_helper = _gtk_icon_helper_new ();
       
       g_signal_connect (widget, "button-press-event",
 			G_CALLBACK (gtk_drag_source_event_cb),
@@ -2910,32 +2907,6 @@ gtk_drag_source_add_uri_targets (GtkWidget *widget)
   gtk_target_list_unref (target_list);
 }
 
-static void
-gtk_drag_source_unset_icon (GtkDragSourceSite *site)
-{
-  switch (site->icon_type)
-    {
-    case GTK_IMAGE_EMPTY:
-      break;
-    case GTK_IMAGE_PIXBUF:
-      g_object_unref (site->icon_data.pixbuf.pixbuf);
-      break;
-    case GTK_IMAGE_STOCK:
-      g_free (site->icon_data.stock.stock_id);
-      break;
-    case GTK_IMAGE_ICON_NAME:
-      g_free (site->icon_data.name.icon_name);
-      break;
-    case GTK_IMAGE_GICON:
-      _gtk_image_gicon_data_clear (&(site->icon_data.gicon));
-      break;
-    default:
-      g_assert_not_reached();
-      break;
-    }
-  site->icon_type = GTK_IMAGE_EMPTY;
-}
-
 /**
  * gtk_drag_source_set_icon_pixbuf: (method)
  * @widget: a #GtkWidget
@@ -2958,10 +2929,7 @@ gtk_drag_source_set_icon_pixbuf (GtkWidget   *widget,
   g_return_if_fail (site != NULL); 
   g_object_ref (pixbuf);
 
-  gtk_drag_source_unset_icon (site);
-
-  site->icon_type = GTK_IMAGE_PIXBUF;
-  site->icon_data.pixbuf.pixbuf = pixbuf;
+  _gtk_icon_helper_set_pixbuf (site->icon_helper, pixbuf);
 }
 
 /**
@@ -2983,11 +2951,8 @@ gtk_drag_source_set_icon_stock (GtkWidget   *widget,
 
   site = g_object_get_data (G_OBJECT (widget), "gtk-site-data");
   g_return_if_fail (site != NULL);
-  
-  gtk_drag_source_unset_icon (site);
 
-  site->icon_type = GTK_IMAGE_STOCK;
-  site->icon_data.stock.stock_id = g_strdup (stock_id);
+  _gtk_icon_helper_set_stock_id (site->icon_helper, stock_id, GTK_ICON_SIZE_DND);
 }
 
 /**
@@ -3012,10 +2977,7 @@ gtk_drag_source_set_icon_name (GtkWidget   *widget,
   site = g_object_get_data (G_OBJECT (widget), "gtk-site-data");
   g_return_if_fail (site != NULL);
 
-  gtk_drag_source_unset_icon (site);
-
-  site->icon_type = GTK_IMAGE_ICON_NAME;
-  site->icon_data.name.icon_name = g_strdup (icon_name);
+  _gtk_icon_helper_set_icon_name (site->icon_helper, icon_name, GTK_ICON_SIZE_DND);
 }
 
 /**
@@ -3040,10 +3002,7 @@ gtk_drag_source_set_icon_gicon (GtkWidget       *widget,
   site = g_object_get_data (G_OBJECT (widget), "gtk-site-data");
   g_return_if_fail (site != NULL);
 
-  gtk_drag_source_unset_icon (site);
-  
-  site->icon_type = GTK_IMAGE_GICON;
-  site->icon_data.gicon.icon = g_object_ref (icon);
+  _gtk_icon_helper_set_gicon (site->icon_helper, icon, GTK_ICON_SIZE_DND);
 }
 
 static void
@@ -3063,6 +3022,7 @@ gtk_drag_get_icon (GtkDragSourceInfo *info,
 	  gint save_hot_x, save_hot_y;
 	  gboolean save_destroy_icon;
 	  GtkWidget *save_icon_window;
+          GtkIconHelper *helper;
 	  
 	  /* HACK to get the appropriate icon
 	   */
@@ -3072,14 +3032,18 @@ gtk_drag_get_icon (GtkDragSourceInfo *info,
 	  save_destroy_icon = info->destroy_icon;
 
 	  info->icon_window = NULL;
-          set_icon_stock_pixbuf (info->context, 
-                                 GTK_STOCK_DND, NULL, -2, -2, TRUE);
+
+          helper = _gtk_icon_helper_new ();
+          _gtk_icon_helper_set_stock_id (helper, GTK_STOCK_DND, GTK_ICON_SIZE_DND);
+          set_icon_helper (info->context, helper, -2, -2, TRUE);
 	  info->fallback_icon = info->icon_window;
 	  
 	  info->icon_window = save_icon_window;
 	  info->hot_x = save_hot_x;
 	  info->hot_y = save_hot_y;
 	  info->destroy_icon = save_destroy_icon;
+
+          g_object_unref (helper);
 	}
       
       gtk_widget_hide (info->icon_window);
@@ -3149,11 +3113,8 @@ gtk_drag_set_icon_window (GdkDragContext *context,
   info->hot_y = hot_y;
   info->destroy_icon = destroy_on_release;
 
-  if (widget && info->icon_pixbuf)
-    {
-      g_object_unref (info->icon_pixbuf);
-      info->icon_pixbuf = NULL;
-    }
+  if (widget && info->icon_helper)
+    g_clear_object (&info->icon_helper);
 
   gtk_drag_update_cursor (info);
   gtk_drag_update_icon (info);
@@ -3186,12 +3147,14 @@ gtk_drag_set_icon_widget (GdkDragContext    *context,
 
 static void
 icon_window_realize (GtkWidget *window,
-		     GdkPixbuf *pixbuf)
+		     GtkIconHelper *helper)
 {
   cairo_surface_t *surface;
   cairo_pattern_t *pattern;
   cairo_t *cr;
+  GdkPixbuf *pixbuf;
 
+  pixbuf = _gtk_icon_helper_ensure_pixbuf (helper, gtk_widget_get_style_context (window));
   surface = gdk_window_create_similar_surface (gtk_widget_get_window (window),
                                                CAIRO_CONTENT_COLOR,
                                                gdk_pixbuf_get_width (pixbuf),
@@ -3232,15 +3195,16 @@ icon_window_realize (GtkWidget *window,
 
       cairo_surface_destroy (surface);
     }
+
+  g_object_unref (pixbuf);
 }
 
 static void
-set_icon_stock_pixbuf (GdkDragContext    *context,
-		       const gchar       *stock_id,
-		       GdkPixbuf         *pixbuf,
-		       gint               hot_x,
-		       gint               hot_y,
-		       gboolean           force_window)
+set_icon_helper (GdkDragContext    *context,
+                 GtkIconHelper     *helper,
+                 gint               hot_x,
+                 gint               hot_y,
+                 gboolean           force_window)
 {
   GtkWidget *window;
   gint width, height;
@@ -3248,8 +3212,7 @@ set_icon_stock_pixbuf (GdkDragContext    *context,
   GdkDisplay *display;
 
   g_return_if_fail (context != NULL);
-  g_return_if_fail (pixbuf != NULL || stock_id != NULL);
-  g_return_if_fail (pixbuf == NULL || stock_id == NULL);
+  g_return_if_fail (helper != NULL);
 
   screen = gdk_window_get_screen (gdk_drag_context_get_source_window (context));
 
@@ -3261,25 +3224,10 @@ set_icon_stock_pixbuf (GdkDragContext    *context,
   gtk_widget_set_events (window, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
   gtk_widget_set_app_paintable (window, TRUE);
 
-  if (stock_id)
-    {
-      pixbuf = gtk_widget_render_icon_pixbuf (window, stock_id,
-                                              GTK_ICON_SIZE_DND);
-
-      if (!pixbuf)
-	{
-	  g_warning ("Cannot load drag icon from stock_id %s", stock_id);
-	  gtk_widget_destroy (window);
-	  return;
-	}
-
-    }
-  else
-    g_object_ref (pixbuf);
-
   display = gdk_window_get_display (gdk_drag_context_get_source_window (context));
-  width = gdk_pixbuf_get_width (pixbuf);
-  height = gdk_pixbuf_get_height (pixbuf);
+  _gtk_icon_helper_get_size (helper, 
+                             gtk_widget_get_style_context (window),
+                             &width, &height);
 
   if (!force_window &&
       gtk_drag_can_use_rgba_cursor (display, width + 2, height + 2))
@@ -3290,9 +3238,9 @@ set_icon_stock_pixbuf (GdkDragContext    *context,
 
       info = gtk_drag_get_source_info (context, FALSE);
 
-      if (info->icon_pixbuf)
-	g_object_unref (info->icon_pixbuf);
-      info->icon_pixbuf = pixbuf;
+      if (info->icon_helper)
+	g_object_unref (info->icon_helper);
+      info->icon_helper = g_object_ref (helper);
 
       gtk_drag_set_icon_window (context, NULL, hot_x, hot_y, TRUE);
     }
@@ -3302,7 +3250,7 @@ set_icon_stock_pixbuf (GdkDragContext    *context,
 
       g_signal_connect_closure (window, "realize",
   			        g_cclosure_new (G_CALLBACK (icon_window_realize),
-					        pixbuf,
+					        g_object_ref (helper),
 					        (GClosureNotify)g_object_unref),
 			        FALSE);
 		    
@@ -3326,10 +3274,16 @@ gtk_drag_set_icon_pixbuf  (GdkDragContext *context,
 			   gint            hot_x,
 			   gint            hot_y)
 {
+  GtkIconHelper *icon;
+
   g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
   g_return_if_fail (GDK_IS_PIXBUF (pixbuf));
 
-  set_icon_stock_pixbuf (context, NULL, pixbuf, hot_x, hot_y, FALSE);
+  icon = _gtk_icon_helper_new ();
+  _gtk_icon_helper_set_pixbuf (icon, pixbuf);
+  set_icon_helper (context, icon, hot_x, hot_y, FALSE);
+
+  g_object_unref (icon);
 }
 
 /**
@@ -3348,10 +3302,16 @@ gtk_drag_set_icon_stock  (GdkDragContext *context,
 			  gint            hot_x,
 			  gint            hot_y)
 {
+  GtkIconHelper *icon;
+
   g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
   g_return_if_fail (stock_id != NULL);
-  
-  set_icon_stock_pixbuf (context, stock_id, NULL, hot_x, hot_y, FALSE);
+
+  icon = _gtk_icon_helper_new ();
+  _gtk_icon_helper_set_stock_id (icon, stock_id, GTK_ICON_SIZE_DND);
+  set_icon_helper (context, icon, hot_x, hot_y, FALSE);
+
+  g_object_unref (icon);
 }
 
 /* XXX: This function is in gdk, too. Should it be in Cairo? */
@@ -3503,13 +3463,15 @@ gtk_drag_set_icon_name (GdkDragContext *context,
 			gint            hot_x,
 			gint            hot_y)
 {
-  GIcon *icon;
+  GtkIconHelper *icon;
 
   g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
   g_return_if_fail (icon_name != NULL);
 
-  icon = g_themed_icon_new (icon_name);
-  gtk_drag_set_icon_gicon (context, icon, hot_x, hot_y);
+  icon = _gtk_icon_helper_new ();
+  _gtk_icon_helper_set_icon_name (icon, icon_name, GTK_ICON_SIZE_DND);
+  set_icon_helper (context, icon, hot_x, hot_y, FALSE);
+
   g_object_unref (icon);
 }
 
@@ -3533,45 +3495,16 @@ gtk_drag_set_icon_gicon (GdkDragContext *context,
 			 gint            hot_x,
 			 gint            hot_y)
 {
-  GdkScreen *screen;
-  GtkSettings *settings;
-  GtkIconTheme *icon_theme;
-  GtkIconInfo *icon_info;
-  GdkPixbuf *pixbuf;
-  gint width, height, icon_size;
+  GtkIconHelper *helper;
 
   g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
   g_return_if_fail (icon != NULL);
 
-  screen = gdk_window_get_screen (gdk_drag_context_get_source_window (context));
-  g_return_if_fail (screen != NULL);
+  helper = _gtk_icon_helper_new ();
+  _gtk_icon_helper_set_gicon (helper, icon, GTK_ICON_SIZE_DND);
+  set_icon_helper (context, helper, hot_x, hot_y, FALSE);
 
-  settings = gtk_settings_get_for_screen (screen);
-  if (gtk_icon_size_lookup_for_settings (settings,
-					 GTK_ICON_SIZE_DND,
-					 &width, &height))
-    icon_size = MAX (width, height);
-  else 
-    icon_size = 32; /* default value for GTK_ICON_SIZE_DND */ 
-
-  icon_theme = gtk_icon_theme_get_for_screen (screen);
-
-  icon_info = gtk_icon_theme_lookup_by_gicon (icon_theme, icon, icon_size, 0);
-  if (icon_info != NULL)
-    {
-      pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
-    }
-  else
-    pixbuf = NULL;
-
-  if (pixbuf)
-    set_icon_stock_pixbuf (context, NULL, pixbuf, hot_x, hot_y, FALSE);
-  else
-    {
-      char *str = g_icon_to_string (icon);
-      g_warning ("Cannot load drag icon from GIcon '%s'", str);
-      g_free (str);
-    }
+  g_object_unref (helper);
 }
 
 /**
@@ -3647,7 +3580,8 @@ _gtk_drag_source_handle_event (GtkWidget *widget,
 	  }
 	else if (info->have_grab)
 	  {
-	    cursor = gtk_drag_get_cursor (gtk_widget_get_display (widget),
+	    cursor = gtk_drag_get_cursor (widget, 
+                                          gtk_widget_get_display (widget),
 					  gdk_drag_context_get_selected_action (event->dnd.context),
 					  info);
 	    if (info->cursor != cursor)
@@ -3786,8 +3720,8 @@ gtk_drag_drop_finished (GtkDragSourceInfo *info,
 	  info->cur_screen = gtk_widget_get_screen (info->widget);
 
 	  if (!info->icon_window)
-	    set_icon_stock_pixbuf (info->context, NULL, info->icon_pixbuf, 
-				   0, 0, TRUE);
+	    set_icon_helper (info->context, info->icon_helper, 
+                             0, 0, TRUE);
 
 	  gtk_drag_update_icon (info);
 
@@ -3950,7 +3884,7 @@ gtk_drag_source_site_destroy (gpointer data)
   if (site->target_list)
     gtk_target_list_unref (site->target_list);
 
-  gtk_drag_source_unset_icon (site);
+  g_clear_object (&site->icon_helper);
   g_slice_free (GtkDragSourceSite, site);
 }
 
@@ -4093,12 +4027,7 @@ gtk_drag_source_info_destroy (GtkDragSourceInfo *info)
     }
 
   gtk_drag_remove_icon (info);
-
-  if (info->icon_pixbuf)
-    {
-      g_object_unref (info->icon_pixbuf);
-      info->icon_pixbuf = NULL;
-    }
+  g_clear_object (&info->icon_helper);
 
   g_signal_handlers_disconnect_by_func (info->ipc_widget,
 					gtk_drag_grab_broken_event_cb,

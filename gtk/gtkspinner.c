@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA  02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Code adapted from egg-spinner
  * by Christian Hergert <christian.hergert@gmail.com>
@@ -31,10 +29,11 @@
 
 #include "config.h"
 
-#include "gtkintl.h"
-#include "gtkaccessible.h"
-#include "gtkimage.h"
 #include "gtkspinner.h"
+
+#include "gtkimage.h"
+#include "gtkintl.h"
+#include "gtkstylecontext.h"
 #include "a11y/gtkspinneraccessible.h"
 
 
@@ -202,12 +201,9 @@ gtk_spinner_draw (GtkWidget *widget,
                   cairo_t   *cr)
 {
   GtkStyleContext *context;
-  GtkStateFlags state;
 
   context = gtk_widget_get_style_context (widget);
-  state = gtk_widget_get_state_flags (widget);
 
-  gtk_style_context_set_state (context, state);
   gtk_render_activity (context, cr, 0, 0,
                        gtk_widget_get_allocated_width (widget),
                        gtk_widget_get_allocated_height (widget));

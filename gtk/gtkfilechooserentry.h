@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_FILE_CHOOSER_ENTRY_H__
@@ -33,16 +31,12 @@ G_BEGIN_DECLS
 typedef struct _GtkFileChooserEntry      GtkFileChooserEntry;
 
 GType              _gtk_file_chooser_entry_get_type           (void) G_GNUC_CONST;
-GtkWidget *        _gtk_file_chooser_entry_new                (gboolean eat_tab);
+GtkWidget *        _gtk_file_chooser_entry_new                (gboolean             eat_tab);
 void               _gtk_file_chooser_entry_set_action         (GtkFileChooserEntry *chooser_entry,
 							       GtkFileChooserAction action);
 GtkFileChooserAction _gtk_file_chooser_entry_get_action       (GtkFileChooserEntry *chooser_entry);
-void               _gtk_file_chooser_entry_set_file_system    (GtkFileChooserEntry *chooser_entry,
-							       GtkFileSystem       *file_system);
 void               _gtk_file_chooser_entry_set_base_folder    (GtkFileChooserEntry *chooser_entry,
 							       GFile               *folder);
-void               _gtk_file_chooser_entry_set_file_part      (GtkFileChooserEntry *chooser_entry,
-							       const gchar         *file_part);
 GFile *            _gtk_file_chooser_entry_get_current_folder (GtkFileChooserEntry *chooser_entry);
 const gchar *      _gtk_file_chooser_entry_get_file_part      (GtkFileChooserEntry *chooser_entry);
 gboolean           _gtk_file_chooser_entry_get_is_folder      (GtkFileChooserEntry *chooser_entry,

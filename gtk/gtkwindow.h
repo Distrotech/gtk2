@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -135,6 +133,11 @@ gboolean   gtk_window_activate_default	       (GtkWindow           *window);
 void       gtk_window_set_transient_for        (GtkWindow           *window, 
 						GtkWindow           *parent);
 GtkWindow *gtk_window_get_transient_for        (GtkWindow           *window);
+GDK_AVAILABLE_IN_3_4
+void       gtk_window_set_attached_to          (GtkWindow           *window, 
+                                                GtkWidget           *attach_widget);
+GDK_AVAILABLE_IN_3_4
+GtkWidget *gtk_window_get_attached_to          (GtkWindow           *window);
 void       gtk_window_set_opacity              (GtkWindow           *window, 
 						gdouble              opacity);
 gdouble    gtk_window_get_opacity              (GtkWindow           *window);
@@ -159,11 +162,18 @@ gboolean   gtk_window_get_focus_on_map         (GtkWindow           *window);
 void       gtk_window_set_destroy_with_parent  (GtkWindow           *window,
                                                 gboolean             setting);
 gboolean   gtk_window_get_destroy_with_parent  (GtkWindow           *window);
+GDK_AVAILABLE_IN_3_4
+void       gtk_window_set_hide_titlebar_when_maximized (GtkWindow   *window,
+                                                        gboolean     setting);
+GDK_AVAILABLE_IN_3_4
+gboolean   gtk_window_get_hide_titlebar_when_maximized (GtkWindow   *window);
 void       gtk_window_set_mnemonics_visible    (GtkWindow           *window,
                                                 gboolean             setting);
 gboolean   gtk_window_get_mnemonics_visible    (GtkWindow           *window);
+GDK_AVAILABLE_IN_3_2
 void       gtk_window_set_focus_visible        (GtkWindow           *window,
                                                 gboolean             setting);
+GDK_AVAILABLE_IN_3_2
 gboolean   gtk_window_get_focus_visible        (GtkWindow           *window);
 
 void       gtk_window_set_resizable            (GtkWindow           *window,

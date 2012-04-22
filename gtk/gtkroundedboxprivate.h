@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_ROUNDED_BOX_PRIVATE_H__
@@ -30,11 +28,17 @@
 G_BEGIN_DECLS
 
 typedef struct _GtkRoundedBox GtkRoundedBox;
+typedef struct _GtkRoundedBoxCorner GtkRoundedBoxCorner;
+
+struct _GtkRoundedBoxCorner {
+  double                   horizontal;
+  double                   vertical;
+};
 
 struct _GtkRoundedBox {
   /*< private >*/
-  cairo_rectangle_t  box;
-  GtkCssBorderRadius border_radius;
+  cairo_rectangle_t        box;
+  GtkRoundedBoxCorner      corner[4];
 };
 
 void            _gtk_rounded_box_init_rect                      (GtkRoundedBox       *box,
@@ -43,10 +47,13 @@ void            _gtk_rounded_box_init_rect                      (GtkRoundedBox  
                                                                  double               width,
                                                                  double               height);
 
-void            _gtk_rounded_box_apply_border_radius            (GtkRoundedBox       *box,
+void            _gtk_rounded_box_apply_border_radius_for_engine (GtkRoundedBox       *box,
                                                                  GtkThemingEngine    *engine,
-                                                                 GtkStateFlags        state,
                                                                  GtkJunctionSides     junction);
+void            _gtk_rounded_box_apply_border_radius_for_context (GtkRoundedBox    *box,
+                                                                  GtkStyleContext  *context,
+                                                                  GtkJunctionSides  junction);
+
 void            _gtk_rounded_box_shrink                         (GtkRoundedBox       *box,
                                                                  double               top,
                                                                  double               right,
@@ -56,8 +63,14 @@ void            _gtk_rounded_box_move                           (GtkRoundedBox  
                                                                  double               dx,
                                                                  double               dy);
 
+double          _gtk_rounded_box_guess_length                   (const GtkRoundedBox *box,
+                                                                 GtkCssSide           side);
+
 void            _gtk_rounded_box_path                           (const GtkRoundedBox *box,
                                                                  cairo_t             *cr);
+void            _gtk_rounded_box_path_side                      (const GtkRoundedBox *box,
+                                                                 cairo_t             *cr,
+                                                                 GtkCssSide           side);
 void            _gtk_rounded_box_path_top                       (const GtkRoundedBox *outer,
                                                                  const GtkRoundedBox *inner,
                                                                  cairo_t             *cr);

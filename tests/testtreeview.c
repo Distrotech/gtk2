@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -792,6 +790,9 @@ main (int    argc,
   
   gtk_container_add (GTK_CONTAINER (sw), tv);
   
+  create_prop_editor (G_OBJECT (tv), GTK_TYPE_TREE_VIEW);
+  create_prop_editor (G_OBJECT (gtk_tree_view_get_selection (GTK_TREE_VIEW (tv))), GTK_TYPE_TREE_SELECTION);
+
   gtk_widget_show_all (window);
   
   gtk_main ();

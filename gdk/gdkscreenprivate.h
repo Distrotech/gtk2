@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GDK_SCREEN_PRIVATE_H__
@@ -60,6 +58,9 @@ struct _GdkScreenClass
   gchar *      (* get_monitor_plug_name) (GdkScreen *screen,
                                           gint       monitor_num);
   void         (* get_monitor_geometry)  (GdkScreen    *screen,
+                                          gint          monitor_num,
+                                          GdkRectangle *dest);
+  void         (* get_monitor_workarea)  (GdkScreen    *screen,
                                           gint          monitor_num,
                                           GdkRectangle *dest);
   GList *      (* list_visuals)          (GdkScreen *screen);

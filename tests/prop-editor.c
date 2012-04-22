@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -661,12 +659,12 @@ object_properties (GtkWidget *button,
 }
 
 static void
-color_modified (GtkColorButton *cb, gpointer data)
+rgba_modified (GtkColorButton *cb, gpointer data)
 {
   ObjectProperty *p = data;
-  GdkRGBA rgba;
+  GdkRGBA color;
 
-  gtk_color_button_get_rgba (cb, &rgba);
+  gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (cb), &color);
 
   if (is_child_property (p->spec))
     {
@@ -674,14 +672,14 @@ color_modified (GtkColorButton *cb, gpointer data)
       GtkWidget *parent = gtk_widget_get_parent (widget);
 
       gtk_container_child_set (GTK_CONTAINER (parent),
-                               widget, p->spec->name, &rgba, NULL);
+                               widget, p->spec->name, &color, NULL);
     }
   else
-    g_object_set (p->obj, p->spec->name, &rgba, NULL);
+    g_object_set (p->obj, p->spec->name, &color, NULL);
 }
 
 static void
-color_changed (GObject *object, GParamSpec *pspec, gpointer data)
+rgba_changed (GObject *object, GParamSpec *pspec, gpointer data)
 {
   GtkColorButton *cb = GTK_COLOR_BUTTON (data);
   GValue val = G_VALUE_INIT;
@@ -692,12 +690,54 @@ color_changed (GObject *object, GParamSpec *pspec, gpointer data)
   get_property_value (object, pspec, &val);
 
   color = g_value_get_boxed (&val);
-  gtk_color_button_get_rgba (cb, &cb_color);
+  gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (cb), &cb_color);
 
   if (color != NULL && !gdk_rgba_equal (color, &cb_color))
     {
       block_controller (G_OBJECT (cb));
-      gtk_color_button_set_rgba (cb, color);
+      gtk_color_chooser_set_rgba (GTK_COLOR_CHOOSER (cb), color);
+      unblock_controller (G_OBJECT (cb));
+    }
+
+  g_value_unset (&val);
+}
+
+static void
+color_modified (GtkColorButton *cb, gpointer data)
+{
+  ObjectProperty *p = data;
+  GValue val = G_VALUE_INIT;
+
+  g_value_init (&val, GDK_TYPE_COLOR);
+  g_object_get_property (G_OBJECT (cb), "color", &val);
+
+  if (is_child_property (p->spec))
+    {
+      GtkWidget *widget = GTK_WIDGET (p->obj);
+      GtkWidget *parent = gtk_widget_get_parent (widget);
+
+      gtk_container_child_set_property (GTK_CONTAINER (parent),
+			                widget, p->spec->name, &val);
+    }
+  else
+    g_object_set_property (p->obj, p->spec->name, &val);
+
+  g_value_unset (&val);
+}
+
+static void
+color_changed (GObject *object, GParamSpec *pspec, gpointer data)
+{
+  GtkColorButton *cb = GTK_COLOR_BUTTON (data);
+  GValue val = G_VALUE_INIT;
+
+  g_value_init (&val, GDK_TYPE_COLOR);
+  get_property_value (object, pspec, &val);
+
+  if (g_value_get_boxed (&val))
+    {
+      block_controller (G_OBJECT (cb));
+      g_object_set_property (G_OBJECT (cb), "color", &val);
       unblock_controller (G_OBJECT (cb));
     }
 
@@ -966,6 +1006,20 @@ property_widget (GObject    *object,
 
       /* The Properties button is not really modifying, anyway */
       can_modify = TRUE;
+    }
+  else if (type == G_TYPE_PARAM_BOXED &&
+           G_PARAM_SPEC_VALUE_TYPE (spec) == GDK_TYPE_RGBA)
+    {
+      prop_edit = gtk_color_button_new ();
+      gtk_color_chooser_set_use_alpha (GTK_COLOR_CHOOSER (prop_edit), TRUE);
+
+      g_object_connect_property (object, spec,
+                                 G_CALLBACK (rgba_changed),
+                                 prop_edit, G_OBJECT (prop_edit));
+
+      if (can_modify)
+        connect_controller (G_OBJECT (prop_edit), "color-set",
+                            object, spec, G_CALLBACK (rgba_modified));
     }
   else if (type == G_TYPE_PARAM_BOXED &&
            G_PARAM_SPEC_VALUE_TYPE (spec) == GDK_TYPE_COLOR)

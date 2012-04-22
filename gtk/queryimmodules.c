@@ -14,16 +14,13 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include <glib.h>
 #include <glib/gprintf.h>
-#include <gmodule.h>
 
 #include <errno.h>
 #include <string.h>
@@ -37,8 +34,13 @@
 #define SOEXT ("." G_MODULE_SUFFIX)
 #endif
 
-#include "gtk/gtkimmodule.h"
+#include "gtk/gtkimcontextinfo.h"
 #include "gtk/gtkversion.h"
+
+#define GDK_DISABLE_DEPRECATION_WARNINGS
+#undef GTK_DISABLE_DEPRECATED
+
+#include "gtk/deprecated/gtkrc.h"
 
 static void
 escape_string (GString *contents, const char *str)

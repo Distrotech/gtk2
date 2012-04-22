@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -26,32 +24,30 @@
 #include <atk/atk.h>
 
 #include "gtkfontchooserwidget.h"
-#include "gtkfontchooser.h"
-#include "gtkfontchooserutils.h"
+
+#include "gtkadjustment.h"
+#include "gtkbuildable.h"
+#include "gtkbox.h"
 #include "gtkcellrenderertext.h"
 #include "gtkentry.h"
-#include "gtkframe.h"
-#include "gtkbbox.h"
-#include "gtkbox.h"
+#include "gtkgrid.h"
+#include "gtkfontchooser.h"
+#include "gtkfontchooserutils.h"
+#include "gtkintl.h"
 #include "gtklabel.h"
 #include "gtkliststore.h"
-#include "gtkstock.h"
+#include "gtknotebook.h"
+#include "gtkprivate.h"
+#include "gtkscale.h"
+#include "gtkscrolledwindow.h"
+#include "gtkspinbutton.h"
 #include "gtktextview.h"
 #include "gtktreeselection.h"
 #include "gtktreeview.h"
-#include "gtkscrolledwindow.h"
-#include "gtkintl.h"
-#include "gtkaccessible.h"
-#include "gtkbuildable.h"
-#include "gtkprivate.h"
-#include "gtkscale.h"
-#include "gtkspinbutton.h"
-#include "gtknotebook.h"
 #include "gtkwidget.h"
-#include "gtkgrid.h"
 
 /**
- * SECTION:gtkfontchooser
+ * SECTION:gtkfontchooserwidget
  * @Short_description: A widget for selecting fonts
  * @Title: GtkFontChooserWidget
  * @See_also: #GtkFontChooserDialog
@@ -807,7 +803,7 @@ gtk_font_chooser_widget_get_preview_text_height (GtkFontChooserWidget *fontchoos
                          "font-size", &font_size,
                          NULL);
 
-  return dpi / 72.0 * PANGO_SCALE_X_LARGE * font_size * PANGO_SCALE;
+  return (dpi < 0.0 ? 96.0 : dpi) / 72.0 * PANGO_SCALE_X_LARGE * font_size * PANGO_SCALE;
 }
 
 static PangoAttrList *

@@ -13,9 +13,7 @@
    Library General Public License for more details.
 
    You should have received a copy of the GNU Library General Public
-   License along with the Gnome Library; see the file COPYING.LIB.  If not,
-   write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.
+   License along with this library. If not, see <http://www.gnu.org/licenses/>.
 
    Author: Alexander Larsson <alexl@redhat.com>
 */
@@ -38,6 +36,7 @@
  * screen or workspace.
  * <example>
  * <title>Launching an application</title>
+ * <informalexample>
  * <programlisting>
  * GdkAppLaunchContext *context;
  *
@@ -51,6 +50,7 @@
  *
  * g_object_unref (context);
  * </programlisting>
+ * </informalexample>
  * </example>
  */
 

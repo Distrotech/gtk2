@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* gdkgeometry-win32.c: emulation of 32 bit coordinates within the
@@ -59,17 +57,12 @@ _gdk_window_move_resize_child (GdkWindow *window,
 			       gint       height)
 {
   GdkWindowImplWin32 *impl;
-  gboolean is_move;
-  gboolean is_resize;
 
   g_return_if_fail (window != NULL);
   g_return_if_fail (GDK_IS_WINDOW (window));
 
   impl = GDK_WINDOW_IMPL_WIN32 (window->impl);
 
-  is_move = (x - window->x != 0) && (y - window->y != 0);
-  is_resize = window->width != width && window->height != height;
-  
   GDK_NOTE (MISC, g_print ("_gdk_window_move_resize_child: %s@%+d%+d %dx%d@%+d%+d\n",
 			   _gdk_win32_window_description (window),
 			   window->x, window->y, width, height, x, y));
@@ -93,19 +86,15 @@ _gdk_window_move_resize_child (GdkWindow *window,
   _gdk_win32_window_tmp_unset_bg (window, TRUE);
   
   GDK_NOTE (MISC, g_print ("... SetWindowPos(%p,NULL,%d,%d,%d,%d,"
-			   "NOACTIVATE|NOZORDER%s%s)\n",
+			   "NOACTIVATE|NOZORDER)\n",
 			   GDK_WINDOW_HWND (window),
 			   window->x + window->parent->abs_x, window->y + window->parent->abs_y, 
-			   width, height,
-			   (is_move ? "" : "|NOMOVE"),
-			   (is_resize ? "" : "|NOSIZE")));
+			   width, height));
 
   API_CALL (SetWindowPos, (GDK_WINDOW_HWND (window), NULL,
 			   window->x + window->parent->abs_x, window->y + window->parent->abs_y, 
 			   width, height,
-			   SWP_NOACTIVATE | SWP_NOZORDER | 
-			   (is_move ? 0 : SWP_NOMOVE) |
-			   (is_resize ? 0 : SWP_NOSIZE)));
+			   SWP_NOACTIVATE | SWP_NOZORDER));
 
   _gdk_win32_window_tmp_reset_bg (window, TRUE);
 }

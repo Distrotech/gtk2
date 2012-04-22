@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_LOCK_BUTTON_H__
@@ -58,9 +56,13 @@ struct _GtkLockButtonClass
   void (*reserved7) (void);
 };
 
+GDK_AVAILABLE_IN_3_2
 GType        gtk_lock_button_get_type       (void) G_GNUC_CONST;
+GDK_AVAILABLE_IN_3_2
 GtkWidget   *gtk_lock_button_new            (GPermission   *permission);
+GDK_AVAILABLE_IN_3_2
 GPermission *gtk_lock_button_get_permission (GtkLockButton *button);
+GDK_AVAILABLE_IN_3_2
 void         gtk_lock_button_set_permission (GtkLockButton *button,
                                              GPermission   *permission);
 

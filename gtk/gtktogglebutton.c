@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -115,8 +113,6 @@ enum {
 };
 
 
-static gint gtk_toggle_button_draw         (GtkWidget            *widget,
-					    cairo_t              *cr);
 static gboolean gtk_toggle_button_mnemonic_activate  (GtkWidget            *widget,
                                                       gboolean              group_cycling);
 static void gtk_toggle_button_pressed       (GtkButton            *button);
@@ -161,7 +157,6 @@ gtk_toggle_button_class_init (GtkToggleButtonClass *class)
   gobject_class->set_property = gtk_toggle_button_set_property;
   gobject_class->get_property = gtk_toggle_button_get_property;
 
-  widget_class->draw = gtk_toggle_button_draw;
   widget_class->mnemonic_activate = gtk_toggle_button_mnemonic_activate;
 
   button_class->pressed = gtk_toggle_button_pressed;
@@ -565,34 +560,6 @@ gtk_toggle_button_get_inconsistent (GtkToggleButton *toggle_button)
   return toggle_button->priv->inconsistent;
 }
 
-static gint
-gtk_toggle_button_draw (GtkWidget *widget,
-			cairo_t   *cr)
-{
-  GtkToggleButton *toggle_button = GTK_TOGGLE_BUTTON (widget);
-  GtkToggleButtonPrivate *priv = toggle_button->priv;
-  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
-  GtkButton *button = GTK_BUTTON (widget);
-  GtkStateType state;
-
-  state = gtk_widget_get_state_flags (widget);
-
-  if (priv->inconsistent)
-    state |= GTK_STATE_FLAG_INCONSISTENT;
-  else if (button->priv->depressed)
-    state |= GTK_STATE_FLAG_ACTIVE;
-
-  _gtk_button_paint (button, cr,
-                     gtk_widget_get_allocated_width (widget),
-                     gtk_widget_get_allocated_height (widget),
-                     state);
-
-  if (child)
-    gtk_container_propagate_draw (GTK_CONTAINER (widget), child, cr);
-
-  return FALSE;
-}
-
 static gboolean
 gtk_toggle_button_mnemonic_activate (GtkWidget *widget,
                                      gboolean   group_cycling)
@@ -658,12 +625,8 @@ gtk_toggle_button_update_state (GtkButton *button)
 {
   GtkToggleButton *toggle_button = GTK_TOGGLE_BUTTON (button);
   GtkToggleButtonPrivate *priv = toggle_button->priv;
-  gboolean depressed, touchscreen;
+  gboolean depressed;
   GtkStateFlags new_state = 0;
-
-  g_object_get (gtk_widget_get_settings (GTK_WIDGET (button)),
-                "gtk-touchscreen-mode", &touchscreen,
-                NULL);
 
   new_state = gtk_widget_get_state_flags (GTK_WIDGET (button)) &
     ~(GTK_STATE_FLAG_INCONSISTENT |
@@ -680,7 +643,7 @@ gtk_toggle_button_update_state (GtkButton *button)
   else
     depressed = priv->active;
 
-  if (!touchscreen && button->priv->in_button && (!button->priv->button_down || priv->draw_indicator))
+  if (button->priv->in_button && (!button->priv->button_down || priv->draw_indicator))
     new_state |= GTK_STATE_FLAG_PRELIGHT;
 
   if (depressed)

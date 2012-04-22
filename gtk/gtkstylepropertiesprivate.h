@@ -12,28 +12,26 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_STYLE_PROPERTIES_PRIVATE_H__
 #define __GTK_STYLE_PROPERTIES_PRIVATE_H__
 
 #include "gtkstyleproperties.h"
-#include "gtkstylepropertyprivate.h"
+#include "gtkcssstylepropertyprivate.h"
+#include "gtkstylecontextprivate.h"
+#include "gtksymboliccolorprivate.h"
 
 G_BEGIN_DECLS
 
-const GValue * _gtk_style_properties_peek_property            (GtkStyleProperties      *props,
-                                                               const gchar             *prop_name,
-                                                               GtkStateFlags            state,
-                                                               const GtkStyleProperty **property);
-
+GtkCssValue  * _gtk_style_properties_peek_property            (GtkStyleProperties      *props,
+                                                               GtkCssStyleProperty     *property,
+                                                               GtkStateFlags            state);
 void           _gtk_style_properties_set_property_by_property (GtkStyleProperties      *props,
-                                                               const GtkStyleProperty  *property,
+                                                               GtkCssStyleProperty     *property,
                                                                GtkStateFlags            state,
-                                                               const GValue            *value);
+                                                               GtkCssValue             *value);
 
 G_END_DECLS
 

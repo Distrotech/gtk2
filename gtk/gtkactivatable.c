@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -340,9 +338,9 @@ gtk_activatable_update (GtkActivatable *activatable,
  * @action: (allow-none): the related #GtkAction or %NULL
  *
  * This is called to update the activatable completely, this is called
- * internally when the #GtkActivatable::related-action property is set
+ * internally when the #GtkActivatable:related-action property is set
  * or unset and by the implementing class when
- * #GtkActivatable::use-action-appearance changes.
+ * #GtkActivatable:use-action-appearance changes.
  *
  * Since: 2.16
  **/

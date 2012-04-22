@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -1664,9 +1662,10 @@ render_fallback_image (GtkStyleContext   *context,
       _gtk_icon_theme_ensure_builtin_cache ();
 
       index = _gtk_icon_cache_get_directory_index (_builtin_cache, "24");
-      pixbuf = _gtk_icon_cache_get_icon (_builtin_cache,
-					 GTK_STOCK_MISSING_IMAGE,
-					 index);
+      pixbuf = _gtk_icon_cache_get_icon (_builtin_cache, "image-missing", index);
+
+      g_return_val_if_fail(pixbuf != NULL, NULL);
+
       gtk_icon_source_set_pixbuf (&fallback_source, pixbuf);
       g_object_unref (pixbuf);
     }
@@ -2147,7 +2146,7 @@ gtk_icon_source_set_filename (GtkIconSource *source,
 }
 
 /**
- * gtk_icon_source_set_icon_name
+ * gtk_icon_source_set_icon_name:
  * @source: a #GtkIconSource
  * @icon_name: (allow-none): name of icon to use
  *

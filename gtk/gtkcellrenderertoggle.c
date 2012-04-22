@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -24,6 +22,7 @@
 #include "gtkmarshalers.h"
 #include "gtkprivate.h"
 #include "gtktreeprivate.h"
+#include "a11y/gtkbooleancellaccessible.h"
 
 
 /**
@@ -196,6 +195,8 @@ gtk_cell_renderer_toggle_class_init (GtkCellRendererToggleClass *class)
 		  G_TYPE_STRING);
 
   g_type_class_add_private (object_class, sizeof (GtkCellRendererTogglePrivate));
+
+  _gtk_cell_renderer_class_set_accessible_type (cell_class, GTK_TYPE_BOOLEAN_CELL_ACCESSIBLE);
 }
 
 static void
@@ -360,10 +361,12 @@ gtk_cell_renderer_toggle_render (GtkCellRenderer      *cell,
   if (width <= 0 || height <= 0)
     return;
 
+  state = gtk_cell_renderer_get_state (cell, widget, flags);
+
   if (!priv->activatable)
-    state = GTK_STATE_FLAG_INSENSITIVE;
-  else
-    state = gtk_cell_renderer_get_state (cell, widget, flags);
+    state |= GTK_STATE_FLAG_INSENSITIVE;
+
+  state &= ~(GTK_STATE_FLAG_INCONSISTENT | GTK_STATE_FLAG_ACTIVE);
 
   if (priv->inconsistent)
     state |= GTK_STATE_FLAG_INCONSISTENT;

@@ -11,20 +11,99 @@ licensing terms for GTK+, the GNU LGPL, allow it to be used by all
 developers, including those developing proprietary software, without any
 license fees or royalties.
 
-The official ftp site is:
+The official download locations are:
   ftp://ftp.gtk.org/pub/gtk
+  http://download.gnome.org/sources/gtk+
 
 The official web site is:
   http://www.gtk.org/
 
 Information about mailing lists can be found at
-  http://www.gtk.org/mailing-lists.html
+  http://www.gtk.org/mailing-lists.php
 
 
 Installation
 ============
 
 See the file 'INSTALL'
+
+
+How to report bugs
+==================
+
+Bugs should be reported to the GNOME bug tracking system.
+(http://bugzilla.gnome.org, product glib.) You will need
+to create an account for yourself.
+
+In the bug report please include:
+
+* Information about your system. For instance:
+
+   - What operating system and version
+   - For Linux, what version of the C library
+
+  And anything else you think is relevant.
+
+* How to reproduce the bug.
+
+  If you can reproduce it with one of the test programs that are built
+  in the tests/ subdirectory, that will be most convenient.  Otherwise,
+  please include a short test program that exhibits the behavior.
+  As a last resort, you can also provide a pointer to a larger piece
+  of software that can be downloaded.
+
+* If the bug was a crash, the exact text that was printed out
+  when the crash occured.
+
+* Further information such as stack traces may be useful, but
+  is not necessary.
+
+
+Patches
+=======
+
+Patches should also be submitted to bugzilla.gnome.org. If the
+patch fixes an existing bug, add the patch as an attachment
+to that bug report.
+
+Otherwise, enter a new bug report that describes the patch,
+and attach the patch to that bug report.
+
+Patches should be in unified diff form. (The -up option to GNU diff.)
+
+
+Release notes for 3.4
+=====================
+
+* Scroll events have been separated from button events, and smooth
+  scrolling has been added with a separate event mask. Widgets now
+  need to have either GDK_SCROLL_MASK or GDK_SMOOTH_SCROLL_MASK in
+  their event mask to receive scroll events.
+
+* GTK+ now uses <Primary> instead of <Control> in keyboard accelerators,
+  for improved cross-platform handling. This should not affect
+  applications, unless they parse or create these accelerator
+  manually.
+
+* The tacit assumption that the Alt key corresponds to the MOD1
+  modifier under X11 is now a hard requirement.
+
+* The beagle search backend for the file chooser has been dropped.
+  Tracker is the only supported search backend on Linux now.
+
+* GtkNotebook has been changed to destroy its action widgets when
+  it gets destroyed itself. If your application is using action
+  widgets in notebooks, you may have to adjust your code to take
+  this into account.
+
+* GtkApplication no longer uses the gtk mainloop wrappers, so
+  it is no longer possible to use gtk_main_quit() to stop it.
+
+* The -uninstalled variants of the pkg-config files have been dropped.
+
+* Excessive dependencies have been culled from Requires: lines
+  in .pc files. Dependent modules may have to declare dependencies
+  that there were getting 'for free' in the past.
 
 
 Release notes for 3.2

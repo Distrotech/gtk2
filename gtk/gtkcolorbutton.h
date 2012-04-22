@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* Color picker button for GNOME
@@ -73,28 +71,37 @@ struct _GtkColorButtonClass {
 };
 
 
-GType      gtk_color_button_get_type       (void) G_GNUC_CONST;
-GtkWidget *gtk_color_button_new            (void);
-GtkWidget *gtk_color_button_new_with_color (const GdkColor *color);
-GtkWidget *gtk_color_button_new_with_rgba  (const GdkRGBA  *rgba);
-void       gtk_color_button_set_color      (GtkColorButton *color_button,
-                                            const GdkColor *color);
-void       gtk_color_button_set_alpha      (GtkColorButton *color_button,
-                                            guint16         alpha);
-void       gtk_color_button_get_color      (GtkColorButton *color_button,
-                                            GdkColor       *color);
-guint16    gtk_color_button_get_alpha      (GtkColorButton *color_button);
-void       gtk_color_button_set_use_alpha  (GtkColorButton *color_button,
-                                            gboolean        use_alpha);
-gboolean   gtk_color_button_get_use_alpha  (GtkColorButton *color_button);
-void       gtk_color_button_set_rgba       (GtkColorButton *color_button,
-                                            const GdkRGBA  *rgba);
-void       gtk_color_button_get_rgba       (GtkColorButton *color_button,
-                                            GdkRGBA        *rgba);
-void       gtk_color_button_set_title      (GtkColorButton *color_button,
-                                            const gchar    *title);
-const gchar *gtk_color_button_get_title    (GtkColorButton *color_button);
+GType        gtk_color_button_get_type      (void) G_GNUC_CONST;
+GtkWidget *  gtk_color_button_new           (void);
+GtkWidget *  gtk_color_button_new_with_rgba (const GdkRGBA  *rgba);
+void         gtk_color_button_set_title     (GtkColorButton *button,
+                                             const gchar    *title);
+const gchar *gtk_color_button_get_title     (GtkColorButton *button);
 
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_button_new_with_rgba)
+GtkWidget *gtk_color_button_new_with_color (const GdkColor *color);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_button_set_rgba)
+void       gtk_color_button_set_color      (GtkColorButton *button,
+                                            const GdkColor *color);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_button_get_rgba)
+void       gtk_color_button_get_color      (GtkColorButton *button,
+                                            GdkColor       *color);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_button_set_rgba)
+void       gtk_color_button_set_alpha      (GtkColorButton *button,
+                                            guint16         alpha);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_button_get_rgba)
+guint16    gtk_color_button_get_alpha      (GtkColorButton *button);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_chooser_set_use_alpha)
+void         gtk_color_button_set_use_alpha (GtkColorButton *button,
+                                             gboolean        use_alpha);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_chooser_get_use_alpha)
+gboolean     gtk_color_button_get_use_alpha (GtkColorButton *button);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_chooser_set_rgba)
+void         gtk_color_button_set_rgba      (GtkColorButton *button,
+                                             const GdkRGBA  *rgba);
+GDK_DEPRECATED_IN_3_4_FOR(gtk_color_chooser_get_rgba)
+void         gtk_color_button_get_rgba      (GtkColorButton *button,
+                                             GdkRGBA        *rgba);
 
 G_END_DECLS
 

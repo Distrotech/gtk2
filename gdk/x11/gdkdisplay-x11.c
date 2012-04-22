@@ -17,9 +17,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -98,13 +96,11 @@ static gboolean gdk_x11_display_translate_event (GdkEventTranslator *translator,
                                                  GdkEvent           *event,
                                                  XEvent             *xevent);
 
-#ifdef HAVE_X11R6
 static void gdk_internal_connection_watch (Display  *display,
 					   XPointer  arg,
 					   gint      fd,
 					   gboolean  opening,
 					   XPointer *watch_data);
-#endif /* HAVE_X11R6 */
 
 typedef struct _GdkEventTypeX11 GdkEventTypeX11;
 
@@ -155,7 +151,8 @@ static const char *const precache_atoms[] = {
   "_NET_WM_WINDOW_TYPE_NORMAL",
   "_NET_WM_USER_TIME",
   "_NET_VIRTUAL_ROOTS",
-  "GDK_SELECTION"
+  "GDK_SELECTION",
+  "_NET_WM_STATE_FOCUSED"
 };
 
 static char *gdk_sm_client_id;
@@ -202,7 +199,7 @@ do_net_wm_state_changes (GdkWindow *window)
     }
   else
     {
-      if (toplevel->have_sticky || toplevel->on_all_desktops)
+      if (toplevel->have_sticky && toplevel->on_all_desktops)
         gdk_synthesize_window_state (window,
                                      0,
                                      GDK_WINDOW_STATE_STICKY);
@@ -240,6 +237,36 @@ do_net_wm_state_changes (GdkWindow *window)
                                      0,
                                      GDK_WINDOW_STATE_MAXIMIZED);
     }
+
+  if (old_state & GDK_WINDOW_STATE_FOCUSED)
+    {
+      if (!toplevel->have_focused)
+        gdk_synthesize_window_state (window,
+                                     GDK_WINDOW_STATE_FOCUSED,
+                                     0);
+    }
+  else
+    {
+      if (toplevel->have_focused)
+        gdk_synthesize_window_state (window,
+                                     0,
+                                     GDK_WINDOW_STATE_FOCUSED);
+    }
+
+  if (old_state & GDK_WINDOW_STATE_ICONIFIED)
+    {
+      if (!toplevel->have_hidden)
+        gdk_synthesize_window_state (window,
+                                     GDK_WINDOW_STATE_ICONIFIED,
+                                     0);
+    }
+  else
+    {
+      if (toplevel->have_hidden)
+        gdk_synthesize_window_state (window,
+                                     0,
+                                     GDK_WINDOW_STATE_ICONIFIED);
+    }
 }
 
 static void
@@ -268,7 +295,7 @@ gdk_check_wm_desktop_changed (GdkWindow *window)
   if (type != None)
     {
       desktop = (gulong *)data;
-      toplevel->on_all_desktops = (*desktop == 0xFFFFFFFF);
+      toplevel->on_all_desktops = ((*desktop & 0xFFFFFFFF) == 0xFFFFFFFF);
       XFree (desktop);
     }
   else
@@ -282,6 +309,7 @@ gdk_check_wm_state_changed (GdkWindow *window)
 {
   GdkToplevelX11 *toplevel = _gdk_x11_window_get_toplevel (window);
   GdkDisplay *display = GDK_WINDOW_DISPLAY (window);
+  GdkScreen *screen = GDK_WINDOW_SCREEN (window);
 
   Atom type;
   gint format;
@@ -297,6 +325,8 @@ gdk_check_wm_state_changed (GdkWindow *window)
   toplevel->have_maxvert = FALSE;
   toplevel->have_maxhorz = FALSE;
   toplevel->have_fullscreen = FALSE;
+  toplevel->have_focused = FALSE;
+  toplevel->have_hidden = FALSE;
 
   type = None;
   gdk_x11_display_error_trap_push (display);
@@ -312,6 +342,8 @@ gdk_check_wm_state_changed (GdkWindow *window)
       Atom maxvert_atom = gdk_x11_get_xatom_by_name_for_display (display, "_NET_WM_STATE_MAXIMIZED_VERT");
       Atom maxhorz_atom	= gdk_x11_get_xatom_by_name_for_display (display, "_NET_WM_STATE_MAXIMIZED_HORZ");
       Atom fullscreen_atom = gdk_x11_get_xatom_by_name_for_display (display, "_NET_WM_STATE_FULLSCREEN");
+      Atom focused_atom = gdk_x11_get_xatom_by_name_for_display (display, "_NET_WM_STATE_FOCUSED");
+      Atom hidden_atom = gdk_x11_get_xatom_by_name_for_display (display, "_NET_WM_STATE_HIDDEN");
 
       atoms = (Atom *)data;
 
@@ -326,12 +358,20 @@ gdk_check_wm_state_changed (GdkWindow *window)
             toplevel->have_maxhorz = TRUE;
           else if (atoms[i] == fullscreen_atom)
             toplevel->have_fullscreen = TRUE;
+          else if (atoms[i] == focused_atom)
+            toplevel->have_focused = TRUE;
+          else if (atoms[i] == hidden_atom)
+            toplevel->have_hidden = TRUE;
 
           ++i;
         }
 
       XFree (atoms);
     }
+
+  if (!gdk_x11_screen_supports_net_wm_hint (screen,
+                                            gdk_atom_intern_static_string ("_NET_WM_STATE_FOCUSED")))
+    toplevel->have_focused = TRUE;
 
   /* When have_sticky is turned on, we have to check the DESKTOP property
    * as well.
@@ -606,19 +646,27 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
       event->any.type = GDK_UNMAP;
       event->any.window = window;
 
-      /* If we are shown (not withdrawn) and get an unmap, it means we
-       * were iconified in the X sense. If we are withdrawn, and get
-       * an unmap, it means we hid the window ourselves, so we
-       * will have already flipped the iconified bit off.
+      /* If the WM supports the _NET_WM_STATE_HIDDEN hint, we do not want to
+       * interpret UnmapNotify events as implying iconic state.
+       * http://bugzilla.gnome.org/show_bug.cgi?id=590726.
        */
-      if (window)
+      if (screen &&
+          !gdk_x11_screen_supports_net_wm_hint (screen,
+                                                gdk_atom_intern_static_string ("_NET_WM_STATE_HIDDEN")))
         {
-          if (GDK_WINDOW_IS_MAPPED (window))
-            gdk_synthesize_window_state (window,
-                                         0,
-                                         GDK_WINDOW_STATE_ICONIFIED);
-
-          _gdk_x11_window_grab_check_unmap (window, xevent->xany.serial);
+          /* If we are shown (not withdrawn) and get an unmap, it means we were
+           * iconified in the X sense. If we are withdrawn, and get an unmap, it
+           * means we hid the window ourselves, so we will have already flipped
+           * the iconified bit off.
+           */
+          if (window)
+            {
+              if (GDK_WINDOW_IS_MAPPED (window))
+                gdk_synthesize_window_state (window,
+                                             0,
+                                             GDK_WINDOW_STATE_ICONIFIED);
+              _gdk_x11_window_grab_check_unmap (window, xevent->xany.serial);
+            }
         }
 
       break;
@@ -1175,17 +1223,15 @@ _gdk_x11_display_open (const gchar *display_name)
   xdisplay = XOpenDisplay (display_name);
   if (!xdisplay)
     return NULL;
-  
+
   display = g_object_new (GDK_TYPE_X11_DISPLAY, NULL);
   display_x11 = GDK_X11_DISPLAY (display);
 
   display_x11->xdisplay = xdisplay;
 
-#ifdef HAVE_X11R6  
   /* Set up handlers for Xlib internal connections */
   XAddConnectionWatch (xdisplay, gdk_internal_connection_watch, NULL);
-#endif /* HAVE_X11R6 */
-  
+
   _gdk_x11_precache_atoms (display, precache_atoms, G_N_ELEMENTS (precache_atoms));
 
   /* RandR must be initialized before we initialize the screens */
@@ -1378,7 +1424,7 @@ _gdk_x11_display_open (const gchar *display_name)
 	    XkbSelectEventDetails (display_x11->xdisplay,
 				   XkbUseCoreKbd, XkbStateNotify,
 				   XkbAllStateComponentsMask,
-                                   XkbGroupLockMask|XkbModifierLockMask);
+                                   XkbModifierStateMask|XkbGroupStateMask);
 
 	    XkbSetDetectableAutoRepeat (display_x11->xdisplay,
 					True,
@@ -1419,7 +1465,6 @@ _gdk_x11_display_open (const gchar *display_name)
   return display;
 }
 
-#ifdef HAVE_X11R6
 /*
  * XLib internal connection handling
  */
@@ -1498,7 +1543,6 @@ gdk_internal_connection_watch (Display  *display,
   else
     gdk_remove_connection_handler ((GdkInternalConnection *)*watch_data);
 }
-#endif /* HAVE_X11R6 */
 
 static const gchar *
 gdk_x11_display_get_name (GdkDisplay *display)
@@ -1554,9 +1598,12 @@ device_grab_update_callback (GdkDisplay *display,
                              gpointer    data,
                              gulong      serial)
 {
+  GdkPointerWindowInfo *pointer_info;
   GdkDevice *device = data;
 
-  _gdk_display_device_grab_update (display, device, NULL, serial);
+  pointer_info = _gdk_display_get_pointer_info (display, device);
+  _gdk_display_device_grab_update (display, device,
+                                   pointer_info->last_slave, serial);
 }
 
 #define XSERVER_TIME_IS_LATER(time1, time2)                        \
@@ -1742,12 +1789,10 @@ gdk_x11_display_finalize (GObject *object)
   g_slist_free (display_x11->event_types);
 
   /* input GdkDevice list */
-  g_list_foreach (display_x11->input_devices, (GFunc) g_object_unref, NULL);
-  g_list_free (display_x11->input_devices);
+  g_list_free_full (display_x11->input_devices, g_object_unref);
 
   /* input GdkWindow list */
-  g_list_foreach (display_x11->input_windows, (GFunc) g_free, NULL);
-  g_list_free (display_x11->input_windows);
+  g_list_free_full (display_x11->input_windows, g_free);
 
   /* Free all GdkScreens */
   for (i = 0; i < ScreenCount (display_x11->xdisplay); i++)
@@ -1843,9 +1888,10 @@ _gdk_x11_display_screen_for_xrootwin (GdkDisplay *display,
 /**
  * gdk_x11_display_get_xdisplay:
  * @display: (type GdkX11Display): a #GdkDisplay
- * @returns: (transfer none): an X display.
  *
  * Returns the X display of a #GdkDisplay.
+ *
+ * Returns: (transfer none): an X display
  *
  * Since: 2.2
  */

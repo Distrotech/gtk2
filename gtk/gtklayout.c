@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * GtkLayout: Widget for scrolling of arbitrary-sized areas.
  *
@@ -34,9 +32,10 @@
 
 #include "gdk/gdk.h"
 
-#include "gtkprivate.h"
+#include "gtkadjustment.h"
 #include "gtkintl.h"
 #include "gtkmarshalers.h"
+#include "gtkprivate.h"
 #include "gtkscrollable.h"
 
 
@@ -322,25 +321,11 @@ gtk_layout_finalize (GObject *object)
   G_OBJECT_CLASS (gtk_layout_parent_class)->finalize (object);
 }
 
-/**
- * gtk_layout_set_hadjustment:
- * @layout: a #GtkLayout
- * @adjustment: (allow-none): new scroll adjustment
- *
- * Sets the horizontal scroll adjustment for the layout.
- *
- * See #GtkScrolledWindow, #GtkScrollbar, #GtkAdjustment for details.
- *
- * Deprecated: 3.0: Use gtk_scrollable_set_hadjustment()
- **/
-void
-gtk_layout_set_hadjustment (GtkLayout     *layout,
-                            GtkAdjustment *adjustment)
+static void
+gtk_layout_do_set_hadjustment (GtkLayout     *layout,
+                               GtkAdjustment *adjustment)
 {
   GtkLayoutPrivate *priv;
-
-  g_return_if_fail (GTK_IS_LAYOUT (layout));
-  g_return_if_fail (adjustment == NULL || GTK_IS_ADJUSTMENT (adjustment));
 
   priv = layout->priv;
 
@@ -366,26 +351,32 @@ gtk_layout_set_hadjustment (GtkLayout     *layout,
   g_object_notify (G_OBJECT (layout), "hadjustment");
 }
 
-
 /**
- * gtk_layout_set_vadjustment:
+ * gtk_layout_set_hadjustment:
  * @layout: a #GtkLayout
  * @adjustment: (allow-none): new scroll adjustment
  *
- * Sets the vertical scroll adjustment for the layout.
+ * Sets the horizontal scroll adjustment for the layout.
  *
  * See #GtkScrolledWindow, #GtkScrollbar, #GtkAdjustment for details.
  *
- * Deprecated: 3.0: Use gtk_scrollable_set_vadjustment()
+ * Deprecated: 3.0: Use gtk_scrollable_set_hadjustment()
  **/
 void
-gtk_layout_set_vadjustment (GtkLayout     *layout,
+gtk_layout_set_hadjustment (GtkLayout     *layout,
                             GtkAdjustment *adjustment)
 {
-  GtkLayoutPrivate *priv;
-
   g_return_if_fail (GTK_IS_LAYOUT (layout));
   g_return_if_fail (adjustment == NULL || GTK_IS_ADJUSTMENT (adjustment));
+
+  gtk_layout_do_set_hadjustment (layout, adjustment);
+}
+
+static void
+gtk_layout_do_set_vadjustment (GtkLayout     *layout,
+                               GtkAdjustment *adjustment)
+{
+  GtkLayoutPrivate *priv;
 
   priv = layout->priv;
 
@@ -409,6 +400,27 @@ gtk_layout_set_vadjustment (GtkLayout     *layout,
   gtk_layout_set_vadjustment_values (layout);
 
   g_object_notify (G_OBJECT (layout), "vadjustment");
+}
+
+/**
+ * gtk_layout_set_vadjustment:
+ * @layout: a #GtkLayout
+ * @adjustment: (allow-none): new scroll adjustment
+ *
+ * Sets the vertical scroll adjustment for the layout.
+ *
+ * See #GtkScrolledWindow, #GtkScrollbar, #GtkAdjustment for details.
+ *
+ * Deprecated: 3.0: Use gtk_scrollable_set_vadjustment()
+ **/
+void
+gtk_layout_set_vadjustment (GtkLayout     *layout,
+                            GtkAdjustment *adjustment)
+{
+  g_return_if_fail (GTK_IS_LAYOUT (layout));
+  g_return_if_fail (adjustment == NULL || GTK_IS_ADJUSTMENT (adjustment));
+
+  gtk_layout_do_set_vadjustment (layout, adjustment);
 }
 
 static GtkLayoutChild*
@@ -735,12 +747,10 @@ gtk_layout_set_property (GObject      *object,
   switch (prop_id)
     {
     case PROP_HADJUSTMENT:
-      gtk_layout_set_hadjustment (layout, 
-				  (GtkAdjustment*) g_value_get_object (value));
+      gtk_layout_do_set_hadjustment (layout, g_value_get_object (value));
       break;
     case PROP_VADJUSTMENT:
-      gtk_layout_set_vadjustment (layout, 
-				  (GtkAdjustment*) g_value_get_object (value));
+      gtk_layout_do_set_vadjustment (layout, g_value_get_object (value));
       break;
     case PROP_HSCROLL_POLICY:
       priv->hscroll_policy = g_value_get_enum (value);
@@ -883,7 +893,8 @@ gtk_layout_realize (GtkWidget *widget)
   attributes.y = - gtk_adjustment_get_value (priv->vadjustment);
   attributes.width = MAX (priv->width, allocation.width);
   attributes.height = MAX (priv->height, allocation.height);
-  attributes.event_mask = GDK_EXPOSURE_MASK | GDK_SCROLL_MASK | 
+  attributes.event_mask = GDK_EXPOSURE_MASK | GDK_SCROLL_MASK |
+                          GDK_SMOOTH_SCROLL_MASK | 
                           gtk_widget_get_events (widget);
 
   priv->bin_window = gdk_window_new (window,
@@ -1112,7 +1123,5 @@ gtk_layout_adjustment_changed (GtkAdjustment *adjustment,
       gdk_window_move (priv->bin_window,
 		       - gtk_adjustment_get_value (priv->hadjustment),
 		       - gtk_adjustment_get_value (priv->vadjustment));
-
-      gdk_window_process_updates (priv->bin_window, TRUE);
     }
 }

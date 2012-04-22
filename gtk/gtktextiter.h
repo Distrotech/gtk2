@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -88,6 +86,7 @@ GtkTextBuffer *gtk_text_iter_get_buffer (const GtkTextIter *iter);
 
 GtkTextIter *gtk_text_iter_copy     (const GtkTextIter *iter);
 void         gtk_text_iter_free     (GtkTextIter       *iter);
+GDK_AVAILABLE_IN_3_2
 void         gtk_text_iter_assign   (GtkTextIter       *iter,
                                      const GtkTextIter *other);
 

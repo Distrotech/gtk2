@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -94,4 +92,82 @@ _gtk_cell_accessible_parent_grab_focus (GtkCellAccessibleParent *parent,
     return (iface->grab_focus) (parent, cell);
   else
     return FALSE;
+}
+
+int
+_gtk_cell_accessible_parent_get_child_index (GtkCellAccessibleParent *parent,
+                                             GtkCellAccessible       *cell)
+{
+  GtkCellAccessibleParentIface *iface;
+
+  g_return_val_if_fail (GTK_IS_CELL_ACCESSIBLE_PARENT (parent), FALSE);
+
+  iface = GTK_CELL_ACCESSIBLE_PARENT_GET_IFACE (parent);
+
+  if (iface->get_child_index)
+    return (iface->get_child_index) (parent, cell);
+  else
+    return -1;
+}
+
+GtkCellRendererState
+_gtk_cell_accessible_parent_get_renderer_state (GtkCellAccessibleParent *parent,
+                                                GtkCellAccessible       *cell)
+{
+  GtkCellAccessibleParentIface *iface;
+
+  g_return_val_if_fail (GTK_IS_CELL_ACCESSIBLE_PARENT (parent), 0);
+  g_return_val_if_fail (GTK_IS_CELL_ACCESSIBLE (cell), 0);
+
+  iface = GTK_CELL_ACCESSIBLE_PARENT_GET_IFACE (parent);
+
+  if (iface->get_renderer_state)
+    return (iface->get_renderer_state) (parent, cell);
+  else
+    return 0;
+}
+
+void
+_gtk_cell_accessible_parent_expand_collapse (GtkCellAccessibleParent *parent,
+                                             GtkCellAccessible       *cell)
+{
+  GtkCellAccessibleParentIface *iface;
+
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE_PARENT (parent));
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE (cell));
+
+  iface = GTK_CELL_ACCESSIBLE_PARENT_GET_IFACE (parent);
+
+  if (iface->expand_collapse)
+    (iface->expand_collapse) (parent, cell);
+}
+
+void
+_gtk_cell_accessible_parent_activate (GtkCellAccessibleParent *parent,
+                                      GtkCellAccessible       *cell)
+{
+  GtkCellAccessibleParentIface *iface;
+
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE_PARENT (parent));
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE (cell));
+
+  iface = GTK_CELL_ACCESSIBLE_PARENT_GET_IFACE (parent);
+
+  if (iface->activate)
+    (iface->activate) (parent, cell);
+}
+
+void
+_gtk_cell_accessible_parent_edit (GtkCellAccessibleParent *parent,
+                                  GtkCellAccessible       *cell)
+{
+  GtkCellAccessibleParentIface *iface;
+
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE_PARENT (parent));
+  g_return_if_fail (GTK_IS_CELL_ACCESSIBLE (cell));
+
+  iface = GTK_CELL_ACCESSIBLE_PARENT_GET_IFACE (parent);
+
+  if (iface->edit)
+    (iface->edit) (parent, cell);
 }

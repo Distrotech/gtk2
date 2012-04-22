@@ -15,9 +15,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with the Gnome Library; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Dave Camp <dave@novell.com>
  *          Alexander Larsson <alexl@redhat.com>
@@ -208,7 +206,7 @@ widget_button_press_event_cb (GtkWidget      *widget,
 {
   GtkAppChooserWidget *self = user_data;
 
-  if (event->button == 3 && event->type == GDK_BUTTON_PRESS)
+  if (event->button == GDK_BUTTON_SECONDARY && event->type == GDK_BUTTON_PRESS)
     {
       GAppInfo *info;
       GtkWidget *menu;
@@ -993,11 +991,7 @@ gtk_app_chooser_widget_dispose (GObject *object)
 {
   GtkAppChooserWidget *self = GTK_APP_CHOOSER_WIDGET (object);
 
-  if (self->priv->selected_app_info != NULL)
-    {
-      g_object_unref (self->priv->selected_app_info);
-      self->priv->selected_app_info = NULL;
-    }
+  g_clear_object (&self->priv->selected_app_info);
 
   G_OBJECT_CLASS (gtk_app_chooser_widget_parent_class)->dispose (object);
 }

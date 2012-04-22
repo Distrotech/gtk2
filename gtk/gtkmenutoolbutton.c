@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -327,7 +325,7 @@ menu_position_func (GtkMenu           *menu,
   monitor_num = gdk_screen_get_monitor_at_window (screen, window);
   if (monitor_num < 0)
     monitor_num = 0;
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   if (orientation == GTK_ORIENTATION_HORIZONTAL)
     {
@@ -417,7 +415,7 @@ arrow_button_button_press_event_cb (GtkWidget         *widget,
                                     GdkEventButton    *event,
                                     GtkMenuToolButton *button)
 {
-  if (event->button == 1)
+  if (event->button == GDK_BUTTON_PRIMARY)
     {
       popup_menu_under_arrow (button, event);
       gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (widget), TRUE);

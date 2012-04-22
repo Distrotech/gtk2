@@ -14,8 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -281,7 +280,7 @@ gtk_recent_manager_class_init (GtkRecentManagerClass *klass)
   gobject_class->finalize = gtk_recent_manager_finalize;
   
   /**
-   * GtkRecentManager:filename
+   * GtkRecentManager:filename:
    *
    * The full path to the file to be used to store and read the recently
    * used resources list
@@ -297,7 +296,7 @@ gtk_recent_manager_class_init (GtkRecentManagerClass *klass)
 							(G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE)));
 
   /**
-   * GtkRecentManager:size
+   * GtkRecentManager:size:
    * 
    * The size of the recently used resources list.
    *
@@ -314,7 +313,7 @@ gtk_recent_manager_class_init (GtkRecentManagerClass *klass)
 						     G_PARAM_READABLE));
   
   /**
-   * GtkRecentManager::changed
+   * GtkRecentManager::changed:
    * @recent_manager: the recent manager
    *
    * Emitted when the current recently used resources manager changes its
@@ -729,21 +728,11 @@ gtk_recent_manager_add_item_query_info (GObject      *source_object,
   GtkRecentManager *manager = user_data;
   GtkRecentData recent_data;
   GFileInfo *file_info;
-  gchar *uri;
-  GError *error;
+  gchar *uri, *basename;
 
   uri = g_file_get_uri (file);
 
-  error = NULL;
-  file_info = g_file_query_info_finish (file, res, &error);
-  if (error)
-    {
-      g_warning ("Unable to retrieve the file info for `%s': %s",
-                 uri,
-                 error->message);
-      g_error_free (error);
-      goto out;
-    }
+  file_info = g_file_query_info_finish (file, res, NULL); /* NULL-GError */
 
   recent_data.display_name = NULL;
   recent_data.description = NULL;
@@ -763,7 +752,11 @@ gtk_recent_manager_add_item_query_info (GObject      *source_object,
       g_object_unref (file_info);
     }
   else
-    recent_data.mime_type = g_strdup (GTK_RECENT_DEFAULT_MIME);
+    {
+      basename = g_file_get_basename (file);
+      recent_data.mime_type = g_content_type_guess (basename, NULL, 0, NULL);
+      g_free (basename);
+    }
 
   recent_data.app_name = g_strdup (g_get_application_name ());
   recent_data.app_exec = g_strjoin (" ", g_get_prgname (), "%u", NULL);
@@ -785,7 +778,6 @@ gtk_recent_manager_add_item_query_info (GObject      *source_object,
   g_free (recent_data.app_name);
   g_free (recent_data.app_exec);
 
-out:
   g_object_unref (manager);
   g_free (uri);
 }

@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -49,7 +47,7 @@
  * very quick and easy change. If you have derived your own classes from
  * GtkHBox, you can simply change the inheritance to derive directly
  * from #GtkBox. No further changes are needed, since the default
- * value of the #GtkOrientable::orientation property is
+ * value of the #GtkOrientable:orientation property is
  * %GTK_ORIENTATION_HORIZONTAL.
  * If you want your code to be future-proof, the recommendation is to
  * switch to #GtkGrid, since #GtkBox is going to be deprecated in favor
@@ -84,7 +82,7 @@ gtk_hbox_init (GtkHBox *hbox)
  * Returns: a new #GtkHBox.
  *
  * Deprecated: 3.2: You can use gtk_box_new() with %GTK_ORIENTATION_HORIZONTAL instead,
- *   wich is a very quick and easy change. But the recommendation is to switch to
+ *   which is a quick and easy change. But the recommendation is to switch to
  *   #GtkGrid, since #GtkBox is going to go away eventually.
  *   See <xref linkend="gtk-migrating-GtkGrid"/>.
  */

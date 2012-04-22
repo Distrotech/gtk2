@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -115,6 +113,7 @@ gtk_printer_cups_init (GtkPrinterCups *printer)
   printer->get_remote_ppd_attempts = 0;
   printer->remote_cups_connection_test = NULL;
   printer->auth_info_required = NULL;
+  printer->default_number_up = 1;
 }
 
 static void
@@ -278,6 +277,8 @@ colord_client_profile_connect_cb (GObject *source_object,
 
   /* update the UI */
   colord_update_ui_from_settings (printer);
+
+  g_object_unref (printer);
 }
 
 static void
@@ -305,10 +306,12 @@ colord_client_device_get_profile_for_qualifiers_cb (GObject *source_object,
   cd_profile_connect (printer->colord_profile,
                       printer->colord_cancellable,
                       colord_client_profile_connect_cb,
-                      printer);
+                      g_object_ref (printer));
 out:
   /* update the UI */
   colord_update_ui_from_settings (printer);
+
+  g_object_unref (printer);
 }
 
 void
@@ -346,6 +349,8 @@ gtk_printer_cups_update_settings (GtkPrinterCups *printer,
   /* cupsICCQualifier3 */
   option = gtk_printer_option_set_lookup (set, "cups-Resolution");
   if (option != NULL)
+    format[2] = option->value;
+  else
     format[2] = "*";
 
   /* get profile for the device given the qualifier */
@@ -364,7 +369,7 @@ gtk_printer_cups_update_settings (GtkPrinterCups *printer,
                                         (const gchar **) qualifiers,
                                         printer->colord_cancellable,
                                         colord_client_device_get_profile_for_qualifiers_cb,
-                                        printer);
+                                        g_object_ref (printer));
 
   /* save for the future */
   g_free (printer->colord_qualifier);
@@ -398,6 +403,8 @@ colord_client_device_connect_cb (GObject *source_object,
 out:
   /* update the UI */
   colord_update_ui_from_settings (printer);
+
+  g_object_unref (printer);
 }
 
 static void
@@ -425,10 +432,12 @@ colord_client_find_device_cb (GObject *source_object,
   cd_device_connect (printer->colord_device,
                      printer->colord_cancellable,
                      colord_client_device_connect_cb,
-                     printer);
+                     g_object_ref (printer));
 out:
   /* update the UI */
   colord_update_ui_from_settings (printer);
+
+  g_object_unref (printer);
 }
 
 static void
@@ -466,7 +475,7 @@ colord_update_device (GtkPrinterCups *printer)
                          colord_device_id,
                          printer->colord_cancellable,
                          colord_client_find_device_cb,
-                         printer);
+                         g_object_ref (printer));
 out:
   g_free (colord_device_id);
 
@@ -493,6 +502,8 @@ colord_client_connect_cb (GObject *source_object,
 
   /* refresh the device */
   colord_update_device (printer);
+
+  g_object_unref (printer);
 }
 #endif
 
@@ -537,7 +548,7 @@ gtk_printer_cups_new (const char      *name,
       cd_client_connect (printer->colord_client,
                          printer->colord_cancellable,
                          colord_client_connect_cb,
-                         printer);
+                         g_object_ref (printer));
     }
 #endif
   return printer;

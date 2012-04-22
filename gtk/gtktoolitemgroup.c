@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors:
  *      Mathias Hasselmann
@@ -277,6 +276,7 @@ gtk_tool_item_group_header_draw_cb (GtkWidget *widget,
   width = gtk_widget_get_allocated_width (widget);
   height = gtk_widget_get_allocated_height (widget);
   context = gtk_widget_get_style_context (widget);
+  state = gtk_widget_get_state_flags (widget);
 
   if (!priv->collapsed)
     state |= GTK_STATE_FLAG_ACTIVE;
@@ -303,14 +303,10 @@ gtk_tool_item_group_header_draw_cb (GtkWidget *widget,
       y = 0;
     }
 
-  /* The expander is the only animatable region */
-  gtk_style_context_push_animatable_region (context, GUINT_TO_POINTER (1));
-
   gtk_render_expander (context, cr, x, y,
                        priv->expander_size,
                        priv->expander_size);
 
-  gtk_style_context_pop_animatable_region (context);
   gtk_style_context_restore (context);
 
   return FALSE;
@@ -1909,8 +1905,6 @@ gtk_tool_item_group_set_collapsed (GtkToolItemGroup *group,
                                            GTK_WIDGET (group));
   if (collapsed != priv->collapsed)
     {
-      GtkStyleContext *context;
-
       if (priv->animation)
         {
           if (priv->animation_timeout)
@@ -1923,19 +1917,6 @@ gtk_tool_item_group_set_collapsed (GtkToolItemGroup *group,
                                  gtk_tool_item_group_animation_cb,
                                  group, NULL);
           g_source_attach (priv->animation_timeout, NULL);
-
-          context = gtk_widget_get_style_context (gtk_bin_get_child (GTK_BIN (priv->header)));
-
-          gtk_style_context_save (context);
-          gtk_style_context_add_class (context, GTK_STYLE_CLASS_EXPANDER);
-
-          gtk_style_context_notify_state_change (context,
-                                                 gtk_widget_get_window (priv->header),
-                                                 GUINT_TO_POINTER (1),
-                                                 GTK_STATE_FLAG_ACTIVE,
-                                                 !collapsed);
-
-          gtk_style_context_restore (context);
         }
       else
         gtk_tool_item_group_force_expose (group);

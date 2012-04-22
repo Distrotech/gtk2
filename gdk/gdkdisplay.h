@@ -16,9 +16,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GDK_H_INSIDE__) && !defined (GDK_COMPILATION)
@@ -28,6 +26,7 @@
 #ifndef __GDK_DISPLAY_H__
 #define __GDK_DISPLAY_H__
 
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdktypes.h>
 #include <gdk/gdkevents.h>
 #include <gdk/gdkdevicemanager.h>
@@ -52,16 +51,14 @@ GdkScreen * gdk_display_get_screen         (GdkDisplay  *display,
 GdkScreen * gdk_display_get_default_screen (GdkDisplay  *display);
 
 #ifndef GDK_MULTIDEVICE_SAFE
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gdk_device_ungrab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_ungrab)
 void        gdk_display_pointer_ungrab     (GdkDisplay  *display,
                                             guint32      time_);
-GDK_DEPRECATED_FOR(gdk_device_ungrab)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_ungrab)
 void        gdk_display_keyboard_ungrab    (GdkDisplay  *display,
                                             guint32      time_);
-GDK_DEPRECATED_FOR(gdk_display_device_is_grabbed)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_display_device_is_grabbed)
 gboolean    gdk_display_pointer_is_grabbed (GdkDisplay  *display);
-#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 gboolean    gdk_display_device_is_grabbed  (GdkDisplay  *display,
@@ -73,10 +70,8 @@ void        gdk_display_flush              (GdkDisplay  *display);
 void        gdk_display_close                  (GdkDisplay  *display);
 gboolean    gdk_display_is_closed          (GdkDisplay  *display);
 
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gdk_device_manager_list_devices)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_manager_list_devices)
 GList *     gdk_display_list_devices       (GdkDisplay  *display);
-#endif /* GDK_DISABLE_DEPRECATED */
 
 GdkEvent* gdk_display_get_event  (GdkDisplay     *display);
 GdkEvent* gdk_display_peek_event (GdkDisplay     *display);
@@ -92,23 +87,21 @@ void gdk_display_set_double_click_distance (GdkDisplay   *display,
 GdkDisplay *gdk_display_get_default (void);
 
 #ifndef GDK_MULTIDEVICE_SAFE
-#ifndef GDK_DISABLE_DEPRECATED
-GDK_DEPRECATED_FOR(gdk_device_get_position)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_get_position)
 void             gdk_display_get_pointer           (GdkDisplay             *display,
                                                     GdkScreen             **screen,
                                                     gint                   *x,
                                                     gint                   *y,
                                                     GdkModifierType        *mask);
-GDK_DEPRECATED_FOR(gdk_device_get_window_at_position)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_get_window_at_position)
 GdkWindow *      gdk_display_get_window_at_pointer (GdkDisplay             *display,
                                                     gint                   *win_x,
                                                     gint                   *win_y);
-GDK_DEPRECATED_FOR(gdk_device_warp)
+GDK_DEPRECATED_IN_3_0_FOR(gdk_device_warp)
 void             gdk_display_warp_pointer          (GdkDisplay             *display,
                                                     GdkScreen              *screen,
                                                     gint                   x,
                                                     gint                   y);
-#endif /* GDK_DISABLE_DEPRECATED */
 #endif /* GDK_MULTIDEVICE_SAFE */
 
 GdkDisplay *gdk_display_open_default_libgtk_only (void);

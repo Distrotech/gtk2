@@ -16,9 +16,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -709,6 +707,8 @@ gtk_cell_area_class_init (GtkCellAreaClass *class)
                   GTK_TYPE_TREE_ITER,
                   G_TYPE_BOOLEAN,
                   G_TYPE_BOOLEAN);
+  g_signal_set_va_marshaller (cell_area_signals[SIGNAL_APPLY_ATTRIBUTES], G_TYPE_FROM_CLASS (class),
+                              _gtk_marshal_VOID__OBJECT_BOXED_BOOLEAN_BOOLEANv);
 
   /**
    * GtkCellArea::add-editable:
@@ -1069,7 +1069,7 @@ gtk_cell_area_real_event (GtkCellArea          *area,
     {
       GdkEventButton *button_event = (GdkEventButton *)event;
 
-      if (button_event->button == 1)
+      if (button_event->button == GDK_BUTTON_PRIMARY)
         {
           GtkCellRenderer *renderer = NULL;
           GtkCellRenderer *focus_renderer;
@@ -2335,7 +2335,7 @@ gtk_cell_area_attribute_disconnect (GtkCellArea        *area,
 }
 
 /**
- * gtk_cell_area_apply_attributes
+ * gtk_cell_area_apply_attributes:
  * @area: a #GtkCellArea
  * @tree_model: the #GtkTreeModel to pull values from
  * @iter: the #GtkTreeIter in @tree_model to apply values for

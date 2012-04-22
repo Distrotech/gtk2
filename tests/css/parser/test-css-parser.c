@@ -15,9 +15,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -289,6 +287,15 @@ add_tests_for_files_in_directory (GFile *dir)
   g_list_free_full (files, g_object_unref);
 }
 
+static gboolean
+parse_uint8 (const char *string,
+             GValue *value,
+             GError **error)
+{
+  g_value_set_uchar (value, 42);
+  return TRUE;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -383,6 +390,12 @@ main (int argc, char **argv)
                                                               "test flags properties",
                                                               GTK_TYPE_STATE_FLAGS,
                                                               GTK_STATE_FLAG_NORMAL,
+                                                              G_PARAM_READABLE));
+  gtk_style_properties_register_property (parse_uint8,
+                                          g_param_spec_uchar ("uint8-property",
+                                                              "uint8 property",
+                                                              "test uint8 properties",
+                                                              0, G_MAXUINT8, 0,
                                                               G_PARAM_READABLE));
 
   if (argc < 2)

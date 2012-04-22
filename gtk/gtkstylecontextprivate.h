@@ -12,31 +12,47 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_STYLE_CONTEXT_PRIVATE_H__
 #define __GTK_STYLE_CONTEXT_PRIVATE_H__
 
 #include "gtkstylecontext.h"
+#include "gtksymboliccolor.h"
+#include "gtkcssvalueprivate.h"
 
 G_BEGIN_DECLS
 
-
+void            _gtk_style_context_set_widget                (GtkStyleContext *context,
+                                                              GtkWidget       *widget);
+GtkCssValue   * _gtk_style_context_peek_property             (GtkStyleContext *context,
+                                                              guint            property_id);
+double         _gtk_style_context_get_number                 (GtkStyleContext *context,
+                                                              guint            property_id,
+                                                              double           one_hundred_percent);
 const GValue * _gtk_style_context_peek_style_property        (GtkStyleContext *context,
                                                               GType            widget_type,
                                                               GtkStateFlags    state,
                                                               GParamSpec      *pspec);
-void           _gtk_style_context_invalidate_animation_areas (GtkStyleContext *context);
-void           _gtk_style_context_coalesce_animation_areas   (GtkStyleContext *context,
-                                                              GtkWidget       *widget);
+void           _gtk_style_context_validate                   (GtkStyleContext *context,
+                                                              gint64           timestamp,
+                                                              GtkCssChange     change);
+void           _gtk_style_context_queue_invalidate           (GtkStyleContext *context,
+                                                              GtkCssChange     change);
 gboolean       _gtk_style_context_check_region_name          (const gchar     *str);
 
+gboolean       _gtk_style_context_resolve_color              (GtkStyleContext  *context,
+                                                              GtkSymbolicColor *color,
+                                                              GdkRGBA          *result);
+GtkCssValue *  _gtk_style_context_resolve_color_value        (GtkStyleContext  *context,
+                                                              GtkCssValue      *current,
+                                                              GtkCssValue      *color);
 void           _gtk_style_context_get_cursor_color           (GtkStyleContext *context,
                                                               GdkRGBA         *primary_color,
                                                               GdkRGBA         *secondary_color);
+
+void           _gtk_style_context_stop_animations            (GtkStyleContext  *context);
 
 G_END_DECLS
 

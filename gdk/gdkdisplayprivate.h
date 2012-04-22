@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GDK_DISPLAY_PRIVATE_H__
@@ -60,6 +58,19 @@ typedef struct
   guint implicit : 1;
 } GdkDeviceGrabInfo;
 
+/* Tracks information about a touch implicit grab on this display */
+typedef struct
+{
+  GdkDevice *device;
+  GdkEventSequence *sequence;
+
+  GdkWindow *window;
+  GdkWindow *native_window;
+  gulong serial;
+  guint event_mask;
+  guint32 time;
+} GdkTouchGrabInfo;
+
 /* Tracks information about which window and position the pointer last was in.
  * This is useful when we need to synthesize events later.
  * Note that we track toplevel_under_pointer using enter/leave events,
@@ -75,6 +86,8 @@ typedef struct
   gdouble toplevel_x, toplevel_y;
   guint32 state;
   guint32 button;
+  GdkDevice *last_slave;
+  guint need_touch_press_enter : 1;
 } GdkPointerWindowInfo;
 
 typedef struct
@@ -101,8 +114,8 @@ struct _GdkDisplay
   GdkDevice *core_pointer;  /* Core pointer device */
 
   guint closed             : 1;  /* Whether this display has been closed */
-  guint ignore_core_events : 1;  /* Don't send core motion and button event */
 
+  GArray *touch_implicit_grabs;
   GHashTable *device_grabs;
   GHashTable *motion_hint_info;
   GdkDeviceManager *device_manager;
@@ -260,6 +273,21 @@ gboolean            _gdk_display_end_device_grab      (GdkDisplay       *display
 gboolean            _gdk_display_check_grab_ownership (GdkDisplay       *display,
                                                        GdkDevice        *device,
                                                        gulong            serial);
+void                _gdk_display_add_touch_grab       (GdkDisplay       *display,
+                                                       GdkDevice        *device,
+                                                       GdkEventSequence *sequence,
+                                                       GdkWindow        *window,
+                                                       GdkWindow        *native_window,
+                                                       GdkEventMask      event_mask,
+                                                       unsigned long     serial_start,
+                                                       guint32           time);
+GdkTouchGrabInfo *  _gdk_display_has_touch_grab       (GdkDisplay       *display,
+                                                       GdkDevice        *device,
+                                                       GdkEventSequence *sequence,
+                                                       gulong            serial);
+gboolean            _gdk_display_end_touch_grab       (GdkDisplay       *display,
+                                                       GdkDevice        *device,
+                                                       GdkEventSequence *sequence);
 void                _gdk_display_enable_motion_hints  (GdkDisplay       *display,
                                                        GdkDevice        *device);
 GdkPointerWindowInfo * _gdk_display_get_pointer_info  (GdkDisplay       *display,

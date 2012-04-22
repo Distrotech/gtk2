@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <gtk/gtk.h>
@@ -351,8 +349,7 @@ do_popup_menu (GtkWidget      *icon_list,
       if (list)
         {
           path = (GtkTreePath*)list->data;
-          g_list_foreach (list->next, (GFunc) gtk_tree_path_free, NULL);
-          g_list_free (list);
+          g_list_free_full (list, (GDestroyNotify) gtk_tree_path_free);
         }
     }
 
@@ -392,7 +389,8 @@ button_press_event_handler (GtkWidget      *widget,
 			    GdkEventButton *event)
 {
   /* Ignore double-clicks and triple-clicks */
-  if (event->button == 3 && event->type == GDK_BUTTON_PRESS)
+  if (gdk_event_triggers_context_menu ((GdkEvent *) event) &&
+      event->type == GDK_BUTTON_PRESS)
     {
       do_popup_menu (widget, event);
       return TRUE;

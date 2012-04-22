@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Portions of code in this file are based on code from Xlib
  */
@@ -278,7 +276,7 @@ _gdk_x11_send_client_message_async (GdkDisplay           *display,
    * XSync (dpy, 0)
    */
   {
-    xReq *req;
+    G_GNUC_UNUSED xReq *req;
     
     GetEmptyReq(GetInputFocus, req);
     state->get_input_focus_req = dpy->request;
@@ -741,7 +739,7 @@ _gdk_x11_roundtrip_async (GdkDisplay           *display,
    * XSync (dpy, 0)
    */
   {
-    xReq *req;
+    G_GNUC_UNUSED xReq *req;
     
     GetEmptyReq(GetInputFocus, req);
     state->get_input_focus_req = dpy->request;

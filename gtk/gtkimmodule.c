@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.Free
  */
 
 /*
@@ -32,11 +31,19 @@
 
 #include <glib/gstdio.h>
 #include <gmodule.h>
-#include "gtkimmodule.h"
+#include "gtkimmoduleprivate.h"
 #include "gtkimcontextsimple.h"
 #include "gtksettings.h"
 #include "gtkprivate.h"
 #include "gtkintl.h"
+
+#undef GDK_DEPRECATED
+#undef GDK_DEPRECATED_FOR
+#define GDK_DEPRECATED
+#define GDK_DEPRECATED_FOR(f)
+#undef GTK_DISABLE_DEPRECATED
+
+#include "deprecated/gtkrc.h"
 
 #define SIMPLE_ID "gtk-im-context-simple"
 

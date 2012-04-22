@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.Free
  */
 
 
@@ -32,6 +31,7 @@
 #include "gtkwidget.h"
 #include "gtkprivate.h"
 #include "gtkcssproviderprivate.h"
+#include "gtkstyleproviderprivate.h"
 #include "gtksymboliccolor.h"
 #include "gtktypebuiltins.h"
 #include "gtkversion.h"
@@ -44,6 +44,12 @@
 #ifdef GDK_WINDOWING_QUARTZ
 #include "quartz/gdkquartz.h"
 #endif
+
+#undef GDK_DEPRECATED
+#undef GDK_DEPRECATED_FOR
+#define GDK_DEPRECATED
+#define GDK_DEPRECATED_FOR(f)
+#undef GTK_DISABLE_DEPRECATED
 
 #include "deprecated/gtkrc.h"
 
@@ -104,6 +110,7 @@ struct _GtkSettingsPrivate
   GdkScreen *screen;
   GtkCssProvider *theme_provider;
   GtkCssProvider *key_theme_provider;
+  GtkStyleProperties *style;
 };
 
 typedef enum
@@ -197,11 +204,14 @@ enum {
   PROP_LABEL_SELECT_ON_FOCUS,
   PROP_COLOR_PALETTE,
   PROP_IM_PREEDIT_STYLE,
-  PROP_IM_STATUS_STYLE
+  PROP_IM_STATUS_STYLE,
+  PROP_SHELL_SHOWS_APP_MENU,
+  PROP_SHELL_SHOWS_MENUBAR
 };
 
 /* --- prototypes --- */
 static void     gtk_settings_provider_iface_init (GtkStyleProviderIface *iface);
+static void     gtk_settings_provider_private_init (GtkStyleProviderPrivateInterface *iface);
 
 static void     gtk_settings_finalize            (GObject               *object);
 static void     gtk_settings_get_property        (GObject               *object,
@@ -250,7 +260,9 @@ static guint             class_n_properties = 0;
 
 G_DEFINE_TYPE_EXTENDED (GtkSettings, gtk_settings, G_TYPE_OBJECT, 0,
                         G_IMPLEMENT_INTERFACE (GTK_TYPE_STYLE_PROVIDER,
-                                               gtk_settings_provider_iface_init));
+                                               gtk_settings_provider_iface_init)
+                        G_IMPLEMENT_INTERFACE (GTK_TYPE_STYLE_PROVIDER_PRIVATE,
+                                               gtk_settings_provider_private_init));
 
 /* --- functions --- */
 static void
@@ -395,7 +407,11 @@ gtk_settings_class_init (GtkSettingsClass *class)
                                              g_param_spec_string ("gtk-theme-name",
                                                                    P_("Theme Name"),
                                                                    P_("Name of theme to load"),
+#ifdef G_OS_WIN32
+								  _gtk_win32_theme_get_default (),
+#else
                                                                   "Raleigh",
+#endif
                                                                   GTK_PARAM_READWRITE),
                                              NULL);
   g_assert (result == PROP_THEME_NAME);
@@ -684,13 +700,16 @@ gtk_settings_class_init (GtkSettingsClass *class)
    * functionality.
    *
    * Since: 2.10
+   *
+   * Deprecated: 3.4. Generally the behavior touchscreen input should be
+   *             performed dynamically based on gdk_event_get_source_device().
    */
   result = settings_install_property_parser (class,
                                              g_param_spec_boolean ("gtk-touchscreen-mode",
                                                                    P_("Enable Touchscreen Mode"),
                                                                    P_("When TRUE, there are no motion notify events delivered on this screen"),
                                                                    FALSE,
-                                                                   GTK_PARAM_READWRITE),
+                                                                   GTK_PARAM_READWRITE | G_PARAM_DEPRECATED),
                                              NULL);
 
   g_assert (result == PROP_TOUCHSCREEN_MODE);
@@ -1154,7 +1173,7 @@ gtk_settings_class_init (GtkSettingsClass *class)
    * Dark themes should not be used for documents, where large spaces are white/light
    * and the dark chrome creates too much contrast (web browser, text editor...).
    *
-   * Since: 2.22
+   * Since: 3.0
    */
   result = settings_install_property_parser (class,
                                              g_param_spec_boolean ("gtk-application-prefer-dark-theme",
@@ -1313,22 +1332,42 @@ gtk_settings_class_init (GtkSettingsClass *class)
                                              gtk_rc_property_parse_enum);
   g_assert (result == PROP_IM_STATUS_STYLE);
 
+  result = settings_install_property_parser (class,
+                                             g_param_spec_boolean ("gtk-shell-shows-app-menu",
+                                                                   P_("Desktop shell shows app menu"),
+                                                                   P_("Set to TRUE if the desktop environment "
+                                                                      "is displaying the app menu, FALSE if "
+                                                                      "the app should display it itself."),
+                                                                   FALSE, GTK_PARAM_READWRITE),
+                                             NULL);
+  g_assert (result == PROP_SHELL_SHOWS_APP_MENU);
+
+  result = settings_install_property_parser (class,
+                                             g_param_spec_boolean ("gtk-shell-shows-menubar",
+                                                                   P_("Desktop shell shows the menubar"),
+                                                                   P_("Set to TRUE if the desktop environment "
+                                                                      "is displaying the menubar, FALSE if "
+                                                                      "the app should display it itself."),
+                                                                   FALSE, GTK_PARAM_READWRITE),
+                                             NULL);
+  g_assert (result == PROP_SHELL_SHOWS_MENUBAR);
+
   g_type_class_add_private (class, sizeof (GtkSettingsPrivate));
 }
 
-static GtkStyleProperties *
-gtk_settings_get_style (GtkStyleProvider *provider,
-                        GtkWidgetPath    *path)
+static void
+settings_ensure_style (GtkSettings *settings)
 {
+  GtkSettingsPrivate *priv = settings->priv;
   PangoFontDescription *font_desc;
   gchar *font_name, *color_scheme;
-  GtkSettings *settings;
-  GtkStyleProperties *props;
   gchar **colors;
   guint i;
 
-  settings = GTK_SETTINGS (provider);
-  props = gtk_style_properties_new ();
+  if (priv->style)
+    return;
+
+  priv->style = gtk_style_properties_new ();
 
   g_object_get (settings,
                 "gtk-font-name", &font_name,
@@ -1364,7 +1403,7 @@ gtk_settings_get_style (GtkStyleProvider *provider,
         continue;
 
       color = gtk_symbolic_color_new_literal (&col);
-      gtk_style_properties_map_color (props, name, color);
+      gtk_style_properties_map_color (priv->style, name, color);
       gtk_symbolic_color_unref (color);
     }
 
@@ -1388,7 +1427,7 @@ gtk_settings_get_style (GtkStyleProvider *provider,
     pango_font_description_unset_fields (font_desc,
                                          PANGO_FONT_MASK_STYLE);
 
-  gtk_style_properties_set (props, 0,
+  gtk_style_properties_set (priv->style, 0,
                             "font", font_desc,
                             NULL);
 
@@ -1396,14 +1435,70 @@ gtk_settings_get_style (GtkStyleProvider *provider,
   g_strfreev (colors);
   g_free (color_scheme);
   g_free (font_name);
+}
 
-  return props;
+static GtkStyleProperties *
+gtk_settings_get_style (GtkStyleProvider *provider,
+                        GtkWidgetPath    *path)
+{
+  GtkSettings *settings;
+
+  settings = GTK_SETTINGS (provider);
+
+  settings_ensure_style (settings);
+
+  return g_object_ref (settings->priv->style);
 }
 
 static void
 gtk_settings_provider_iface_init (GtkStyleProviderIface *iface)
 {
   iface->get_style = gtk_settings_get_style;
+}
+
+static GtkSymbolicColor *
+gtk_settings_style_provider_get_color (GtkStyleProviderPrivate *provider,
+                                       const char              *name)
+{
+  GtkSettings *settings = GTK_SETTINGS (provider);
+
+  settings_ensure_style (settings);
+
+  return _gtk_style_provider_private_get_color (GTK_STYLE_PROVIDER_PRIVATE (settings->priv->style), name);
+}
+
+static void
+gtk_settings_style_provider_lookup (GtkStyleProviderPrivate *provider,
+                                    const GtkCssMatcher     *matcher,
+                                    GtkCssLookup            *lookup)
+{
+  GtkSettings *settings = GTK_SETTINGS (provider);
+
+  settings_ensure_style (settings);
+
+  _gtk_style_provider_private_lookup (GTK_STYLE_PROVIDER_PRIVATE (settings->priv->style),
+                                      matcher,
+                                      lookup);
+}
+
+static GtkCssChange
+gtk_settings_style_provider_get_change (GtkStyleProviderPrivate *provider,
+                                        const GtkCssMatcher     *matcher)
+{
+  GtkSettings *settings = GTK_SETTINGS (provider);
+
+  settings_ensure_style (settings);
+
+  return _gtk_style_provider_private_get_change (GTK_STYLE_PROVIDER_PRIVATE (settings->priv->style),
+                                                 matcher);
+}
+
+static void
+gtk_settings_provider_private_init (GtkStyleProviderPrivateInterface *iface)
+{
+  iface->get_color = gtk_settings_style_provider_get_color;
+  iface->lookup = gtk_settings_style_provider_lookup;
+  iface->get_change = gtk_settings_style_provider_get_change;
 }
 
 static void
@@ -1427,6 +1522,9 @@ gtk_settings_finalize (GObject *object)
   if (priv->key_theme_provider)
     g_object_unref (priv->key_theme_provider);
 
+  if (priv->style)
+    g_object_unref (priv->style);
+
   G_OBJECT_CLASS (gtk_settings_parent_class)->finalize (object);
 }
 
@@ -1436,7 +1534,6 @@ settings_init_style (GtkSettings *settings)
   static GtkCssProvider *css_provider = NULL;
 
   GdkScreen *screen = settings->priv->screen;
-  GtkCssProvider *default_provider;
 
   /* Add provider for user file */
   if (G_UNLIKELY (!css_provider))
@@ -1459,11 +1556,6 @@ settings_init_style (GtkSettings *settings)
   gtk_style_context_add_provider_for_screen (screen,
                                              GTK_STYLE_PROVIDER (css_provider),
                                              GTK_STYLE_PROVIDER_PRIORITY_USER);
-
-  default_provider = gtk_css_provider_get_default ();
-  gtk_style_context_add_provider_for_screen (screen,
-                                             GTK_STYLE_PROVIDER (default_provider),
-                                             GTK_STYLE_PROVIDER_PRIORITY_FALLBACK);
 
   gtk_style_context_add_provider_for_screen (screen,
                                              GTK_STYLE_PROVIDER (settings),
@@ -1495,7 +1587,11 @@ gtk_settings_get_for_screen (GdkScreen *screen)
     {
 #ifdef GDK_WINDOWING_QUARTZ
       if (GDK_IS_QUARTZ_SCREEN (screen))
-        settings = g_object_new (GTK_TYPE_SETTINGS, "gtk-key-theme-name", "Mac", NULL);
+        settings = g_object_new (GTK_TYPE_SETTINGS,
+                                 "gtk-key-theme-name", "Mac",
+                                 "gtk-shell-shows-app-menu", TRUE,
+                                 "gtk-shell-shows-menubar", TRUE,
+                                 NULL);
       else
 #endif
         settings = g_object_new (GTK_TYPE_SETTINGS, NULL);
@@ -1633,6 +1729,20 @@ gtk_settings_get_property (GObject     *object,
 }
 
 static void
+settings_invalidate_style (GtkSettings *settings)
+{
+  GtkSettingsPrivate *priv = settings->priv;
+
+  if (priv->style)
+    {
+      g_object_unref (priv->style);
+      priv->style = NULL;
+    }
+
+  _gtk_style_provider_private_changed (GTK_STYLE_PROVIDER_PRIVATE (settings));
+}
+
+static void
 gtk_settings_notify (GObject    *object,
                      GParamSpec *pspec)
 {
@@ -1654,9 +1764,11 @@ gtk_settings_notify (GObject    *object,
       break;
     case PROP_COLOR_SCHEME:
       settings_update_color_scheme (settings);
+      settings_invalidate_style (settings);
       gtk_style_context_reset_widgets (priv->screen);
       break;
     case PROP_FONT_NAME:
+      settings_invalidate_style (settings);
       gtk_style_context_reset_widgets (priv->screen);
       break;
     case PROP_KEY_THEME_NAME:
@@ -2769,6 +2881,10 @@ settings_update_theme (GtkSettings *settings)
       if (!provider)
         provider = gtk_css_provider_get_named (theme_name, NULL);
     }
+
+  /* If we didn't find the named theme, fall back */
+  if (!provider)
+    provider = gtk_css_provider_get_named ("Raleigh", NULL);
 
   settings_update_provider (priv->screen, &priv->theme_provider, provider);
 

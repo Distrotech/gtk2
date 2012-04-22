@@ -11,12 +11,14 @@ gail_c_sources =			\
 	gtkcellaccessible.c		\
 	gtkcellaccessibleparent.c	\
 	gtkcheckmenuitemaccessible.c	\
+	gtkcolorswatchaccessible.c	\
 	gtkcomboboxaccessible.c		\
 	gtkcontaineraccessible.c	\
 	gtkcontainercellaccessible.c	\
 	gtkentryaccessible.c		\
 	gtkexpanderaccessible.c		\
 	gtkframeaccessible.c		\
+	gtkiconviewaccessible.c		\
 	gtkimageaccessible.c		\
 	gtkimagecellaccessible.c	\
 	gtklabelaccessible.c		\
@@ -58,12 +60,14 @@ gail_private_h_sources =		\
 	gtkcellaccessible.h		\
 	gtkcellaccessibleparent.h	\
 	gtkcheckmenuitemaccessible.h	\
+	gtkcolorswatchaccessible.h	\
 	gtkcomboboxaccessible.h		\
 	gtkcontaineraccessible.h	\
 	gtkcontainercellaccessible.h	\
 	gtkentryaccessible.h		\
 	gtkexpanderaccessible.h		\
 	gtkframeaccessible.h		\
+	gtkiconviewaccessible.h		\
 	gtkimageaccessible.h		\
 	gtkimagecellaccessible.h	\
 	gtklabelaccessible.h		\

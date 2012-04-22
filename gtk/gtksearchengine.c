@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Anders Carlsson <andersca@imendio.com>
  *
@@ -22,20 +21,14 @@
 
 #include "config.h"
 #include "gtksearchengine.h"
-#include "gtksearchenginebeagle.h"
 #include "gtksearchenginesimple.h"
 #include "gtksearchenginetracker.h"
 #include "gtksearchenginequartz.h"
 
 #include <gdk/gdk.h> /* for GDK_WINDOWING_QUARTZ */
 
-#ifndef G_OS_WIN32		/* Beagle and tracker are not ported
-				 * to Windows, as far as I know.
-				 */
-
-#define HAVE_BEAGLE  1
+#ifndef G_OS_WIN32  /* No tracker on Windows */
 #define HAVE_TRACKER 1
-
 #endif
 
 enum 
@@ -121,12 +114,6 @@ _gtk_search_engine_new (void)
     return engine;
 #endif
   
-#ifdef HAVE_BEAGLE
-  engine = _gtk_search_engine_beagle_new ();
-  if (engine)
-    return engine;
-#endif
-
 #ifdef GDK_WINDOWING_QUARTZ
   engine = _gtk_search_engine_quartz_new ();
   if (engine)

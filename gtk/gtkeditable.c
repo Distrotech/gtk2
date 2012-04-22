@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -30,13 +28,13 @@
  * @Title: GtkEditable
  *
  * The #GtkEditable interface is an interface which should be implemented by
- * text editing widgets, such as #GtkEntry and #GtkText. It contains functions
+ * text editing widgets, such as #GtkEntry and #GtkSpinButton. It contains functions
  * for generically manipulating an editable widget, a large number of action
  * signals used for key bindings, and several signals that an application can
  * connect to to modify the behavior of a widget.
  *
  * As an example of the latter usage, by connecting
- * the following handler to "insert_text", an application
+ * the following handler to #GtkEditable::insert-text, an application
  * can convert all entry into a widget into uppercase.
  *
  * <example>

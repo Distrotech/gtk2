@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -233,7 +231,7 @@ gtk_recent_chooser_menu_class_init (GtkRecentChooserMenuClass *klass)
   _gtk_recent_chooser_install_properties (gobject_class);
 
   /**
-   * GtkRecentChooserMenu:show-numbers
+   * GtkRecentChooserMenu:show-numbers:
    *
    * Whether the first ten items in the menu should be prepended by
    * a number acting as a unique mnemonic.
@@ -1055,8 +1053,7 @@ check_and_return:
 
   if (pdata->loaded_items == pdata->n_items)
     {
-      g_list_foreach (pdata->items, (GFunc) gtk_recent_info_unref, NULL);
-      g_list_free (pdata->items);
+      g_list_free_full (pdata->items, (GDestroyNotify) gtk_recent_info_unref);
 
       priv->populate_id = 0;
 

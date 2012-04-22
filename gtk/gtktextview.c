@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -1479,6 +1477,7 @@ gtk_text_view_set_buffer (GtkTextView   *text_view,
                           GtkTextBuffer *buffer)
 {
   GtkTextViewPrivate *priv;
+  GtkTextBuffer *old_buffer;
 
   g_return_if_fail (GTK_IS_TEXT_VIEW (text_view));
   g_return_if_fail (buffer == NULL || GTK_IS_TEXT_BUFFER (buffer));
@@ -1488,6 +1487,7 @@ gtk_text_view_set_buffer (GtkTextView   *text_view,
   if (priv->buffer == buffer)
     return;
 
+  old_buffer = priv->buffer;
   if (priv->buffer != NULL)
     {
       /* Destroy all anchored children */
@@ -1531,7 +1531,6 @@ gtk_text_view_set_buffer (GtkTextView   *text_view,
       if (priv->layout)
         gtk_text_layout_set_buffer (priv->layout, NULL);
 
-      g_object_unref (priv->buffer);
       priv->dnd_mark = NULL;
       priv->first_para_mark = NULL;
       cancel_pending_scroll (text_view);
@@ -1580,6 +1579,10 @@ gtk_text_view_set_buffer (GtkTextView   *text_view,
 	  gtk_text_buffer_add_selection_clipboard (priv->buffer, clipboard);
 	}
     }
+
+  _gtk_text_view_accessible_set_buffer (text_view, old_buffer);
+  if (old_buffer)
+    g_object_unref (old_buffer);
 
   g_object_notify (G_OBJECT (text_view), "buffer");
   
@@ -3979,12 +3982,10 @@ gtk_text_view_realize (GtkWidget *widget)
   GtkTextView *text_view;
   GtkTextViewPrivate *priv;
   GtkStyleContext *context;
-  GtkStateFlags state;
   GdkWindow *window;
   GdkWindowAttr attributes;
   gint attributes_mask;
   GSList *tmp_list;
-  GdkRGBA color;
 
   text_view = GTK_TEXT_VIEW (widget);
   priv = text_view->priv;
@@ -4010,10 +4011,11 @@ gtk_text_view_realize (GtkWidget *widget)
   gdk_window_set_user_data (window, widget);
 
   context = gtk_widget_get_style_context (widget);
-  state = gtk_widget_get_state_flags (widget);
 
-  gtk_style_context_get_background_color (context, state, &color);
-  gdk_window_set_background_rgba (window, &color);
+  gtk_style_context_save (context);
+  gtk_style_context_add_class (context, GTK_STYLE_CLASS_VIEW);
+  gtk_style_context_set_background (context, window);
+  gtk_style_context_restore (context);
 
   text_window_realize (priv->text_window, widget);
 
@@ -4113,15 +4115,13 @@ gtk_text_view_set_background (GtkTextView *text_view)
   gtk_style_context_save (context);
   gtk_style_context_add_class (context, GTK_STYLE_CLASS_VIEW);
 
-  gtk_style_context_get_background_color (context, state, &color);
-  gdk_window_set_background_rgba (priv->text_window->bin_window, &color);
+  gtk_style_context_set_background (context, priv->text_window->bin_window);
+  gtk_style_context_set_background (context, gtk_widget_get_window (widget));
 
   gtk_style_context_restore (context);
 
   /* Set lateral panes background */
   gtk_style_context_get_background_color (context, state, &color);
-
-  gdk_window_set_background_rgba (gtk_widget_get_window (widget), &color);
 
   if (priv->left_window)
     gdk_window_set_background_rgba (priv->left_window->bin_window, &color);
@@ -4268,8 +4268,15 @@ gtk_text_view_grab_notify (GtkWidget *widget,
   if (priv->grab_device &&
       gtk_widget_device_is_shadowed (widget, priv->grab_device))
     {
+      if (priv->drag_start_x >= 0)
+        {
+          priv->drag_start_x = -1;
+          priv->drag_start_y = -1;
+        }
+
       gtk_text_view_end_selection_drag (GTK_TEXT_VIEW (widget));
       gtk_text_view_unobscure_mouse_cursor (GTK_TEXT_VIEW (widget));
+      priv->grab_device = NULL;
     }
 }
 
@@ -4535,9 +4542,9 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
 
 #if 0
   /* debug hack */
-  if (event->button == 3 && (event->state & GDK_CONTROL_MASK) != 0)
+  if (event->button == GDK_BUTTON_SECONDARY && (event->state & GDK_CONTROL_MASK) != 0)
     _gtk_text_buffer_spew (GTK_TEXT_VIEW (widget)->buffer);
-  else if (event->button == 3)
+  else if (event->button == GDK_BUTTON_SECONDARY)
     gtk_text_layout_spew (GTK_TEXT_VIEW (widget)->layout);
 #endif
 
@@ -4550,7 +4557,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
 	  gtk_text_view_do_popup (text_view, event);
 	  return TRUE;
         }
-      else if (event->button == 1)
+      else if (event->button == GDK_BUTTON_PRIMARY)
         {
           /* If we're in the selection, start a drag copy/move of the
            * selection; otherwise, start creating a new selection.
@@ -4570,6 +4577,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
                 gtk_widget_get_modifier_mask (widget,
                                               GDK_MODIFIER_INTENT_EXTEND_SELECTION)))
             {
+              priv->grab_device = event->device;
               priv->drag_start_x = event->x;
               priv->drag_start_y = event->y;
               priv->pending_place_cursor_button = event->button;
@@ -4581,7 +4589,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
 
           return TRUE;
         }
-      else if (event->button == 2)
+      else if (event->button == GDK_BUTTON_MIDDLE)
         {
           GtkTextIter iter;
 
@@ -4603,7 +4611,7 @@ gtk_text_view_button_press_event (GtkWidget *widget, GdkEventButton *event)
     }
   else if ((event->type == GDK_2BUTTON_PRESS ||
 	    event->type == GDK_3BUTTON_PRESS) &&
-	   event->button == 1) 
+	   event->button == GDK_BUTTON_PRIMARY)
     {
       GtkTextIter iter;
 
@@ -4633,7 +4641,7 @@ gtk_text_view_button_release_event (GtkWidget *widget, GdkEventButton *event)
   if (event->window != priv->text_window->bin_window)
     return FALSE;
 
-  if (event->button == 1)
+  if (event->button == GDK_BUTTON_PRIMARY)
     {
       if (priv->drag_start_x >= 0)
         {
@@ -4796,8 +4804,6 @@ gtk_text_view_paint (GtkWidget      *widget,
 {
   GtkTextView *text_view;
   GtkTextViewPrivate *priv;
-  GList *child_exposes;
-  GList *tmp_list;
   
   text_view = GTK_TEXT_VIEW (widget);
   priv = text_view->priv;
@@ -4825,33 +4831,15 @@ gtk_text_view_paint (GtkWidget      *widget,
           area->width, area->height);
 #endif
 
-  child_exposes = NULL;
-
   cairo_save (cr);
   cairo_translate (cr, -priv->xoffset, -priv->yoffset);
 
   gtk_text_layout_draw (priv->layout,
                         widget,
                         cr,
-                        &child_exposes);
+                        NULL);
 
   cairo_restore (cr);
-
-  tmp_list = child_exposes;
-  while (tmp_list != NULL)
-    {
-      GtkWidget *child = tmp_list->data;
-  
-      gtk_container_propagate_draw (GTK_CONTAINER (text_view),
-                                    child,
-                                    cr);
-
-      g_object_unref (child);
-      
-      tmp_list = tmp_list->next;
-    }
-
-  g_list_free (child_exposes);
 }
 
 static gboolean
@@ -4886,10 +4874,9 @@ gtk_text_view_draw (GtkWidget *widget,
       /* propagate_draw checks that event->window matches
        * child->window
        */
-      if (!vc->anchor)
-        gtk_container_propagate_draw (GTK_CONTAINER (widget),
-                                      vc->widget,
-                                      cr);
+      gtk_container_propagate_draw (GTK_CONTAINER (widget),
+                                    vc->widget,
+                                    cr);
       
       tmp_list = tmp_list->next;
     }
@@ -7692,26 +7679,6 @@ gtk_text_view_value_changed (GtkAdjustment *adjustment,
    */
   gtk_text_view_validate_onscreen (text_view);
   
-  /* process exposes */
-  if (gtk_widget_get_realized (GTK_WIDGET (text_view)))
-    {
-      DV (g_print ("Processing updates (%s)\n", G_STRLOC));
-      
-      if (priv->left_window)
-        gdk_window_process_updates (priv->left_window->bin_window, TRUE);
-
-      if (priv->right_window)
-        gdk_window_process_updates (priv->right_window->bin_window, TRUE);
-
-      if (priv->top_window)
-        gdk_window_process_updates (priv->top_window->bin_window, TRUE);
-      
-      if (priv->bottom_window)
-        gdk_window_process_updates (priv->bottom_window->bin_window, TRUE);
-  
-      gdk_window_process_updates (priv->text_window->bin_window, TRUE);
-    }
-
   /* If this got installed, get rid of it, it's just a waste of time. */
   if (priv->first_validate_idle != 0)
     {
@@ -8144,7 +8111,7 @@ popup_position_func (GtkMenu   *menu,
 
   monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
   gtk_menu_set_monitor (menu, monitor_num);
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   *x = CLAMP (*x, monitor.x, monitor.x + MAX (0, monitor.width - req.width));
   *y = CLAMP (*y, monitor.y, monitor.y + MAX (0, monitor.height - req.height));
@@ -8441,6 +8408,7 @@ text_window_realize (GtkTextWindow *win,
   attributes.height = win->allocation.height;
   attributes.event_mask = (GDK_EXPOSURE_MASK            |
                            GDK_SCROLL_MASK              |
+                           GDK_SMOOTH_SCROLL_MASK       |
                            GDK_KEY_PRESS_MASK           |
                            GDK_BUTTON_PRESS_MASK        |
                            GDK_BUTTON_RELEASE_MASK      |
@@ -8622,7 +8590,7 @@ text_window_invalidate_cursors (GtkTextWindow *win)
   gtk_text_layout_get_cursor_locations (priv->layout, &iter,
                                         &strong, &weak);
 
-  /* cursor width calculation as in gtkstyle.c:draw_insertion_cursor(),
+  /* cursor width calculation as in gtkstylecontext.c:draw_insertion_cursor(),
    * ignoring the text direction be exposing both sides of the cursor
    */
 

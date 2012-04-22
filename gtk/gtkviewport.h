@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -32,7 +30,6 @@
 #define __GTK_VIEWPORT_H__
 
 
-#include <gtk/gtkadjustment.h>
 #include <gtk/gtkbin.h>
 
 
@@ -75,16 +72,16 @@ GType          gtk_viewport_get_type        (void) G_GNUC_CONST;
 GtkWidget*     gtk_viewport_new             (GtkAdjustment *hadjustment,
 					     GtkAdjustment *vadjustment);
 
-#if !defined (GTK_DISABLE_DEPRECATED) || defined (GTK_COMPILATION)
-
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_hadjustment)
 GtkAdjustment* gtk_viewport_get_hadjustment (GtkViewport   *viewport);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_get_vadjustment)
 GtkAdjustment* gtk_viewport_get_vadjustment (GtkViewport   *viewport);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_set_hadjustment)
 void           gtk_viewport_set_hadjustment (GtkViewport   *viewport,
-					     GtkAdjustment *adjustment);
+                                             GtkAdjustment *adjustment);
+GDK_DEPRECATED_IN_3_0_FOR(gtk_scrollable_set_vadjustment)
 void           gtk_viewport_set_vadjustment (GtkViewport   *viewport,
-					     GtkAdjustment *adjustment);
-
-#endif
+                                             GtkAdjustment *adjustment);
 
 void           gtk_viewport_set_shadow_type (GtkViewport   *viewport,
 					     GtkShadowType  type);

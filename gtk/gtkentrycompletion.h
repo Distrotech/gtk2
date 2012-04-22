@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -114,6 +112,9 @@ void                gtk_entry_completion_set_match_func         (GtkEntryComplet
 void                gtk_entry_completion_set_minimum_key_length (GtkEntryCompletion          *completion,
                                                                  gint                         length);
 gint                gtk_entry_completion_get_minimum_key_length (GtkEntryCompletion          *completion);
+GDK_AVAILABLE_IN_3_4
+gchar *             gtk_entry_completion_compute_prefix         (GtkEntryCompletion          *completion,
+                                                                 const char                  *key);
 void                gtk_entry_completion_complete               (GtkEntryCompletion          *completion);
 void                gtk_entry_completion_insert_prefix          (GtkEntryCompletion          *completion);
 

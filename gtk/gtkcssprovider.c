@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -27,14 +25,19 @@
 
 #include "gtkcssproviderprivate.h"
 
+#include "gtkbitmaskprivate.h"
+#include "gtkcssarrayvalueprivate.h"
+#include "gtkcssstylefuncsprivate.h"
 #include "gtkcssparserprivate.h"
 #include "gtkcsssectionprivate.h"
 #include "gtkcssselectorprivate.h"
+#include "gtkcssshorthandpropertyprivate.h"
 #include "gtksymboliccolor.h"
 #include "gtkstyleprovider.h"
 #include "gtkstylecontextprivate.h"
 #include "gtkstylepropertiesprivate.h"
 #include "gtkstylepropertyprivate.h"
+#include "gtkstyleproviderprivate.h"
 #include "gtkbindings.h"
 #include "gtkmarshalers.h"
 #include "gtkprivate.h"
@@ -428,6 +431,14 @@
  *       <row>
  *         <entry>darker(@color)</entry>
  *         <entry>A darker variant of @color</entry>
+ *       </row>
+ *       <row>
+ *         <entry>alpha(@color, @f)</entry>
+ *         <entry>Modifies passed color's alpha by a factor @f. @f is a
+ *                floating point number. @f < 1.0 results in a more transparent
+ *                color while @f > 1.0 results in a more opaque color.
+ *         </entry>
+ *         <entry>alhpa(blue, 0.5)</entry>
  *       </row>
  *     </tbody>
  *   </tgroup>
@@ -840,6 +851,16 @@
  *         </entry>
  *       </row>
  *       <row>
+ *         <entry>background-repeat</entry>
+ *         <entry>[repeat|no-repeat]</entry>
+ *         <entry>internal</entry>
+ *         <entry><literallayout>background-repeat: no-repeat;</literallayout>
+ *                If not specified, the style doesn't respect the CSS3
+ *                specification, since the background will be
+ *                stretched to fill the area.
+ *         </entry>
+ *       </row>
+ *       <row>
  *         <entry>border-top-width</entry>
  *         <entry>integer</entry>
  *         <entry>#gint</entry>
@@ -942,16 +963,34 @@
 
 typedef struct GtkCssRuleset GtkCssRuleset;
 typedef struct _GtkCssScanner GtkCssScanner;
+typedef struct _PropertyValue PropertyValue;
+typedef struct _WidgetPropertyValue WidgetPropertyValue;
 typedef enum ParserScope ParserScope;
 typedef enum ParserSymbol ParserSymbol;
+
+struct _PropertyValue {
+  GtkCssStyleProperty *property;
+  GtkCssValue         *value;
+  GtkCssSection       *section;
+};
+
+struct _WidgetPropertyValue {
+  WidgetPropertyValue *next;
+  char *name;
+  char *value;
+
+  GtkCssSection *section;
+};
 
 struct GtkCssRuleset
 {
   GtkCssSelector *selector;
-  GHashTable *widget_style;
-  GHashTable *style;
-
-  guint has_inherit :1;
+  WidgetPropertyValue *widget_style;
+  PropertyValue *styles;
+  GtkBitmask *set_styles;
+  guint n_styles;
+  guint owns_styles : 1;
+  guint owns_widget_style : 1;
 };
 
 struct _GtkCssScanner
@@ -972,6 +1011,7 @@ struct _GtkCssProviderPrivate
   GHashTable *symbolic_colors;
 
   GArray *rulesets;
+  GResource *resource;
 };
 
 enum {
@@ -979,10 +1019,14 @@ enum {
   LAST_SIGNAL
 };
 
+static gboolean gtk_keep_css_sections = FALSE;
+
 static guint css_provider_signals[LAST_SIGNAL] = { 0 };
 
 static void gtk_css_provider_finalize (GObject *object);
 static void gtk_css_style_provider_iface_init (GtkStyleProviderIface *iface);
+static void gtk_css_style_provider_private_iface_init (GtkStyleProviderPrivateInterface *iface);
+static void widget_property_value_list_free (WidgetPropertyValue *head);
 
 static gboolean
 gtk_css_provider_load_internal (GtkCssProvider *css_provider,
@@ -999,7 +1043,9 @@ gtk_css_provider_error_quark (void)
 
 G_DEFINE_TYPE_EXTENDED (GtkCssProvider, gtk_css_provider, G_TYPE_OBJECT, 0,
                         G_IMPLEMENT_INTERFACE (GTK_TYPE_STYLE_PROVIDER,
-                                               gtk_css_style_provider_iface_init));
+                                               gtk_css_style_provider_iface_init)
+                        G_IMPLEMENT_INTERFACE (GTK_TYPE_STYLE_PROVIDER_PRIVATE,
+                                               gtk_css_style_provider_private_iface_init));
 
 static void
 gtk_css_provider_parsing_error (GtkCssProvider  *provider,
@@ -1053,6 +1099,9 @@ gtk_css_provider_class_init (GtkCssProviderClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+  if (g_getenv ("GTK_CSS_DEBUG"))
+    gtk_keep_css_sections = TRUE;
+
   /**
    * GtkCssProvider::parsing-error:
    * @provider: the provider that had a parsing error
@@ -1089,122 +1138,178 @@ gtk_css_provider_class_init (GtkCssProviderClass *klass)
 
 static void
 gtk_css_ruleset_init_copy (GtkCssRuleset       *new,
-                           const GtkCssRuleset *ruleset,
+                           GtkCssRuleset       *ruleset,
                            GtkCssSelector      *selector)
 {
   memcpy (new, ruleset, sizeof (GtkCssRuleset));
 
   new->selector = selector;
-  if (new->widget_style)
-    g_hash_table_ref (new->widget_style);
-  if (new->style)
-    g_hash_table_ref (new->style);
+  /* First copy takes over ownership */
+  if (ruleset->owns_styles)
+    ruleset->owns_styles = FALSE;
+  if (ruleset->owns_widget_style)
+    ruleset->owns_widget_style = FALSE;
+  if (new->set_styles)
+    new->set_styles = _gtk_bitmask_copy (new->set_styles);
 }
 
 static void
 gtk_css_ruleset_clear (GtkCssRuleset *ruleset)
 {
-  if (ruleset->style)
-    g_hash_table_unref (ruleset->style);
-  if (ruleset->widget_style)
-    g_hash_table_unref (ruleset->widget_style);
+  if (ruleset->owns_styles)
+    {
+      guint i;
+
+      for (i = 0; i < ruleset->n_styles; i++)
+        {
+          _gtk_css_value_unref (ruleset->styles[i].value);
+	  ruleset->styles[i].value = NULL;
+	  if (ruleset->styles[i].section)
+	    gtk_css_section_unref (ruleset->styles[i].section);
+        }
+      g_free (ruleset->styles);
+    }
+  if (ruleset->set_styles)
+    _gtk_bitmask_free (ruleset->set_styles);
+  if (ruleset->owns_widget_style)
+    widget_property_value_list_free (ruleset->widget_style);
   if (ruleset->selector)
     _gtk_css_selector_free (ruleset->selector);
 
   memset (ruleset, 0, sizeof (GtkCssRuleset));
 }
 
-typedef struct _PropertyValue PropertyValue;
-struct _PropertyValue {
-  GtkCssSection *section;
-  GValue         value;
-};
-
-static PropertyValue *
-property_value_new (GtkCssSection *section)
+static WidgetPropertyValue *
+widget_property_value_new (char *name, GtkCssSection *section)
 {
-  PropertyValue *value;
+  WidgetPropertyValue *value;
 
-  value = g_slice_new0 (PropertyValue);
+  value = g_slice_new0 (WidgetPropertyValue);
 
-  value->section = gtk_css_section_ref (section);
+  value->name = name;
+  if (gtk_keep_css_sections)
+    value->section = gtk_css_section_ref (section);
 
   return value;
 }
 
 static void
-property_value_free (PropertyValue *value)
+widget_property_value_free (WidgetPropertyValue *value)
 {
-  if (G_IS_VALUE (&value->value))
-    g_value_unset (&value->value);
+  g_free (value->value);
+  g_free (value->name);
+  if (value->section)
+    gtk_css_section_unref (value->section);
 
-  gtk_css_section_unref (value->section);
+  g_slice_free (WidgetPropertyValue, value);
+}
 
-  g_slice_free (PropertyValue, value);
+static void
+widget_property_value_list_free (WidgetPropertyValue *head)
+{
+  WidgetPropertyValue *l, *next;
+  for (l = head; l != NULL; l = next)
+    {
+      next = l->next;
+      widget_property_value_free (l);
+    }
+}
+
+static WidgetPropertyValue *
+widget_property_value_list_remove_name (WidgetPropertyValue *head, const char *name)
+{
+  WidgetPropertyValue *l, **last;
+
+  last = &head;
+
+  for (l = head; l != NULL; l = l->next)
+    {
+      if (strcmp (l->name, name) == 0)
+	{
+	  *last = l->next;
+	  widget_property_value_free (l);
+	  break;
+	}
+
+      last = &l->next;
+    }
+
+  return head;
 }
 
 static void
 gtk_css_ruleset_add_style (GtkCssRuleset *ruleset,
                            char          *name,
-                           PropertyValue *value)
+                           WidgetPropertyValue *value)
 {
-  if (ruleset->widget_style == NULL)
-    ruleset->widget_style = g_hash_table_new_full (g_str_hash,
-                                                   g_str_equal,
-                                                   (GDestroyNotify) g_free,
-                                                   (GDestroyNotify) property_value_free);
-
-  g_hash_table_insert (ruleset->widget_style, name, value);
+  value->next = widget_property_value_list_remove_name (ruleset->widget_style, name);
+  ruleset->widget_style = value;
+  ruleset->owns_widget_style = TRUE;
 }
 
 static void
-gtk_css_ruleset_add (GtkCssRuleset          *ruleset,
-                     const GtkStyleProperty *prop,
-                     PropertyValue          *value)
+gtk_css_ruleset_add (GtkCssRuleset       *ruleset,
+                     GtkCssStyleProperty *property,
+                     GtkCssValue         *value,
+                     GtkCssSection       *section)
 {
-  if (ruleset->style == NULL)
-    ruleset->style = g_hash_table_new_full (g_direct_hash,
-                                            g_direct_equal,
-                                            NULL,
-                                            (GDestroyNotify) property_value_free);
+  guint i;
 
-  if (_gtk_style_property_is_shorthand (prop))
+  g_return_if_fail (ruleset->owns_styles || ruleset->n_styles == 0);
+
+  if (ruleset->set_styles == NULL)
+    ruleset->set_styles = _gtk_bitmask_new ();
+
+  ruleset->set_styles = _gtk_bitmask_set (ruleset->set_styles,
+                                          _gtk_css_style_property_get_id (property),
+                                          TRUE);
+
+  ruleset->owns_styles = TRUE;
+
+  for (i = 0; i < ruleset->n_styles; i++)
     {
-      GParameter *parameters;
-      guint i, n_parameters;
-
-      parameters = _gtk_style_property_unpack (prop, &value->value, &n_parameters);
-
-      for (i = 0; i < n_parameters; i++)
+      if (ruleset->styles[i].property == property)
         {
-          const GtkStyleProperty *child;
-          PropertyValue *val;
-
-          child = _gtk_style_property_lookup (parameters[i].name);
-          val = property_value_new (value->section);
-          memcpy (&val->value, &parameters[i].value, sizeof (GValue));
-          gtk_css_ruleset_add (ruleset, child, val);
+          _gtk_css_value_unref (ruleset->styles[i].value);
+	  ruleset->styles[i].value = NULL;
+	  if (ruleset->styles[i].section)
+	    gtk_css_section_unref (ruleset->styles[i].section);
+          break;
         }
-      g_free (parameters);
-      property_value_free (value);
-      return;
+    }
+  if (i == ruleset->n_styles)
+    {
+      ruleset->n_styles++;
+      ruleset->styles = g_realloc (ruleset->styles, ruleset->n_styles * sizeof (PropertyValue));
+      ruleset->styles[i].value = NULL;
+      ruleset->styles[i].property = property;
     }
 
-  ruleset->has_inherit |= _gtk_style_property_is_inherit (prop);
-  g_hash_table_insert (ruleset->style, (gpointer) prop, value);
+  ruleset->styles[i].value = value;
+  if (gtk_keep_css_sections)
+    ruleset->styles[i].section = gtk_css_section_ref (section);
+  else
+    ruleset->styles[i].section = NULL;
 }
 
 static gboolean
-gtk_css_ruleset_matches (GtkCssRuleset *ruleset,
-                         GtkWidgetPath *path,
-                         guint          length)
+gtk_css_ruleset_matches (GtkCssRuleset       *ruleset,
+                         const GtkCssMatcher *matcher)
 {
-  return _gtk_css_selector_matches (ruleset->selector, path, length);
+  return _gtk_css_selector_matches (ruleset->selector, matcher);
+}
+
+static GtkCssChange
+gtk_css_ruleset_get_change (GtkCssRuleset *ruleset)
+{
+  return _gtk_css_selector_get_change (ruleset->selector);
 }
 
 static void
 gtk_css_scanner_destroy (GtkCssScanner *scanner)
 {
+  if (scanner->section)
+    gtk_css_section_unref (scanner->section);
   g_object_unref (scanner->provider);
   if (scanner->file)
     g_object_unref (scanner->file);
@@ -1220,7 +1325,7 @@ gtk_css_provider_emit_error (GtkCssProvider *provider,
                              const GError   *error)
 {
   g_signal_emit (provider, css_provider_signals[PARSING_ERROR], 0,
-                 scanner->section, error);
+                 scanner != NULL ? scanner->section : NULL, error);
 }
 
 static void
@@ -1369,53 +1474,36 @@ static GtkStyleProperties *
 gtk_css_provider_get_style (GtkStyleProvider *provider,
                             GtkWidgetPath    *path)
 {
+  GtkCssMatcher matcher;
   GtkCssProvider *css_provider;
   GtkCssProviderPrivate *priv;
   GtkStyleProperties *props;
-  guint i, l, length;
+  guint i, j;
 
   css_provider = GTK_CSS_PROVIDER (provider);
   priv = css_provider->priv;
-  length = gtk_widget_path_length (path);
   props = gtk_style_properties_new ();
 
   css_provider_dump_symbolic_colors (css_provider, props);
+  _gtk_css_matcher_init (&matcher, path, 0);
 
-  for (l = 1; l <= length; l++)
+  for (i = 0; i < priv->rulesets->len; i++)
     {
-      for (i = 0; i < priv->rulesets->len; i++)
-        {
-          GtkCssRuleset *ruleset;
-          GHashTableIter iter;
-          gpointer key, val;
+      GtkCssRuleset *ruleset;
 
-          ruleset = &g_array_index (priv->rulesets, GtkCssRuleset, i);
+      ruleset = &g_array_index (priv->rulesets, GtkCssRuleset, i);
 
-          if (ruleset->style == NULL)
-            continue;
+      if (ruleset->styles == NULL)
+        continue;
 
-          if (l < length && (!ruleset->has_inherit || _gtk_css_selector_get_state_flags (ruleset->selector)))
-            continue;
+      if (!gtk_css_ruleset_matches (ruleset, &matcher))
+        continue;
 
-          if (!gtk_css_ruleset_matches (ruleset, path, l))
-            continue;
-
-          g_hash_table_iter_init (&iter, ruleset->style);
-
-          while (g_hash_table_iter_next (&iter, &key, &val))
-            {
-              GtkStyleProperty *prop = key;
-              PropertyValue *value = val;
-
-              if (l != length && !_gtk_style_property_is_inherit (prop))
-                continue;
-
-              _gtk_style_properties_set_property_by_property (props,
-                                                              prop,
-                                                              _gtk_css_selector_get_state_flags (ruleset->selector),
-                                                              &value->value);
-            }
-        }
+      for (j = 0; j < ruleset->n_styles; j++)
+	_gtk_style_properties_set_property_by_property (props,
+							GTK_CSS_STYLE_PROPERTY (ruleset->styles[i].property),
+							_gtk_css_selector_get_state_flags (ruleset->selector),
+							ruleset->styles[i].value);
     }
 
   return props;
@@ -1430,7 +1518,8 @@ gtk_css_provider_get_style_property (GtkStyleProvider *provider,
 {
   GtkCssProvider *css_provider = GTK_CSS_PROVIDER (provider);
   GtkCssProviderPrivate *priv = css_provider->priv;
-  PropertyValue *val;
+  WidgetPropertyValue *val;
+  GtkCssMatcher matcher;
   gboolean found = FALSE;
   gchar *prop_name;
   gint i;
@@ -1438,47 +1527,44 @@ gtk_css_provider_get_style_property (GtkStyleProvider *provider,
   prop_name = g_strdup_printf ("-%s-%s",
                                g_type_name (pspec->owner_type),
                                pspec->name);
+  _gtk_css_matcher_init (&matcher, path, 0);
 
   for (i = priv->rulesets->len - 1; i >= 0; i--)
     {
       GtkCssRuleset *ruleset;
-      GtkStateFlags selector_state;
 
       ruleset = &g_array_index (priv->rulesets, GtkCssRuleset, i);
 
       if (ruleset->widget_style == NULL)
         continue;
 
-      if (!gtk_css_ruleset_matches (ruleset, path, gtk_widget_path_length (path)))
+      if (!gtk_css_ruleset_matches (ruleset, &matcher))
         continue;
 
-      selector_state = _gtk_css_selector_get_state_flags (ruleset->selector);
-      val = g_hash_table_lookup (ruleset->widget_style, prop_name);
+      for (val = ruleset->widget_style; val != NULL; val = val->next)
+	{
+	  if (strcmp (val->name, prop_name) == 0)
+	    {
+	      GtkCssScanner *scanner;
 
-      if (val &&
-          (selector_state == 0 ||
-           selector_state == state ||
-           ((selector_state & state) != 0 &&
-            (selector_state & ~(state)) == 0)))
-        {
-          GtkCssScanner *scanner;
+	      scanner = gtk_css_scanner_new (css_provider,
+					     NULL,
+					     val->section,
+					     val->section != NULL ? gtk_css_section_get_file (val->section) : NULL,
+					     val->value);
 
-          scanner = gtk_css_scanner_new (css_provider,
-                                         NULL,
-                                         val->section,
-                                         gtk_css_section_get_file (val->section),
-                                         g_value_get_string (&val->value));
+	      found = _gtk_css_style_parse_value (value,
+						  scanner->parser,
+						  NULL);
 
-          found = _gtk_style_property_parse_value (NULL,
-                                                   value,
-                                                   scanner->parser,
-                                                   NULL);
+	      gtk_css_scanner_destroy (scanner);
 
-          gtk_css_scanner_destroy (scanner);
+	      break;
+	    }
+	}
 
-          if (found)
-            break;
-        }
+      if (found)
+	break;
     }
 
   g_free (prop_name);
@@ -1491,6 +1577,98 @@ gtk_css_style_provider_iface_init (GtkStyleProviderIface *iface)
 {
   iface->get_style = gtk_css_provider_get_style;
   iface->get_style_property = gtk_css_provider_get_style_property;
+}
+
+static GtkSymbolicColor *
+gtk_css_style_provider_get_color (GtkStyleProviderPrivate *provider,
+                                  const char              *name)
+{
+  GtkCssProvider *css_provider = GTK_CSS_PROVIDER (provider);
+
+  return g_hash_table_lookup (css_provider->priv->symbolic_colors, name);
+}
+
+static void
+gtk_css_style_provider_lookup (GtkStyleProviderPrivate *provider,
+                               const GtkCssMatcher     *matcher,
+                               GtkCssLookup            *lookup)
+{
+  GtkCssProvider *css_provider;
+  GtkCssProviderPrivate *priv;
+  int i;
+  guint j;
+
+  css_provider = GTK_CSS_PROVIDER (provider);
+  priv = css_provider->priv;
+
+  for (i = priv->rulesets->len - 1; i >= 0; i--)
+    {
+      GtkCssRuleset *ruleset;
+
+      ruleset = &g_array_index (priv->rulesets, GtkCssRuleset, i);
+
+      if (ruleset->styles == NULL)
+        continue;
+
+      if (!_gtk_bitmask_intersects (_gtk_css_lookup_get_missing (lookup),
+                                    ruleset->set_styles))
+        continue;
+
+      if (!gtk_css_ruleset_matches (ruleset, matcher))
+        continue;
+
+      for (j = 0; j < ruleset->n_styles; j++)
+        {
+          GtkCssStyleProperty *prop = ruleset->styles[j].property;
+          guint id = _gtk_css_style_property_get_id (prop);
+
+          if (!_gtk_css_lookup_is_missing (lookup, id))
+            continue;
+
+          _gtk_css_lookup_set (lookup,
+                               id,
+                               ruleset->styles[j].section,
+                               ruleset->styles[j].value);
+        }
+    }
+}
+
+static GtkCssChange
+gtk_css_style_provider_get_change (GtkStyleProviderPrivate *provider,
+                                   const GtkCssMatcher     *matcher)
+{
+  GtkCssProvider *css_provider;
+  GtkCssProviderPrivate *priv;
+  GtkCssChange change = 0;
+  int i;
+
+  css_provider = GTK_CSS_PROVIDER (provider);
+  priv = css_provider->priv;
+
+  for (i = priv->rulesets->len - 1; i >= 0; i--)
+    {
+      GtkCssRuleset *ruleset;
+
+      ruleset = &g_array_index (priv->rulesets, GtkCssRuleset, i);
+
+      if (ruleset->styles == NULL)
+        continue;
+
+      if (!gtk_css_ruleset_matches (ruleset, matcher))
+        continue;
+
+      change |= gtk_css_ruleset_get_change (ruleset);
+    }
+
+  return change;
+}
+
+static void
+gtk_css_style_provider_private_iface_init (GtkStyleProviderPrivateInterface *iface)
+{
+  iface->get_color = gtk_css_style_provider_get_color;
+  iface->lookup = gtk_css_style_provider_lookup;
+  iface->get_change = gtk_css_style_provider_get_change;
 }
 
 static void
@@ -1510,6 +1688,13 @@ gtk_css_provider_finalize (GObject *object)
 
   if (priv->symbolic_colors)
     g_hash_table_destroy (priv->symbolic_colors);
+
+  if (priv->resource)
+    {
+      g_resources_unregister (priv->resource);
+      g_resource_unref (priv->resource);
+      priv->resource = NULL;
+    }
 
   G_OBJECT_CLASS (gtk_css_provider_parent_class)->finalize (object);
 }
@@ -1532,7 +1717,7 @@ gtk_css_provider_take_error (GtkCssProvider *provider,
                              GtkCssScanner  *scanner,
                              GError         *error)
 {
-  gtk_css_provider_emit_error (scanner->provider,
+  gtk_css_provider_emit_error (provider,
                                scanner,
                                error);
 
@@ -1598,7 +1783,7 @@ css_provider_commit (GtkCssProvider *css_provider,
 
   priv = css_provider->priv;
 
-  if (ruleset->style == NULL && ruleset->widget_style == NULL)
+  if (ruleset->styles == NULL && ruleset->widget_style == NULL)
     {
       g_slist_free_full (selectors, (GDestroyNotify) _gtk_css_selector_free);
       return;
@@ -1623,6 +1808,13 @@ gtk_css_provider_reset (GtkCssProvider *css_provider)
   guint i;
 
   priv = css_provider->priv;
+
+  if (priv->resource)
+    {
+      g_resources_unregister (priv->resource);
+      g_resource_unref (priv->resource);
+      priv->resource = NULL;
+    }
 
   g_hash_table_remove_all (priv->symbolic_colors);
 
@@ -1684,7 +1876,6 @@ static gboolean
 parse_import (GtkCssScanner *scanner)
 {
   GFile *file;
-  char *uri;
 
   gtk_css_scanner_push_section (scanner, GTK_CSS_SECTION_IMPORT);
 
@@ -1695,21 +1886,32 @@ parse_import (GtkCssScanner *scanner)
     }
 
   if (_gtk_css_parser_is_string (scanner->parser))
-    uri = _gtk_css_parser_read_string (scanner->parser);
-  else
-    uri = _gtk_css_parser_read_uri (scanner->parser);
+    {
+      char *uri;
 
-  if (uri == NULL)
+      uri = _gtk_css_parser_read_string (scanner->parser);
+      file = g_file_resolve_relative_path (gtk_css_scanner_get_base_url (scanner), uri);
+      g_free (uri);
+    }
+  else
+    {
+      file = _gtk_css_parser_read_url (scanner->parser,
+                                       gtk_css_scanner_get_base_url (scanner));
+    }
+
+  if (file == NULL)
     {
       _gtk_css_parser_resync (scanner->parser, TRUE, 0);
       gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_IMPORT);
       return TRUE;
     }
 
-  file = g_file_resolve_relative_path (gtk_css_scanner_get_base_url (scanner), uri);
-  g_free (uri);
-
-  if (gtk_css_scanner_would_recurse (scanner, file))
+  if (!_gtk_css_parser_try (scanner->parser, ";", FALSE))
+    {
+      gtk_css_provider_invalid_token (scanner->provider, scanner, "semicolon");
+      _gtk_css_parser_resync (scanner->parser, TRUE, 0);
+    }
+  else if (gtk_css_scanner_would_recurse (scanner, file))
     {
        char *path = g_file_get_path (file);
        gtk_css_provider_error (scanner->provider,
@@ -1729,22 +1931,18 @@ parse_import (GtkCssScanner *scanner)
                                       NULL);
     }
 
-  if (!_gtk_css_parser_try (scanner->parser, ";", TRUE))
-    {
-      gtk_css_provider_invalid_token (scanner->provider, scanner, "semicolon");
-      _gtk_css_parser_resync (scanner->parser, TRUE, 0);
-    }
-
   g_object_unref (file);
 
   gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_IMPORT);
+  _gtk_css_parser_skip_whitespace (scanner->parser);
+
   return TRUE;
 }
 
 static gboolean
 parse_color_definition (GtkCssScanner *scanner)
 {
-  GtkSymbolicColor *symbolic;
+  GtkCssValue *symbolic;
   char *name;
 
   gtk_css_scanner_push_section (scanner, GTK_CSS_SECTION_COLOR_DEFINITION);
@@ -1768,7 +1966,7 @@ parse_color_definition (GtkCssScanner *scanner)
       return TRUE;
     }
 
-  symbolic = _gtk_css_parser_read_symbolic_color (scanner->parser);
+  symbolic = _gtk_css_symbolic_value_new (scanner->parser);
   if (symbolic == NULL)
     {
       g_free (name);
@@ -1780,7 +1978,7 @@ parse_color_definition (GtkCssScanner *scanner)
   if (!_gtk_css_parser_try (scanner->parser, ";", TRUE))
     {
       g_free (name);
-      gtk_symbolic_color_unref (symbolic);
+      _gtk_css_value_unref (symbolic);
       gtk_css_provider_error_literal (scanner->provider,
                                       scanner,
                                       GTK_CSS_PROVIDER_ERROR,
@@ -1927,282 +2125,6 @@ parse_at_keyword (GtkCssScanner *scanner)
     }
 }
 
-static gboolean
-parse_selector_class (GtkCssScanner *scanner, GArray *classes)
-{
-  GQuark qname;
-  char *name;
-    
-  name = _gtk_css_parser_try_name (scanner->parser, FALSE);
-
-  if (name == NULL)
-    {
-      gtk_css_provider_error_literal (scanner->provider,
-                                      scanner,
-                                      GTK_CSS_PROVIDER_ERROR,
-                                      GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                      "Expected a valid name for class");
-      return FALSE;
-    }
-
-  qname = g_quark_from_string (name);
-  g_array_append_val (classes, qname);
-  g_free (name);
-  return TRUE;
-}
-
-static gboolean
-parse_selector_name (GtkCssScanner *scanner, GArray *names)
-{
-  GQuark qname;
-  char *name;
-    
-  name = _gtk_css_parser_try_name (scanner->parser, FALSE);
-
-  if (name == NULL)
-    {
-      gtk_css_provider_error_literal (scanner->provider,
-                                      scanner,
-                                      GTK_CSS_PROVIDER_ERROR,
-                                      GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                      "Expected a valid name for id");
-      return FALSE;
-    }
-
-  qname = g_quark_from_string (name);
-  g_array_append_val (names, qname);
-  g_free (name);
-  return TRUE;
-}
-
-static gboolean
-parse_selector_pseudo_class (GtkCssScanner  *scanner,
-                             GtkRegionFlags *region_to_modify,
-                             GtkStateFlags  *state_to_modify)
-{
-  struct {
-    const char *name;
-    GtkRegionFlags region_flag;
-    GtkStateFlags state_flag;
-  } pseudo_classes[] = {
-    { "first-child",  GTK_REGION_FIRST, 0 },
-    { "last-child",   GTK_REGION_LAST, 0 },
-    { "only-child",   GTK_REGION_ONLY, 0 },
-    { "sorted",       GTK_REGION_SORTED, 0 },
-    { "active",       0, GTK_STATE_FLAG_ACTIVE },
-    { "prelight",     0, GTK_STATE_FLAG_PRELIGHT },
-    { "hover",        0, GTK_STATE_FLAG_PRELIGHT },
-    { "selected",     0, GTK_STATE_FLAG_SELECTED },
-    { "insensitive",  0, GTK_STATE_FLAG_INSENSITIVE },
-    { "inconsistent", 0, GTK_STATE_FLAG_INCONSISTENT },
-    { "focused",      0, GTK_STATE_FLAG_FOCUSED },
-    { "focus",        0, GTK_STATE_FLAG_FOCUSED },
-    { NULL, }
-  }, nth_child_classes[] = {
-    { "first",        GTK_REGION_FIRST, 0 },
-    { "last",         GTK_REGION_LAST, 0 },
-    { "even",         GTK_REGION_EVEN, 0 },
-    { "odd",          GTK_REGION_ODD, 0 },
-    { NULL, }
-  }, *classes;
-  guint i;
-  char *name;
-
-  name = _gtk_css_parser_try_ident (scanner->parser, FALSE);
-  if (name == NULL)
-    {
-      gtk_css_provider_error_literal (scanner->provider,
-                                      scanner,
-                                      GTK_CSS_PROVIDER_ERROR,
-                                      GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                      "Missing name of pseudo-class");
-      return FALSE;
-    }
-
-  if (_gtk_css_parser_try (scanner->parser, "(", TRUE))
-    {
-      char *function = name;
-
-      name = _gtk_css_parser_try_ident (scanner->parser, TRUE);
-      if (!_gtk_css_parser_try (scanner->parser, ")", FALSE))
-        {
-          gtk_css_provider_error_literal (scanner->provider,
-                                          scanner,
-                                          GTK_CSS_PROVIDER_ERROR,
-                                          GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                          "Missing closing bracket for pseudo-class");
-          return FALSE;
-        }
-
-      if (g_ascii_strcasecmp (function, "nth-child") != 0)
-        {
-          gtk_css_provider_error (scanner->provider,
-                                  scanner,
-                                  GTK_CSS_PROVIDER_ERROR,
-                                  GTK_CSS_PROVIDER_ERROR_UNKNOWN_VALUE,
-                                  "Unknown pseudo-class '%s(%s)'", function, name ? name : "");
-          g_free (function);
-          g_free (name);
-          return FALSE;
-        }
-      
-      g_free (function);
-    
-      if (name == NULL)
-        {
-          gtk_css_provider_error (scanner->provider,
-                                  scanner,
-                                  GTK_CSS_PROVIDER_ERROR,
-                                  GTK_CSS_PROVIDER_ERROR_UNKNOWN_VALUE,
-                                  "nth-child() requires an argument");
-          return FALSE;
-        }
-
-      classes = nth_child_classes;
-    }
-  else
-    classes = pseudo_classes;
-
-  for (i = 0; classes[i].name != NULL; i++)
-    {
-      if (g_ascii_strcasecmp (name, classes[i].name) == 0)
-        {
-          if ((*region_to_modify & classes[i].region_flag) ||
-              (*state_to_modify & classes[i].state_flag))
-            {
-              if (classes == nth_child_classes)
-                gtk_css_provider_error (scanner->provider,
-                                        scanner,
-                                        GTK_CSS_PROVIDER_ERROR,
-                                        GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                        "Duplicate pseudo-class 'nth-child(%s)'", name);
-              else
-                gtk_css_provider_error (scanner->provider,
-                                        scanner,
-                                        GTK_CSS_PROVIDER_ERROR,
-                                        GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                        "Duplicate pseudo-class '%s'", name);
-            }
-          *region_to_modify |= classes[i].region_flag;
-          *state_to_modify |= classes[i].state_flag;
-
-          g_free (name);
-          return TRUE;
-        }
-    }
-
-  if (classes == nth_child_classes)
-    gtk_css_provider_error (scanner->provider,
-                            scanner,
-                            GTK_CSS_PROVIDER_ERROR,
-                            GTK_CSS_PROVIDER_ERROR_UNKNOWN_VALUE,
-                            "Unknown pseudo-class 'nth-child(%s)'", name);
-  else
-    gtk_css_provider_error (scanner->provider,
-                            scanner,
-                            GTK_CSS_PROVIDER_ERROR,
-                            GTK_CSS_PROVIDER_ERROR_UNKNOWN_VALUE,
-                            "Unknown pseudo-class '%s'", name);
-  g_free (name);
-  return FALSE;
-}
-
-static gboolean
-parse_simple_selector (GtkCssScanner *scanner,
-                       char **name,
-                       GArray *ids,
-                       GArray *classes,
-                       GtkRegionFlags *pseudo_classes,
-                       GtkStateFlags *state)
-{
-  gboolean parsed_something;
-  
-  *name = _gtk_css_parser_try_ident (scanner->parser, FALSE);
-  if (*name)
-    parsed_something = TRUE;
-  else
-    parsed_something = _gtk_css_parser_try (scanner->parser, "*", FALSE);
-
-  do {
-      if (_gtk_css_parser_try (scanner->parser, "#", FALSE))
-        {
-          if (!parse_selector_name (scanner, ids))
-            return FALSE;
-        }
-      else if (_gtk_css_parser_try (scanner->parser, ".", FALSE))
-        {
-          if (!parse_selector_class (scanner, classes))
-            return FALSE;
-        }
-      else if (_gtk_css_parser_try (scanner->parser, ":", FALSE))
-        {
-          if (!parse_selector_pseudo_class (scanner, pseudo_classes, state))
-            return FALSE;
-        }
-      else if (!parsed_something)
-        {
-          gtk_css_provider_error_literal (scanner->provider,
-                                          scanner,
-                                          GTK_CSS_PROVIDER_ERROR,
-                                          GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                          "Expected a valid selector");
-          return FALSE;
-        }
-      else
-        break;
-
-      parsed_something = TRUE;
-    }
-  while (!_gtk_css_parser_is_eof (scanner->parser));
-
-  _gtk_css_parser_skip_whitespace (scanner->parser);
-  return TRUE;
-}
-
-static GtkCssSelector *
-parse_selector (GtkCssScanner *scanner)
-{
-  GtkCssSelector *selector = NULL;
-
-  do {
-      char *name = NULL;
-      GArray *ids = g_array_new (TRUE, FALSE, sizeof (GQuark));
-      GArray *classes = g_array_new (TRUE, FALSE, sizeof (GQuark));
-      GtkRegionFlags pseudo_classes = 0;
-      GtkStateFlags state = 0;
-      GtkCssCombinator combine = GTK_CSS_COMBINE_DESCANDANT;
-
-      if (selector)
-        {
-          if (_gtk_css_parser_try (scanner->parser, ">", TRUE))
-            combine = GTK_CSS_COMBINE_CHILD;
-        }
-
-      if (!parse_simple_selector (scanner, &name, ids, classes, &pseudo_classes, &state))
-        {
-          g_array_free (ids, TRUE);
-          g_array_free (classes, TRUE);
-          if (selector)
-            _gtk_css_selector_free (selector);
-          return NULL;
-        }
-
-      selector = _gtk_css_selector_new (selector,
-                                        combine,
-                                        name,
-                                        (GQuark *) g_array_free (ids, ids->len == 0),
-                                        (GQuark *) g_array_free (classes, classes->len == 0),
-                                        pseudo_classes,
-                                        state);
-      g_free (name);
-    }
-  while (!_gtk_css_parser_is_eof (scanner->parser) &&
-         !_gtk_css_parser_begins_with (scanner->parser, ',') &&
-         !_gtk_css_parser_begins_with (scanner->parser, '{'));
-
-  return selector;
-}
-
 static GSList *
 parse_selector_list (GtkCssScanner *scanner)
 {
@@ -2211,7 +2133,7 @@ parse_selector_list (GtkCssScanner *scanner)
   gtk_css_scanner_push_section (scanner, GTK_CSS_SECTION_SELECTOR);
 
   do {
-      GtkCssSelector *select = parse_selector (scanner);
+      GtkCssSelector *select = _gtk_css_selector_parse (scanner->parser);
 
       if (select == NULL)
         {
@@ -2234,7 +2156,7 @@ static void
 parse_declaration (GtkCssScanner *scanner,
                    GtkCssRuleset *ruleset)
 {
-  const GtkStyleProperty *property;
+  GtkStyleProperty *property;
   char *name;
 
   gtk_css_scanner_push_section (scanner, GTK_CSS_SECTION_DECLARATION);
@@ -2269,48 +2191,65 @@ parse_declaration (GtkCssScanner *scanner,
 
   if (property)
     {
-      PropertyValue *val;
+      GtkCssValue *value;
 
       g_free (name);
 
       gtk_css_scanner_push_section (scanner, GTK_CSS_SECTION_VALUE);
 
-      val = property_value_new (scanner->section);
-      g_value_init (&val->value, property->pspec->value_type);
+      value = _gtk_style_property_parse_value (property,
+                                               scanner->parser,
+                                               gtk_css_scanner_get_base_url (scanner));
 
-      if (_gtk_style_property_parse_value (property,
-                                           &val->value,
-                                           scanner->parser,
-                                           gtk_css_scanner_get_base_url (scanner)))
+      if (value == NULL)
         {
-          if (_gtk_css_parser_begins_with (scanner->parser, ';') ||
-              _gtk_css_parser_begins_with (scanner->parser, '}') ||
-              _gtk_css_parser_is_eof (scanner->parser))
-            {
-              gtk_css_ruleset_add (ruleset, property, val);
-            }
-          else
-            {
-              gtk_css_provider_error_literal (scanner->provider,
-                                              scanner,
-                                              GTK_CSS_PROVIDER_ERROR,
-                                              GTK_CSS_PROVIDER_ERROR_SYNTAX,
-                                              "Junk at end of value");
-              _gtk_css_parser_resync (scanner->parser, TRUE, '}');
-              property_value_free (val);
-              gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_VALUE);
-              gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_DECLARATION);
-              return;
-            }
-        }
-      else
-        {
-          property_value_free (val);
           _gtk_css_parser_resync (scanner->parser, TRUE, '}');
           gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_VALUE);
           gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_DECLARATION);
           return;
         }
+
+      if (!_gtk_css_parser_begins_with (scanner->parser, ';') &&
+          !_gtk_css_parser_begins_with (scanner->parser, '}') &&
+          !_gtk_css_parser_is_eof (scanner->parser))
+        {
+          gtk_css_provider_error_literal (scanner->provider,
+                                          scanner,
+                                          GTK_CSS_PROVIDER_ERROR,
+                                          GTK_CSS_PROVIDER_ERROR_SYNTAX,
+                                          "Junk at end of value");
+          _gtk_css_parser_resync (scanner->parser, TRUE, '}');
+          gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_VALUE);
+          gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_DECLARATION);
+          return;
+        }
+
+      if (GTK_IS_CSS_SHORTHAND_PROPERTY (property))
+        {
+          GtkCssShorthandProperty *shorthand = GTK_CSS_SHORTHAND_PROPERTY (property);
+          guint i;
+
+          for (i = 0; i < _gtk_css_shorthand_property_get_n_subproperties (shorthand); i++)
+            {
+              GtkCssStyleProperty *child = _gtk_css_shorthand_property_get_subproperty (shorthand, i);
+              GtkCssValue *sub = _gtk_css_array_value_get_nth (value, i);
+              
+              gtk_css_ruleset_add (ruleset, child, _gtk_css_value_ref (sub), scanner->section);
+            }
+          
+            _gtk_css_value_unref (value);
+        }
+      else if (GTK_IS_CSS_STYLE_PROPERTY (property))
+        {
+          gtk_css_ruleset_add (ruleset, GTK_CSS_STYLE_PROPERTY (property), value, scanner->section);
+        }
+      else
+        {
+          g_assert_not_reached ();
+          _gtk_css_value_unref (value);
+        }
+
+
       gtk_css_scanner_pop_section (scanner, GTK_CSS_SECTION_VALUE);
     }
   else if (name[0] == '-')
@@ -2322,11 +2261,10 @@ parse_declaration (GtkCssScanner *scanner,
       value_str = _gtk_css_parser_read_value (scanner->parser);
       if (value_str)
         {
-          PropertyValue *val;
+          WidgetPropertyValue *val;
 
-          val = property_value_new (scanner->section);
-          g_value_init (&val->value, G_TYPE_STRING);
-          g_value_take_string (&val->value, value_str);
+          val = widget_property_value_new (name, scanner->section);
+	  val->value = value_str;
 
           gtk_css_ruleset_add_style (ruleset, name, val);
         }
@@ -2462,13 +2400,6 @@ gtk_css_provider_compare_rule (gconstpointer a_,
   compare = _gtk_css_selector_compare (a->selector, b->selector);
   if (compare != 0)
     return compare;
-
-  /* compare pointers in array to ensure a stable sort */
-  if (a_ < b_)
-    return -1;
-
-  if (a_ > b_)
-    return 1;
 
   return 0;
 }
@@ -2606,6 +2537,8 @@ gtk_css_provider_load_from_data (GtkCssProvider  *css_provider,
 
   g_free (free_data);
 
+  _gtk_style_provider_private_changed (GTK_STYLE_PROVIDER_PRIVATE (css_provider));
+
   return ret;
 }
 
@@ -2625,12 +2558,18 @@ gtk_css_provider_load_from_file (GtkCssProvider  *css_provider,
                                  GFile           *file,
                                  GError         **error)
 {
+  gboolean success;
+
   g_return_val_if_fail (GTK_IS_CSS_PROVIDER (css_provider), FALSE);
   g_return_val_if_fail (G_IS_FILE (file), FALSE);
 
   gtk_css_provider_reset (css_provider);
 
-  return gtk_css_provider_load_internal (css_provider, NULL, file, NULL, error);
+  success = gtk_css_provider_load_internal (css_provider, NULL, file, NULL, error);
+
+  _gtk_style_provider_private_changed (GTK_STYLE_PROVIDER_PRIVATE (css_provider));
+
+  return success;
 }
 
 /**
@@ -2664,6 +2603,32 @@ gtk_css_provider_load_from_path (GtkCssProvider  *css_provider,
   return result;
 }
 
+static gboolean
+_gtk_css_provider_load_from_resource (GtkCssProvider  *css_provider,
+				      const gchar     *resource_path)
+{
+  GFile *file;
+  char *uri, *escaped;
+  gboolean result;
+
+  g_return_val_if_fail (GTK_IS_CSS_PROVIDER (css_provider), FALSE);
+  g_return_val_if_fail (resource_path != NULL, FALSE);
+
+  escaped = g_uri_escape_string (resource_path,
+				 G_URI_RESERVED_CHARS_ALLOWED_IN_PATH, FALSE);
+  uri = g_strconcat ("resource://", escaped, NULL);
+  g_free (escaped);
+
+  file = g_file_new_for_uri (uri);
+  g_free (uri);
+
+  result = gtk_css_provider_load_from_file (css_provider, file, NULL);
+
+  g_object_unref (file);
+
+  return result;
+}
+
 /**
  * gtk_css_provider_get_default:
  *
@@ -2680,377 +2645,7 @@ gtk_css_provider_get_default (void)
 
   if (G_UNLIKELY (!provider))
     {
-      const gchar *str =
-        "@define-color fg_color #000; \n"
-        "@define-color bg_color #dcdad5; \n"
-        "@define-color text_color #000; \n"
-        "@define-color base_color #fff; \n"
-        "@define-color selected_bg_color #4b6983; \n"
-        "@define-color selected_fg_color #fff; \n"
-        "@define-color tooltip_bg_color #eee1b3; \n"
-        "@define-color tooltip_fg_color #000; \n"
-        "@define-color placeholder_text_color #808080; \n"
-        "\n"
-        "@define-color info_fg_color rgb (181, 171, 156);\n"
-        "@define-color info_bg_color rgb (252, 252, 189);\n"
-        "@define-color warning_fg_color rgb (173, 120, 41);\n"
-        "@define-color warning_bg_color rgb (250, 173, 61);\n"
-        "@define-color question_fg_color rgb (97, 122, 214);\n"
-        "@define-color question_bg_color rgb (138, 173, 212);\n"
-        "@define-color error_fg_color rgb (166, 38, 38);\n"
-        "@define-color error_bg_color rgb (237, 54, 54);\n"
-        "\n"
-        "* {\n"
-        "  background-color: @bg_color;\n"
-        "  color: @fg_color;\n"
-        "  border-color: shade (@bg_color, 0.6);\n"
-        "  padding: 2;\n"
-        "  border-width: 0;\n"
-        "}\n"
-        "\n"
-        "*:prelight {\n"
-        "  background-color: shade (@bg_color, 1.05);\n"
-        "  color: shade (@fg_color, 1.3);\n"
-        "}\n"
-        "\n"
-        "*:selected {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".expander, GtkTreeView.view.expander {\n"
-        "  color: #fff;\n"
-        "}\n"
-        "\n"
-        ".expander:prelight,\n"
-        "GtkTreeView.view.expander:selected:prelight {\n"
-        "  color: @text_color;\n"
-        "}\n"
-        "\n"
-        ".expander:active {\n"
-        "  transition: 200ms linear;\n"
-        "}\n"
-        "\n"
-        "*:insensitive {\n"
-        "  border-color: shade (@bg_color, 0.7);\n"
-        "  background-color: shade (@bg_color, 0.9);\n"
-        "  color: shade (@bg_color, 0.7);\n"
-        "}\n"
-        "\n"
-        ".view {\n"
-        "  border-width: 0;\n"
-        "  border-radius: 0;\n"
-        "  background-color: @base_color;\n"
-        "  color: @text_color;\n"
-        "}\n"
-        ".view:selected {\n"
-        "  background-color: shade (@bg_color, 0.9);\n"
-        "  color: @fg_color;\n"
-        "}\n"
-        "\n"
-        ".view:selected:focused {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".view column:sorted row,\n"
-        ".view column:sorted row:prelight {\n"
-        "  background-color: shade (@bg_color, 0.85);\n"
-        "}\n"
-        "\n"
-        ".view column:sorted row:nth-child(odd),\n"
-        ".view column:sorted row:nth-child(odd):prelight {\n"
-        "  background-color: shade (@bg_color, 0.8);\n"
-        "}\n"
-        "\n"
-        ".view row,\n"
-        ".view row:prelight {\n"
-        "  background-color: @base_color;\n"
-        "  color: @text_color;\n"
-        "}\n"
-        "\n"
-        ".view row:nth-child(odd),\n"
-        ".view row:nth-child(odd):prelight {\n"
-        "  background-color: shade (@base_color, 0.93); \n"
-        "}\n"
-        "\n"
-        ".view row:selected:focused {\n"
-        "  background-color: @selected_bg_color;\n"
-        "}\n"
-        "\n"
-        ".view row:selected {\n"
-        "  background-color: darker (@bg_color);\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".view.cell.trough,\n"
-        ".view.cell.trough:hover,\n"
-        ".view.cell.trough:selected,\n"
-        ".view.cell.trough:selected:focused {\n"
-        "  background-color: @bg_color;\n"
-        "  color: @fg_color;\n"
-        "}\n"
-        "\n"
-        ".view.cell.progressbar,\n"
-        ".view.cell.progressbar:hover,\n"
-        ".view.cell.progressbar:selected,\n"
-        ".view.cell.progressbar:selected:focused {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".rubberband {\n"
-        "  background-color: alpha (@fg_color, 0.25);\n"
-        "  border-color: @fg_color;\n"
-        "  border-style: solid;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        ".tooltip,\n"
-        ".tooltip * {\n"
-        "  background-color: @tooltip_bg_color; \n"
-        "  color: @tooltip_fg_color; \n"
-        "  border-color: @tooltip_fg_color; \n"
-        "  border-width: 1;\n"
-        "  border-style: solid;\n"
-        "}\n"
-        "\n"
-        ".button,\n"
-        ".slider {\n"
-        "  border-style: outset; \n"
-        "  border-width: 2; \n"
-        "}\n"
-        "\n"
-        ".button:active {\n"
-        "  background-color: shade (@bg_color, 0.7);\n"
-        "  border-style: inset; \n"
-        "}\n"
-        "\n"
-        ".button:prelight,\n"
-        ".slider:prelight {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "  border-color: shade (@selected_bg_color, 0.7);\n"
-        "}\n"
-        "\n"
-        ".trough {\n"
-        "  background-color: darker (@bg_color);\n"
-        "  border-style: inset;\n"
-        "  border-width: 1;\n"
-        "  padding: 0;\n"
-        "}\n"
-        "\n"
-        ".entry {\n"
-        "  border-style: inset;\n"
-        "  border-width: 2;\n"
-        "  background-color: @base_color;\n"
-        "  color: @text_color;\n"
-        "}\n"
-        "\n"
-        ".entry:insensitive {\n"
-        "  background-color: shade (@base_color, 0.9);\n"
-        "  color: shade (@base_color, 0.7);\n"
-        "}\n"
-        ".entry:active {\n"
-        "  background-color: #c4c2bd;\n"
-        "  color: #000;\n"
-        "}\n"
-        "\n"
-        ".progressbar,\n"
-        ".entry.progressbar, \n"
-        ".cell.progressbar {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  border-color: shade (@selected_bg_color, 0.7);\n"
-        "  color: @selected_fg_color;\n"
-        "  border-style: outset;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        "GtkCheckButton:hover,\n"
-        "GtkCheckButton:selected,\n"
-        "GtkRadioButton:hover,\n"
-        "GtkRadioButton:selected {\n"
-        "  background-color: shade (@bg_color, 1.05);\n"
-        "}\n"
-        "\n"
-        ".check, .radio,"
-        ".cell.check, .cell.radio,\n"
-        ".cell.check:hover, .cell.radio:hover {\n"
-        "  border-style: solid;\n"
-        "  border-width: 1;\n"
-        "  background-color: @base_color;\n"
-        "  border-color: @fg_color;\n"
-        "}\n"
-        "\n"
-        ".check:active, .radio:active,\n"
-        ".check:hover, .radio:hover {\n"
-        "  background-color: @base_color;\n"
-        "  border-color: @fg_color;\n"
-        "  color: @text_color;\n"
-        "}\n"
-        "\n"
-        ".check:selected, .radio:selected {\n"
-        "  background-color: darker (@bg_color);\n"
-        "  color: @selected_fg_color;\n"
-        "  border-color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".check:selected:focused, .radio:selected:focused {\n"
-        "  background-color: @selected_bg_color;\n"
-        "}\n"
-        "\n"
-        ".menuitem.check, .menuitem.radio {\n"
-        "  color: @fg_color;\n"
-        "  border-style: none;\n"
-        "  border-width: 0;\n"
-        "}\n"
-        "\n"
-        ".popup {\n"
-        "  border-style: outset;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        ".viewport {\n"
-        "  border-style: inset;\n"
-        "  border-width: 2;\n"
-        "}\n"
-        "\n"
-        ".notebook {\n"
-        "  border-style: outset;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        ".frame {\n"
-        "  border-style: inset;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        "GtkScrolledWindow.frame {\n"
-        "  padding: 0;\n"
-        "}\n"
-        "\n"
-        ".menu,\n"
-        ".menubar,\n"
-        ".toolbar {\n"
-        "  border-style: outset;\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        ".menu:hover,\n"
-        ".menubar:hover,\n"
-        ".menuitem:hover,\n"
-        ".menuitem.check:hover,\n"
-        ".menuitem.radio:hover {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        "GtkSpinButton.button {\n"
-        "  border-width: 1;\n"
-        "}\n"
-        "\n"
-        ".scale.slider:hover,\n"
-        "GtkSpinButton.button:hover {\n"
-        "  background-color: shade (@bg_color, 1.05);\n"
-        "  border-color: shade (@bg_color, 0.8);\n"
-        "}\n"
-        "\n"
-        "GtkSwitch.trough:active {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        "GtkToggleButton.button:inconsistent {\n"
-        "  border-style: outset;\n"
-        "  border-width: 1px;\n"
-        "  background-color: shade (@bg_color, 0.9);\n"
-        "  border-color: shade (@bg_color, 0.7);\n"
-        "}\n"
-        "\n"
-        "GtkLabel:selected {\n"
-        "  background-color: shade (@bg_color, 0.9);\n"
-        "}\n"
-        "\n"
-        "GtkLabel:selected:focused {\n"
-        "  background-color: @selected_bg_color;\n"
-        "}\n"
-        "\n"
-        ".spinner:active {\n"
-        "  transition: 750ms linear loop;\n"
-        "}\n"
-        "\n"
-        ".info {\n"
-        "  background-color: @info_bg_color;\n"
-        "  color: @info_fg_color;\n"
-        "}\n"
-        "\n"
-        ".warning {\n"
-        "  background-color: @warning_bg_color;\n"
-        "  color: @warning_fg_color;\n"
-        "}\n"
-        "\n"
-        ".question {\n"
-        "  background-color: @question_bg_color;\n"
-        "  color: @question_fg_color;\n"
-        "}\n"
-        "\n"
-        ".error {\n"
-        "  background-color: @error_bg_color;\n"
-        "  color: @error_fg_color;\n"
-        "}\n"
-        "\n"
-        ".highlight {\n"
-        "  background-color: @selected_bg_color;\n"
-        "  color: @selected_fg_color;\n"
-        "}\n"
-        "\n"
-        ".light-area-focus {\n"
-        "  color: #000;\n"
-        "}\n"
-        "\n"
-        ".dark-area-focus {\n"
-        "  color: #fff;\n"
-        "}\n"
-        "GtkCalendar.view {\n"
-        "  border-width: 1;\n"
-        "  border-style: inset;\n"
-        "  padding: 1;\n"
-        "}\n"
-        "\n"
-        "GtkCalendar.view:inconsistent {\n"
-        "  color: darker (@bg_color);\n"
-        "}\n"
-        "\n"
-        "GtkCalendar.header {\n"
-        "  background-color: @bg_color;\n"
-        "  border-style: outset;\n"
-        "  border-width: 2;\n"
-        "}\n"
-        "\n"
-        "GtkCalendar.highlight {\n"
-        "  border-width: 0;\n"
-        "}\n"
-        "\n"
-        "GtkCalendar.button {\n"
-        "  background-color: @bg_color;\n"
-        "}\n"
-        "\n"
-        "GtkCalendar.button:hover {\n"
-        "  background-color: lighter (@bg_color);\n"
-        "  color: @fg_color;\n"
-        "}\n"
-        "\n"
-        ".menu * {\n"
-        "  border-width: 0;\n"
-        "  padding: 2;\n"
-        "}\n"
-        "\n";
-
       provider = gtk_css_provider_new ();
-      if (!gtk_css_provider_load_from_data (provider, str, -1, NULL))
-        {
-          g_error ("Failed to load the internal default CSS.");
-        }
     }
 
   return provider;
@@ -3091,15 +2686,36 @@ gtk_css_provider_get_named (const gchar *name,
   GtkCssProvider *provider;
   gchar *key;
 
-  if (G_UNLIKELY (!themes))
-    themes = g_hash_table_new (g_str_hash, g_str_equal);
-
   if (variant == NULL)
     key = (gchar *)name;
   else
     key = g_strconcat (name, "-", variant, NULL);
 
+  if (G_UNLIKELY (!themes))
+    themes = g_hash_table_new (g_str_hash, g_str_equal);
+
   provider = g_hash_table_lookup (themes, key);
+
+  if (!provider)
+    {
+      gchar *resource_path = NULL;
+
+      if (variant)
+        resource_path = g_strdup_printf ("/org/gtk/libgtk/%s-%s.css", name, variant);
+      else
+        resource_path = g_strdup_printf ("/org/gtk/libgtk/%s.css", name);
+
+      if (g_resources_get_info (resource_path, 0, NULL, NULL, NULL))
+	{
+	  provider = gtk_css_provider_new ();
+	  if (!_gtk_css_provider_load_from_resource (provider, resource_path))
+	    {
+	      g_object_unref (provider);
+	      provider = NULL;
+	    }
+	}
+      g_free (resource_path);
+    }
 
   if (!provider)
     {
@@ -3144,17 +2760,38 @@ gtk_css_provider_get_named (const gchar *name,
 
       if (path)
         {
+          char *dir, *resource_file;
+          GResource *resource;
+
           provider = gtk_css_provider_new ();
+
+          dir = g_path_get_dirname (path);
+          resource_file = g_build_filename (dir, "gtk.gresource", NULL);
+          resource = g_resource_load (resource_file, NULL);
+          g_free (resource_file);
+
+          if (resource != NULL)
+            g_resources_register (resource);
 
           if (!gtk_css_provider_load_from_path (provider, path, NULL))
             {
+	      if (resource != NULL)
+		{
+		  g_resources_unregister (resource);
+		  g_resource_unref (resource);
+		}
               g_object_unref (provider);
               provider = NULL;
             }
           else
-            g_hash_table_insert (themes, g_strdup (key), provider);
+	    {
+	      /* Only set this after load success, as load_from_path will clear it */
+	      provider->priv->resource = resource;
+	      g_hash_table_insert (themes, g_strdup (key), provider);
+	    }
 
           g_free (path);
+          g_free (dir);
         }
     }
 
@@ -3165,62 +2802,80 @@ gtk_css_provider_get_named (const gchar *name,
 }
 
 static int
-compare_properties (gconstpointer a, gconstpointer b)
+compare_properties (gconstpointer a, gconstpointer b, gpointer style)
 {
-  return strcmp (((const GtkStyleProperty *) a)->pspec->name,
-                 ((const GtkStyleProperty *) b)->pspec->name);
+  const guint *ua = a;
+  const guint *ub = b;
+  PropertyValue *styles = style;
+
+  return strcmp (_gtk_style_property_get_name (GTK_STYLE_PROPERTY (styles[*ua].property)),
+                 _gtk_style_property_get_name (GTK_STYLE_PROPERTY (styles[*ub].property)));
+}
+
+static int
+compare_names (gconstpointer a, gconstpointer b)
+{
+  const WidgetPropertyValue *aa = a;
+  const WidgetPropertyValue *bb = b;
+  return strcmp (aa->name, bb->name);
 }
 
 static void
 gtk_css_ruleset_print (const GtkCssRuleset *ruleset,
                        GString             *str)
 {
-  GList *keys, *walk;
+  GList *values, *walk;
+  WidgetPropertyValue *widget_value;
+  guint i;
 
   _gtk_css_selector_print (ruleset->selector, str);
 
   g_string_append (str, " {\n");
 
-  if (ruleset->style)
+  if (ruleset->styles)
     {
-      keys = g_hash_table_get_keys (ruleset->style);
+      guint *sorted = g_new (guint, ruleset->n_styles);
+
+      for (i = 0; i < ruleset->n_styles; i++)
+        sorted[i] = i;
+
       /* so the output is identical for identical selector styles */
-      keys = g_list_sort (keys, compare_properties);
+      g_qsort_with_data (sorted, ruleset->n_styles, sizeof (guint), compare_properties, ruleset->styles);
 
-      for (walk = keys; walk; walk = walk->next)
+      for (i = 0; i < ruleset->n_styles; i++)
         {
-          GtkStyleProperty *prop = walk->data;
-          const PropertyValue *value = g_hash_table_lookup (ruleset->style, prop);
-
+          PropertyValue *prop = &ruleset->styles[sorted[i]];
           g_string_append (str, "  ");
-          g_string_append (str, prop->pspec->name);
+          g_string_append (str, _gtk_style_property_get_name (GTK_STYLE_PROPERTY (prop->property)));
           g_string_append (str, ": ");
-          _gtk_style_property_print_value (prop, &value->value, str);
+          _gtk_css_style_property_print_value (prop->property, prop->value, str);
           g_string_append (str, ";\n");
         }
 
-      g_list_free (keys);
+      g_free (sorted);
     }
 
   if (ruleset->widget_style)
     {
-      keys = g_hash_table_get_keys (ruleset->widget_style);
-      /* so the output is identical for identical selector styles */
-      keys = g_list_sort (keys, (GCompareFunc) strcmp);
+      values = NULL;
+      for (widget_value = ruleset->widget_style; widget_value != NULL; widget_value = widget_value->next)
+	values = g_list_prepend (values, widget_value);
 
-      for (walk = keys; walk; walk = walk->next)
+      /* so the output is identical for identical selector styles */
+      values = g_list_sort (values, compare_names);
+
+      for (walk = values; walk; walk = walk->next)
         {
-          const char *name = walk->data;
-          const PropertyValue *value = g_hash_table_lookup (ruleset->widget_style, (gpointer) name);
+	  widget_value = walk->data;
 
           g_string_append (str, "  ");
-          g_string_append (str, name);
+          g_string_append (str, widget_value->name);
           g_string_append (str, ": ");
-          g_string_append (str, g_value_get_string (&value->value));
+          g_string_append (str, widget_value->value);
           g_string_append (str, ";\n");
         }
 
-      g_list_free (keys);
+      g_list_free (values);
     }
 
   g_string_append (str, "}\n");
@@ -3267,6 +2922,8 @@ gtk_css_provider_print_colors (GHashTable *colors,
  * this @provider.
  *
  * Returns: a new string representing the @provider.
+ *
+ * Since: 3.2
  **/
 char *
 gtk_css_provider_to_string (GtkCssProvider *provider)
@@ -3285,7 +2942,7 @@ gtk_css_provider_to_string (GtkCssProvider *provider)
 
   for (i = 0; i < priv->rulesets->len; i++)
     {
-      if (i > 0)
+      if (str->len != 0)
         g_string_append (str, "\n");
       gtk_css_ruleset_print (&g_array_index (priv->rulesets, GtkCssRuleset, i), str);
     }

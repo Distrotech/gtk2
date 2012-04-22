@@ -13,9 +13,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors:
  *	Mark McLoughlin <mark@skynet.ie>
@@ -98,9 +96,10 @@ GtkWidget            *gtk_expander_get_label_widget    (GtkExpander *expander);
 void                  gtk_expander_set_label_fill      (GtkExpander *expander,
 						        gboolean     label_fill);
 gboolean              gtk_expander_get_label_fill      (GtkExpander *expander);
-
+GDK_AVAILABLE_IN_3_2
 void                  gtk_expander_set_resize_toplevel (GtkExpander *expander,
                                                         gboolean     resize_toplevel);
+GDK_AVAILABLE_IN_3_2
 gboolean              gtk_expander_get_resize_toplevel (GtkExpander *expander);
 
 G_END_DECLS

@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -1347,7 +1345,7 @@ setup_page_table (GtkPrinterOptionSet *options,
                                            table);
 
   nrows = grid_rows (GTK_GRID (table));
-  if (nrows == 1)
+  if (nrows == 0)
     gtk_widget_hide (page);
   else
     gtk_widget_show (page);
@@ -1521,7 +1519,7 @@ update_dialog_from_settings (GtkPrintUnixDialog *dialog)
                                                table);
 
       nrows = grid_rows (GTK_GRID (table));
-      if (nrows == 1)
+      if (nrows == 0)
         gtk_widget_destroy (table);
       else
         {
@@ -1540,8 +1538,7 @@ update_dialog_from_settings (GtkPrintUnixDialog *dialog)
   else
     gtk_widget_hide (priv->advanced_page);
 
-  g_list_foreach (groups, (GFunc) g_free, NULL);
-  g_list_free (groups);
+  g_list_free_full (groups, g_free);
 }
 
 static void
@@ -4273,7 +4270,7 @@ gtk_print_unix_dialog_set_manual_capabilities (GtkPrintUnixDialog   *dialog,
  * gtk_print_unix_dialog_get_manual_capabilities:
  * @dialog: a #GtkPrintUnixDialog
  *
- * Gets the value of #GtkPrintUnixDialog::manual-capabilities property.
+ * Gets the value of #GtkPrintUnixDialog:manual-capabilities property.
  *
  * Returns: the printing capabilities
  *
@@ -4333,7 +4330,7 @@ gtk_print_unix_dialog_set_support_selection (GtkPrintUnixDialog *dialog,
  * gtk_print_unix_dialog_get_support_selection:
  * @dialog: a #GtkPrintUnixDialog
  *
- * Gets the value of #GtkPrintUnixDialog::support-selection property.
+ * Gets the value of #GtkPrintUnixDialog:support-selection property.
  *
  * Returns: whether the application supports print of selection
  *
@@ -4387,7 +4384,7 @@ gtk_print_unix_dialog_set_has_selection (GtkPrintUnixDialog *dialog,
  * gtk_print_unix_dialog_get_has_selection:
  * @dialog: a #GtkPrintUnixDialog
  *
- * Gets the value of #GtkPrintUnixDialog::has-selection property.
+ * Gets the value of #GtkPrintUnixDialog:has-selection property.
  *
  * Returns: whether there is a selection
  *
@@ -4455,7 +4452,7 @@ gtk_print_unix_dialog_set_embed_page_setup (GtkPrintUnixDialog *dialog,
  * gtk_print_unix_dialog_get_embed_page_setup:
  * @dialog: a #GtkPrintUnixDialog
  *
- * Gets the value of #GtkPrintUnixDialog::embed-page-setup property.
+ * Gets the value of #GtkPrintUnixDialog:embed-page-setup property.
  *
  * Returns: whether there is a selection
  *

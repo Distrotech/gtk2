@@ -16,9 +16,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GDK_H_INSIDE__) && !defined (GDK_COMPILATION)
@@ -29,6 +27,7 @@
 #define __GDK_SCREEN_H__
 
 #include <cairo.h>
+#include <gdk/gdkversionmacros.h>
 #include <gdk/gdktypes.h>
 #include <gdk/gdkdisplay.h>
 
@@ -57,11 +56,16 @@ GList *      gdk_screen_list_visuals          (GdkScreen   *screen);
 GList *      gdk_screen_get_toplevel_windows  (GdkScreen   *screen);
 gchar *      gdk_screen_make_display_name     (GdkScreen   *screen);
 
-gint          gdk_screen_get_n_monitors        (GdkScreen *screen);
-gint          gdk_screen_get_primary_monitor   (GdkScreen *screen);
-void          gdk_screen_get_monitor_geometry  (GdkScreen *screen,
-                                                gint       monitor_num,
-                                                GdkRectangle *dest);
+gint         gdk_screen_get_n_monitors        (GdkScreen    *screen);
+gint         gdk_screen_get_primary_monitor   (GdkScreen    *screen);
+void         gdk_screen_get_monitor_geometry  (GdkScreen    *screen,
+                                               gint          monitor_num,
+                                               GdkRectangle *dest);
+GDK_AVAILABLE_IN_3_4
+void         gdk_screen_get_monitor_workarea  (GdkScreen    *screen,
+                                               gint          monitor_num,
+                                               GdkRectangle *dest);
+
 gint          gdk_screen_get_monitor_at_point  (GdkScreen *screen,
                                                 gint       x,
                                                 gint       y);

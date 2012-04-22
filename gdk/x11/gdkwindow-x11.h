@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -121,8 +119,13 @@ struct _GdkToplevelX11
   guint have_maxvert : 1;       /* _NET_WM_STATE_MAXIMIZED_VERT */
   guint have_maxhorz : 1;       /* _NET_WM_STATE_MAXIMIZED_HORZ */
   guint have_fullscreen : 1;    /* _NET_WM_STATE_FULLSCREEN */
+  guint have_hidden : 1;	/* _NET_WM_STATE_HIDDEN */
 
   guint is_leader : 1;
+
+  /* Set if the WM is presenting us as focused, i.e. with active decorations
+   */
+  guint have_focused : 1;
   
   gulong map_serial;	/* Serial of last transition from unmapped */
   

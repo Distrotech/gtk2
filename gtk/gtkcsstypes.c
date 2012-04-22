@@ -12,25 +12,73 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include "gtkcsstypesprivate.h"
 
-#define DEFINE_BOXED_TYPE_WITH_COPY_FUNC(TypeName, type_name) \
-\
-static TypeName * \
-type_name ## _copy (const TypeName *foo) \
-{ \
-  return g_memdup (foo, sizeof (TypeName)); \
-} \
-\
-G_DEFINE_BOXED_TYPE (TypeName, type_name, type_name ## _copy, g_free)
+#include "gtkcssnumbervalueprivate.h"
+#include "gtkstylecontextprivate.h"
 
-DEFINE_BOXED_TYPE_WITH_COPY_FUNC (GtkCssBorderCornerRadius, _gtk_css_border_corner_radius)
-DEFINE_BOXED_TYPE_WITH_COPY_FUNC (GtkCssBorderRadius, _gtk_css_border_radius)
-DEFINE_BOXED_TYPE_WITH_COPY_FUNC (GtkCssBorderImageRepeat, _gtk_css_border_image_repeat)
+typedef struct _GtkCssChangeTranslation GtkCssChangeTranslation;
+struct _GtkCssChangeTranslation {
+  GtkCssChange from;
+  GtkCssChange to;
+};
+
+static GtkCssChange
+gtk_css_change_translate (GtkCssChange                   match,
+                         const GtkCssChangeTranslation *translations,
+                         guint                         n_translations)
+{
+  GtkCssChange result = match;
+  guint i;
+
+  for (i = 0; i < n_translations; i++)
+    {
+      if (match & translations[i].from)
+        {
+          result &= ~translations[i].from;
+          result |= translations[i].to;
+        }
+    }
+
+  return result;
+}
+
+GtkCssChange
+_gtk_css_change_for_sibling (GtkCssChange match)
+{
+  static const GtkCssChangeTranslation table[] = {
+    { GTK_CSS_CHANGE_CLASS, GTK_CSS_CHANGE_SIBLING_CLASS },
+    { GTK_CSS_CHANGE_NAME, GTK_CSS_CHANGE_SIBLING_NAME },
+    { GTK_CSS_CHANGE_POSITION, GTK_CSS_CHANGE_SIBLING_POSITION },
+    { GTK_CSS_CHANGE_STATE, GTK_CSS_CHANGE_SIBLING_STATE },
+    { GTK_CSS_CHANGE_SOURCE, 0 },
+    { GTK_CSS_CHANGE_ANIMATE, 0 }
+  };
+
+  return gtk_css_change_translate (match, table, G_N_ELEMENTS (table)); 
+}
+
+GtkCssChange
+_gtk_css_change_for_child (GtkCssChange match)
+{
+  static const GtkCssChangeTranslation table[] = {
+    { GTK_CSS_CHANGE_CLASS, GTK_CSS_CHANGE_PARENT_CLASS },
+    { GTK_CSS_CHANGE_NAME, GTK_CSS_CHANGE_PARENT_NAME },
+    { GTK_CSS_CHANGE_POSITION, GTK_CSS_CHANGE_PARENT_POSITION },
+    { GTK_CSS_CHANGE_STATE, GTK_CSS_CHANGE_PARENT_STATE },
+    { GTK_CSS_CHANGE_SIBLING_CLASS, GTK_CSS_CHANGE_PARENT_SIBLING_CLASS },
+    { GTK_CSS_CHANGE_SIBLING_NAME, GTK_CSS_CHANGE_PARENT_SIBLING_NAME },
+    { GTK_CSS_CHANGE_SIBLING_POSITION, GTK_CSS_CHANGE_PARENT_SIBLING_POSITION },
+    { GTK_CSS_CHANGE_SIBLING_STATE, GTK_CSS_CHANGE_PARENT_SIBLING_STATE },
+    { GTK_CSS_CHANGE_SOURCE, 0 },
+    { GTK_CSS_CHANGE_ANIMATE, 0 }
+  };
+
+  return gtk_css_change_translate (match, table, G_N_ELEMENTS (table)); 
+}
+

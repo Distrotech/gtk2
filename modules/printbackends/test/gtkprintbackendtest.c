@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -549,7 +547,7 @@ test_printer_prepare_for_print (GtkPrinter       *printer,
 }
 
 static gboolean
-test_printer_details_aquired_cb (GtkPrinter *printer)
+test_printer_details_acquired_cb (GtkPrinter *printer)
 {
   gboolean success;
   gint weight;
@@ -565,7 +563,7 @@ test_printer_details_aquired_cb (GtkPrinter *printer)
   gtk_printer_set_has_details (printer, success);
   g_signal_emit_by_name (printer, "details-acquired", success);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -590,7 +588,7 @@ test_printer_request_details (GtkPrinter *printer)
   else
     time *= 1000;
 
-  g_timeout_add (time, (GSourceFunc) test_printer_details_aquired_cb, printer);
+  g_timeout_add (time, (GSourceFunc) test_printer_details_acquired_cb, printer);
 }
 
 

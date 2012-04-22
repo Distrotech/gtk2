@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author:
  *   Mathias Hasselmann
@@ -30,11 +28,10 @@
  * SECTION:gtktoolshell
  * @Short_description: Interface for containers containing GtkToolItem widgets
  * @Title: GtkToolShell
+ * @see_also: #GtkToolbar, #GtkToolItem
  *
  * The #GtkToolShell interface allows container widgets to provide additional
  * information when embedding #GtkToolItem widgets.
- *
- * @see_also: #GtkToolbar, #GtkToolItem
  */
 
 /**
@@ -221,7 +218,7 @@ gtk_tool_shell_get_text_alignment (GtkToolShell *shell)
 }
 
 /**
- * gtk_tool_shell_get_ellipsize_mode
+ * gtk_tool_shell_get_ellipsize_mode:
  * @shell: a #GtkToolShell
  *
  * Retrieves the current ellipsize mode for the tool shell. Tool items must not

@@ -14,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -32,7 +30,9 @@
 #include "gtklabel.h"
 #include "gtkimage.h"
 #include "gtkbox.h"
+#include "gtksettings.h"
 #include "gtksizerequest.h"
+#include "gtkstylecontext.h"
 #include "gtkwindowprivate.h"
 
 
@@ -116,7 +116,6 @@ struct _GtkTooltip
   GObject parent_instance;
 
   GtkWidget *window;
-  GtkWidget *alignment;
   GtkWidget *box;
   GtkWidget *image;
   GtkWidget *label;
@@ -1078,7 +1077,7 @@ gtk_tooltip_position (GtkTooltip *tooltip,
   monitor_num = gdk_screen_get_monitor_at_point (screen,
                                                  tooltip->last_x,
                                                  tooltip->last_y);
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
 
   get_bounding_box (new_tooltip_widget, &bounds);
 
@@ -1538,22 +1537,33 @@ _gtk_tooltip_hide (GtkWidget *widget)
 }
 
 static gboolean
-tooltips_enabled (GdkWindow *window)
+tooltips_enabled (GdkEvent *event)
 {
+  GdkDevice *source_device;
+  GdkInputSource source;
+  GdkWindow *window;
   gboolean enabled;
-  gboolean touchscreen;
   GdkScreen *screen;
   GtkSettings *settings;
 
+  window = event->any.window;
+  source_device = gdk_event_get_source_device (event);
+
+  if (!source_device)
+    return FALSE;
+
+  source = gdk_device_get_source (source_device);
   screen = gdk_window_get_screen (window);
   settings = gtk_settings_get_for_screen (screen);
 
   g_object_get (settings,
-		"gtk-touchscreen-mode", &touchscreen,
 		"gtk-enable-tooltips", &enabled,
 		NULL);
 
-  return (!touchscreen && enabled);
+  if (enabled && source != GDK_SOURCE_TOUCHSCREEN)
+    return TRUE;
+
+  return FALSE;
 }
 
 void
@@ -1565,7 +1575,7 @@ _gtk_tooltip_handle_event (GdkEvent *event)
   GdkDisplay *display;
   GtkTooltip *current_tooltip;
 
-  if (!tooltips_enabled (event->any.window))
+  if (!tooltips_enabled (event))
     return;
 
   /* Returns coordinates relative to has_tooltip_widget's allocation. */

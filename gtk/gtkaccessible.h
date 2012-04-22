@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -54,9 +52,9 @@ struct _GtkAccessibleClass
 
   void (*connect_widget_destroyed) (GtkAccessible *accessible);
 
+  void (*widget_set)               (GtkAccessible *accessible);
+  void (*widget_unset)             (GtkAccessible *accessible);
   /* Padding for future expansion */
-  void (*_gtk_reserved1) (void);
-  void (*_gtk_reserved2) (void);
   void (*_gtk_reserved3) (void);
   void (*_gtk_reserved4) (void);
 };
@@ -66,6 +64,8 @@ GType      gtk_accessible_get_type                 (void) G_GNUC_CONST;
 void       gtk_accessible_set_widget               (GtkAccessible *accessible,
                                                     GtkWidget     *widget);
 GtkWidget *gtk_accessible_get_widget               (GtkAccessible *accessible);
+
+GDK_DEPRECATED_IN_3_4_FOR(gtk_accessible_set_widget)
 void       gtk_accessible_connect_widget_destroyed (GtkAccessible *accessible);
 
 G_END_DECLS

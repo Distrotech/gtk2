@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #if !defined (__GTK_H_INSIDE__) && !defined (GTK_COMPILATION)
@@ -25,10 +23,10 @@
 #define __GTK_STYLE_PROVIDER_H__
 
 #include <glib-object.h>
-#include <gtk/gtkwidgetpath.h>
+#include <gtk/gtkenums.h>
 #include <gtk/gtkiconfactory.h>
 #include <gtk/gtkstyleproperties.h>
-#include <gtk/gtkenums.h>
+#include <gtk/gtktypes.h>
 
 G_BEGIN_DECLS
 
@@ -87,7 +85,7 @@ typedef struct _GtkStyleProviderIface GtkStyleProviderIface;
 typedef struct _GtkStyleProvider GtkStyleProvider; /* dummy typedef */
 
 /**
- * GtkStyleProviderIface
+ * GtkStyleProviderIface:
  * @get_style: Gets a set of style information that applies to a widget path.
  * @get_style_property: Gets the value of a widget style property that applies to a widget path.
  * @get_icon_factory: Gets the icon factory that applies to a widget path.

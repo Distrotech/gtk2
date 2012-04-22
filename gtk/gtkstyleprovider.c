@@ -12,16 +12,16 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
-#include "gtkprivate.h"
 #include "gtkstyleprovider.h"
+
 #include "gtkintl.h"
+#include "gtkprivate.h"
+#include "gtkwidgetpath.h"
 
 /**
  * SECTION:gtkstyleprovider
@@ -95,6 +95,8 @@ gtk_style_provider_get_style (GtkStyleProvider *provider,
  * the widget represented by @path.
  *
  * Returns: %TRUE if the property was found and has a value, %FALSE otherwise
+ *
+ * Since: 3.0
  **/
 gboolean
 gtk_style_provider_get_style_property (GtkStyleProvider *provider,

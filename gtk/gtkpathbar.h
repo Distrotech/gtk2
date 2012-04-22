@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_PATH_BAR_H__
@@ -84,10 +82,9 @@ struct _GtkPathBarClass
 GType    gtk_path_bar_get_type (void) G_GNUC_CONST;
 void     _gtk_path_bar_set_file_system (GtkPathBar         *path_bar,
 					GtkFileSystem      *file_system);
-gboolean _gtk_path_bar_set_file        (GtkPathBar         *path_bar,
+void     _gtk_path_bar_set_file        (GtkPathBar         *path_bar,
 					GFile              *file,
-					gboolean            keep_trail,
-					GError            **error);
+					gboolean            keep_trail);
 void     _gtk_path_bar_up              (GtkPathBar *path_bar);
 void     _gtk_path_bar_down            (GtkPathBar *path_bar);
 

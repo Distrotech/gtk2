@@ -12,8 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.Free
  */
 
 /* By Owen Taylor <otaylor@gtk.org>              98/4/4 */
@@ -248,7 +247,6 @@ gtk_plug_init (GtkPlug *plug)
 
 /**
  * gtk_plug_handle_modality_on:
- *
  * @plug: a #GtkPlug
  *
  * Called from the GtkPlug backend when the corresponding socket has
@@ -272,7 +270,6 @@ gtk_plug_handle_modality_on (GtkPlug *plug)
 
 /**
  * gtk_plug_handle_modality_off:
- *
  * @plug: a #GtkPlug
  *
  * Called from the GtkPlug backend when the corresponding socket has
@@ -720,7 +717,6 @@ xembed_set_info (GdkWindow     *window,
 
 /**
  * gtk_plug_focus_first_last:
- *
  * @plug: a #GtkPlug
  * @direction: a direction
  *

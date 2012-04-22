@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -80,6 +78,7 @@ G_BEGIN_DECLS
 
 /* Return true if the GdkWindow is a win32 implemented window */
 gboolean      gdk_win32_window_is_win32 (GdkWindow *window);
+HWND          gdk_win32_window_get_impl_hwnd (GdkWindow *window);
 
 /* Return the Gdk* for a particular HANDLE */
 gpointer      gdk_win32_handle_table_lookup (HWND handle);

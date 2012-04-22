@@ -12,9 +12,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_TREE_PRIVATE_H__
@@ -49,8 +47,10 @@ gboolean     _gtk_tree_view_find_node                 (GtkTreeView       *tree_v
 						       GtkTreePath       *path,
 						       GtkRBTree        **tree,
 						       GtkRBNode        **node);
-GtkTreePath *_gtk_tree_view_find_path                 (GtkTreeView       *tree_view,
-						       GtkRBTree         *tree,
+gboolean     _gtk_tree_view_get_cursor_node           (GtkTreeView       *tree_view,
+						       GtkRBTree        **tree,
+						       GtkRBNode        **node);
+GtkTreePath *_gtk_tree_path_new_from_rbtree           (GtkRBTree         *tree,
 						       GtkRBNode         *node);
 void         _gtk_tree_view_child_move_resize         (GtkTreeView       *tree_view,
 						       GtkWidget         *widget,
@@ -86,6 +86,7 @@ void         _gtk_tree_view_set_anchor_path           (GtkTreeView              
 						       GtkTreePath                 *anchor_path);
 GtkRBTree *  _gtk_tree_view_get_rbtree                (GtkTreeView                 *tree_view);
 
+GtkTreeViewColumn *_gtk_tree_view_get_focus_column    (GtkTreeView                 *tree_view);
 void               _gtk_tree_view_set_focus_column    (GtkTreeView                 *tree_view,
 						       GtkTreeViewColumn           *column);
 GdkWindow         *_gtk_tree_view_get_header_window   (GtkTreeView                 *tree_view);

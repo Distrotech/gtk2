@@ -12,9 +12,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -104,13 +102,11 @@ void       gtk_menu_item_toggle_size_request  (GtkMenuItem         *menu_item,
                                                gint                *requisition);
 void       gtk_menu_item_toggle_size_allocate (GtkMenuItem         *menu_item,
                                                gint                 allocation);
-#ifndef GTK_DISABLE_DEPRECATED
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 void       gtk_menu_item_set_right_justified  (GtkMenuItem         *menu_item,
                                                gboolean             right_justified);
-GDK_DEPRECATED
+GDK_DEPRECATED_IN_3_2
 gboolean   gtk_menu_item_get_right_justified  (GtkMenuItem         *menu_item);
-#endif  /* GTK_DISABLE_DEPRECATED */
 void          gtk_menu_item_set_accel_path    (GtkMenuItem         *menu_item,
                                                const gchar         *accel_path);
 const gchar * gtk_menu_item_get_accel_path    (GtkMenuItem    *menu_item);

@@ -13,9 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __GTK_FILE_SYSTEM_MODEL_H__
@@ -80,6 +78,8 @@ void                _gtk_file_system_model_set_show_folders (GtkFileSystemModel 
 							     gboolean            show_folders);
 void                _gtk_file_system_model_set_show_files   (GtkFileSystemModel *model,
 							     gboolean            show_files);
+void                _gtk_file_system_model_set_filter_folders (GtkFileSystemModel *model,
+							     gboolean            show_folders);
 void                _gtk_file_system_model_freeze_updates   (GtkFileSystemModel *model);
 void                _gtk_file_system_model_thaw_updates     (GtkFileSystemModel *model);
 void                _gtk_file_system_model_clear_cache      (GtkFileSystemModel *model,

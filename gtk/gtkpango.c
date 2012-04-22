@@ -13,8 +13,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.Free
  */
 /*
  * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
@@ -1143,7 +1142,7 @@ _gtk_pango_get_text_after (PangoLayout     *layout,
       if (end < n_attrs - 1)
         {
           end = _gtk_pango_move_words (layout, end, 1);
-          while (!attrs[end].is_word_end && end < n_attrs - 1)
+          while (!attrs[end].is_word_start && end < n_attrs - 1)
             end = _gtk_pango_move_chars (layout, end, 1);
         }
       break;
@@ -1158,7 +1157,7 @@ _gtk_pango_get_text_after (PangoLayout     *layout,
     case ATK_TEXT_BOUNDARY_SENTENCE_START:
       if (_gtk_pango_is_inside_sentence (layout, end))
         end = _gtk_pango_move_sentences (layout, end, 1);
-      while (!attrs[end].is_sentence_end && end < n_attrs - 1)
+      while (!attrs[end].is_sentence_start && end < n_attrs - 1)
         end = _gtk_pango_move_chars (layout, end, 1);
       start = end;
       if (end < n_attrs - 1)
@@ -1245,7 +1244,7 @@ _gtk_pango_get_text_at (PangoLayout     *layout,
       if (_gtk_pango_is_inside_word (layout, end))
         end = _gtk_pango_move_words (layout, end, 1);
       while (!attrs[end].is_word_start && end < n_attrs - 1)
-        end = _gtk_pango_move_chars (layout, end, -1);
+        end = _gtk_pango_move_chars (layout, end, 1);
       break;
 
     case ATK_TEXT_BOUNDARY_WORD_END:
@@ -1262,7 +1261,7 @@ _gtk_pango_get_text_at (PangoLayout     *layout,
         start = _gtk_pango_move_sentences (layout, start, -1);
       if (_gtk_pango_is_inside_sentence (layout, end))
         end = _gtk_pango_move_sentences (layout, end, 1);
-      while (!attrs[end].is_word_end && end < n_attrs - 1)
+      while (!attrs[end].is_sentence_start && end < n_attrs - 1)
         end = _gtk_pango_move_chars (layout, end, 1);
       break;
 

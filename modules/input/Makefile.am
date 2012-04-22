@@ -30,7 +30,7 @@ im_xim_la_SOURCES = 		\
 	imxim.c
 libstatic_im_xim_la_SOURCES = $(im_xim_la_SOURCES)
 im_xim_la_LIBADD = $(LDADDS)
-if HAVE_X11R6
+if USE_X11
 if INCLUDE_IM_XIM
 STATIC_XIM_MODULE = libstatic-im-xim.la
 else
