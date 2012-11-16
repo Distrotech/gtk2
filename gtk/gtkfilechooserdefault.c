@@ -6029,6 +6029,32 @@ settings_ensure (GtkFileChooserDefault *impl)
   g_settings_delay (impl->settings);
 }
 
+static GKeyFile *
+get_settings_keyfile (void)
+{
+  char *filename;
+  GKeyFile *keyfile;
+
+  /* Note that this is really "gtk-2.0" so that we can share the configuration
+   * with GTK2, for old applications.
+   */
+  filename = g_build_filename (g_get_user_config_dir (), "gtk-2.0", "gtkfilechooser.ini", NULL);
+
+  keyfile = g_key_file_new ();
+  if (!g_key_file_load_from_file (keyfile,
+				  filename,
+				  G_KEY_FILE_NONE,
+				  NULL)) /* NULL-GError */
+    {
+      g_key_file_unref (keyfile);
+      keyfile = NULL;
+    }
+
+  g_free (filename);
+
+  return keyfile;
+}
+
 static void
 settings_load (GtkFileChooserDefault *impl)
 {
@@ -6161,22 +6187,13 @@ typedef enum {
 static DefaultFolder
 get_default_folder (void)
 {
-  GKeyFile *keyfile;
-  char *filename;
   DefaultFolder folder;
+  GKeyFile *keyfile;
 
   folder = DEFAULT_FOLDER_RECENT;
 
-  /* Note that this is really "gtk-2.0" so that we can share the configuration
-   * with GTK2, for old applications.
-   */
-  filename = g_build_filename (g_get_user_config_dir (), "gtk-2.0", "gtkfilechooser.ini", NULL);
-
-  keyfile = g_key_file_new ();
-  if (g_key_file_load_from_file (keyfile,
-				 filename,
-				 G_KEY_FILE_NONE,
-				 NULL)) /* NULL-GError */
+  keyfile = get_settings_keyfile ();
+  if (keyfile)
     {
       char *value;
 
@@ -6193,10 +6210,9 @@ get_default_folder (void)
 	  else if (strcmp (value, "recent") == 0)
 	    folder = DEFAULT_FOLDER_RECENT;
 	}
-    }
 
-  g_free (filename);
-  g_key_file_unref (keyfile);
+      g_key_file_unref (keyfile);
+    }
 
   return folder;
 }
