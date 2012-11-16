@@ -6152,6 +6152,90 @@ get_file_for_last_folder_opened (GtkFileChooserDefault *impl)
   return file;
 }
 
+typedef enum {
+  DEFAULT_FOLDER_CWD,
+  DEFAULT_FOLDER_LAST,
+  DEFAULT_FOLDER_RECENT
+} DefaultFolder;
+
+static DefaultFolder
+get_default_folder (void)
+{
+  GKeyFile *keyfile;
+  char *filename;
+  DefaultFolder folder;
+
+  folder = DEFAULT_FOLDER_RECENT;
+
+  /* Note that this is really "gtk-2.0" so that we can share the configuration
+   * with GTK2, for old applications.
+   */
+  filename = g_build_filename (g_get_user_config_dir (), "gtk-2.0", "gtkfilechooser.ini", NULL);
+
+  keyfile = g_key_file_new ();
+  if (g_key_file_load_from_file (keyfile,
+				 filename,
+				 G_KEY_FILE_NONE,
+				 NULL)) /* NULL-GError */
+    {
+      char *value;
+
+      value = g_key_file_get_string (keyfile,
+				     "Filechooser Settings",
+				     "DefaultFolder",
+				     NULL); /* NULL-GError */
+      if (value)
+	{
+	  if (strcmp (value, "cwd") == 0)
+	    folder = DEFAULT_FOLDER_CWD;
+	  else if (strcmp (value, "last") == 0)
+	    folder = DEFAULT_FOLDER_LAST;
+	  else if (strcmp (value, "recent") == 0)
+	    folder = DEFAULT_FOLDER_RECENT;
+	}
+    }
+
+  g_free (filename);
+  g_key_file_unref (keyfile);
+
+  return folder;
+}
+
+static void
+restore_cwd (GtkFileChooserDefault *impl)
+{
+  char *current_working_dir;
+
+  current_working_dir = g_get_current_dir ();
+  gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (impl), current_working_dir);
+  g_free (current_working_dir);
+}
+
+static void
+restore_last_folder (GtkFileChooserDefault *impl)
+{
+  GFile *folder;
+
+  folder = get_file_for_last_folder_opened (impl);
+  gtk_file_chooser_set_current_folder_file (GTK_FILE_CHOOSER (impl), folder, NULL);
+  g_object_unref (folder);
+}
+
+static void
+set_default_folder (GtkFileChooserDefault *impl)
+{
+  DefaultFolder default_folder;
+
+  default_folder = get_default_folder ();
+
+  if (default_folder == DEFAULT_FOLDER_CWD)
+    restore_cwd (impl);
+  else if (default_folder == DEFAULT_FOLDER_LAST)
+    restore_last_folder (impl);
+  else /* default, and also default_folder == DEFAULT_FOLDER_RECENT */
+    recent_shortcut_handler (impl);
+}
+
 /* GtkWidget::map method */
 static void
 gtk_file_chooser_default_map (GtkWidget *widget)
@@ -6169,7 +6253,7 @@ gtk_file_chooser_default_map (GtkWidget *widget)
       switch (impl->reload_state)
         {
         case RELOAD_EMPTY:
-	  recent_shortcut_handler (impl);
+	  set_default_folder (impl);
           break;
         
         case RELOAD_HAS_FOLDER:
