@@ -6029,16 +6029,22 @@ settings_ensure (GtkFileChooserDefault *impl)
   g_settings_delay (impl->settings);
 }
 
+static char *
+get_settings_filename (void)
+{
+  /* Note that this is really "gtk-2.0" so that we can share the configuration
+   * with GTK2, for old applications.
+   */
+  return g_build_filename (g_get_user_config_dir (), "gtk-2.0", "gtkfilechooser.ini", NULL);
+}
+
 static GKeyFile *
 get_settings_keyfile (void)
 {
   char *filename;
   GKeyFile *keyfile;
 
-  /* Note that this is really "gtk-2.0" so that we can share the configuration
-   * with GTK2, for old applications.
-   */
-  filename = g_build_filename (g_get_user_config_dir (), "gtk-2.0", "gtkfilechooser.ini", NULL);
+  filename = get_settings_filename ();
 
   keyfile = g_key_file_new ();
   if (!g_key_file_load_from_file (keyfile,
@@ -6106,23 +6112,50 @@ save_dialog_geometry (GtkFileChooserDefault *impl)
 }
 
 static void
-settings_save (GtkFileChooserDefault *impl)
+save_current_folder_to_settings (GtkFileChooserDefault *impl)
 {
   char *current_folder_uri;
-
-  settings_ensure (impl);
-
-  /* Current folder */
+  GKeyFile *keyfile;
+  char *contents;
+  gsize len;
 
   if (impl->current_folder)
     current_folder_uri = g_file_get_uri (impl->current_folder);
   else
     current_folder_uri = "";
 
+  keyfile = get_settings_keyfile ();
+  if (keyfile)
+    g_key_file_set_string (keyfile,
+			   "Filechooser Settings",
+			   "DefaultFolder",
+			   current_folder_uri);
+
   g_settings_set_string (impl->settings, SETTINGS_KEY_LAST_FOLDER_URI, current_folder_uri);
 
   if (impl->current_folder)
     g_free (current_folder_uri);
+
+  contents = g_key_file_to_data (keyfile, &len, NULL); /* NULL-GError */
+
+  if (contents)
+    {
+      char *filename;
+
+      filename = get_settings_filename ();
+      g_file_set_contents (filename, contents, len, NULL); /* NULL-GError */
+      g_free (filename);
+    }
+}
+
+static void
+settings_save (GtkFileChooserDefault *impl)
+{
+  settings_ensure (impl);
+
+  /* Current folder */
+
+  save_current_folder_to_settings (impl);
 
   /* All the other state */
 
