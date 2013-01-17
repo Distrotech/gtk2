@@ -108,6 +108,7 @@
 #include <gtk/gtkfontchooserdialog.h>
 #include <gtk/gtkfontchooserwidget.h>
 #include <gtk/gtkframe.h>
+#include <gtk/gtkgesture.h>
 #include <gtk/gtkgrid.h>
 #include <gtk/gtkiconfactory.h>
 #include <gtk/gtkicontheme.h>
