@@ -26,6 +26,7 @@ demos =						\
 	entry_buffer.c				\
 	entry_completion.c			\
 	expander.c  				\
+	gestures.c				\
 	hypertext.c				\
 	iconview.c				\
 	iconview_edit.c				\
