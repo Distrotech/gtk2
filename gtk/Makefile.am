@@ -259,6 +259,7 @@ gtk_public_h_sources = 		\
 	gtkframe.h		\
 	gtkgesture.h		\
 	gtkgesturelongpress.h	\
+	gtkgesturerotate.h	\
 	gtkgestureswipe.h	\
 	gtkgrid.h		\
 	gtkiconfactory.h	\
@@ -733,6 +734,7 @@ gtk_base_c_sources = 		\
 	gtkframe.c		\
 	gtkgesture.c		\
 	gtkgesturelongpress.c	\
+	gtkgesturerotate.c	\
 	gtkgestureswipe.c	\
 	gtkgrid.c		\
 	gtkhsla.c		\
