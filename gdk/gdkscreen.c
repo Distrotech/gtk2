@@ -1048,3 +1048,36 @@ gdk_screen_get_setting (GdkScreen   *screen,
 
   return GDK_SCREEN_GET_CLASS (screen)->get_setting (screen, name, value);
 }
+
+/**
+ * gdk_screen_get_monitor_scale_factor:
+ * @window: window to get scale factor for
+ *
+ * Returns the internal scale factor that maps from monitor coordiantes
+ * to the actual device pixels. On traditional systems this is 1, but
+ * on very high density outputs this can be a higher value (often 2).
+ *
+ * This can be used if you want to create pixel based data for a
+ * particula monitor, but most of the time you're drawing to a window
+ * where it is better to use gdk_window_get_scale_factor() instead.
+ *
+ * Since: 3.10
+ * Return value: the scale factor
+ */
+gdouble
+gdk_screen_get_monitor_scale_factor (GdkScreen *screen,
+                                     gint       monitor_num)
+{
+  GdkScreenClass *screen_class;
+
+  g_return_val_if_fail (GDK_IS_SCREEN (screen), 1.0);
+  g_return_val_if_fail (monitor_num >= 0, 1.0);
+  g_return_val_if_fail (monitor_num < gdk_screen_get_n_monitors (screen), 1.0);
+
+  screen_class = GDK_SCREEN_GET_CLASS (screen);
+
+  if (screen_class->get_monitor_scale_factor)
+    return screen_class->get_monitor_scale_factor (screen, monitor_num);
+
+  return 1.0;
+}
