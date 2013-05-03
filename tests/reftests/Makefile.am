@@ -1,8 +1,11 @@
 include $(top_srcdir)/Makefile.decl
+NULL =
 
 TEST_PROGS += gtk-reftest
 
 check_PROGRAMS = $(TEST_PROGS)
+
+insttestdir=$(pkglibexecdir)/installed-tests
 
 gtk_reftest_CFLAGS = \
 	-I$(top_srcdir)                 \
@@ -10,6 +13,7 @@ gtk_reftest_CFLAGS = \
 	-I$(top_srcdir)/gdk             \
 	-DGDK_DISABLE_DEPRECATED        \
 	-DGTK_DISABLE_DEPRECATED        \
+	-DINSTTESTDIR=\""$(insttestdir)"\"	\
 	$(GTK_DEBUG_FLAGS)              \
 	$(GTK_DEP_CFLAGS)
 
@@ -24,8 +28,11 @@ gtk_reftest_SOURCES = \
 clean-local:
 	rm -rf output/ || true
 
-EXTRA_DIST += \
-	align-expand.sh \
+EXTRA_DIST = align-expand.sh \
+	border-image-repeat.sh \
+	$(NULL)
+
+testdata = \
 	background-area.css \
 	background-area.ref.ui \
 	background-area.ui \
@@ -86,7 +93,6 @@ EXTRA_DIST += \
 	border-image-gradient.ui \
 	border-image-repeat.css \
 	border-image-repeat.ref.ui \
-	border-image-repeat.sh \
 	border-image-repeat.ui \
 	border-image-url.css \
 	border-image-url.ref.ui \
@@ -109,8 +115,6 @@ EXTRA_DIST += \
 	box-shadow-spec-inset.css \
 	box-shadow-spec-inset.ref.ui \
 	box-shadow-spec-inset.ui \
-	button-wrapping.ui \
-	button-wrapping.ref.ui \
 	css-match-class.css \
 	css-match-class.ref.ui \
 	css-match-class.ui \
@@ -272,6 +276,24 @@ EXTRA_DIST += \
 	unresolvable.ref.ui \
 	unresolvable.ui \
 	window-default-size.ref.ui \
-	window-default-size.ui
+	window-default-size.ui \
+	$(NULL)
+
+if BUILDOPT_INSTALL_TESTS
+reftestdir = $(insttestdir)/reftests
+reftest_DATA = $(testdata)
+
+insttest_PROGRAMS = gtk-reftest
+
+reftest-%.test: %.ui Makefile
+	$(AM_V_GEN) (echo '[Test]' > $@.tmp; \
+	 echo 'Exec=/bin/sh -c "$(pkglibexecdir)/installed-tests/gtk-reftest -o $$(pwd) -d $(pkglibexecdir)/installed-tests/reftests $(notdir $<)"' >> $@.tmp; \
+	 echo 'Type=session' >> $@.tmp; \
+	 mv $@.tmp $@)
+
+testmetadir = $(datadir)/installed-tests/$(PACKAGE)
+testuifiles = $(filter %.ui,$(filter-out %.ref.ui,$(testdata)))
+testmeta_DATA = $(patsubst %.ui,reftest-%.test,$(testuifiles))
+endif
 
 -include $(top_srcdir)/git.mk
